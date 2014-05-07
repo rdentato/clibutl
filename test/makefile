@@ -26,9 +26,8 @@ CFLAGS= -I../src -g
 
 all: clean $(TESTS)
 	chmod +x ./run_tests.sh
-	ls -la
-	./run_tests.sh 2> tests.log
-	sed -n -e '/^# \*\*/p' -e '/^# TOTAL/p' tests.log
+	./run_tests.sh
+	-sed -n -e '/^# \*\*/p' -e '/^# TOTAL/p' tests.log
 
 t_pmx$(_EXE): $(UTL_H) utl_pmx_ut.c
 	$(CC) $(CFLAGS) -c -o utl_pmx_ut.$(_OBJ) utl_pmx_ut.c
