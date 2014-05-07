@@ -24,7 +24,8 @@ CFLAGS= -I../src -g
 .c.o:
 	$(CC) $(CFLAGS) -c -o $*.$(_OBJ) $*.c
 
-all: $(TESTS)
+all: clean $(TESTS)
+	chmod +x ./run_tests.sh
 	bash ./run_tests.sh 2> tests.log
 	sed -n -e '/^# \*\*/p' -e '/^# TOTAL/p' tests.log
 
