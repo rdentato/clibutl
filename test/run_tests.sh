@@ -7,5 +7,5 @@
  
 for f in t_*
 do
-  $f
+  ./$f
 done
