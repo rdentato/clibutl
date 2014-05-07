@@ -25,8 +25,7 @@ CFLAGS= -I../src -g
 	$(CC) $(CFLAGS) -c -o $*.$(_OBJ) $*.c
 
 all: $(TESTS)
-	echo > tests.log
-	for f in t_* ; do $$f 2>> tests.log ; done
+	bash ./run_tests.sh 2> tests.log
 	sed -n -e '/^# \*\*/p' -e '/^# TOTAL/p' tests.log
 
 t_pmx$(_EXE): $(UTL_H) utl_pmx_ut.c
