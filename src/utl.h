@@ -1313,6 +1313,7 @@ inline int c99_vsnprintf(char* str, size_t size, const char* format, va_list ap)
 int utl_bufFormat(buf_t bf, char *format, ...)
 {
   int count;
+  int count2;
   va_list ap;
 
   if (!bf) return -1;
@@ -1320,10 +1321,12 @@ int utl_bufFormat(buf_t bf, char *format, ...)
   va_start(ap, format);
   count = vsnprintf(NULL,0,format, ap);
   utl_bufSet(bf,count,'\0'); /* ensure there's enough room */
-  count = vsprintf(bufStr(bf),format, ap);
+  count2 = vsprintf(bufStr(bf),format, ap);
   va_end(ap);
   
-  return count;
+  assert(count == count2);
+  
+  return count2;
 }
 
 #endif
