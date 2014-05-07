@@ -1321,7 +1321,7 @@ int utl_bufFormat(buf_t bf, char *format, ...)
   va_start(ap, format);
   count = vsnprintf(NULL,0,format, ap);
   utl_bufSet(bf,count,'\0'); /* ensure there's enough room */
-  count2 = vsprintf(bufStr(bf),format, ap);
+  count2 = vsnprintf(bufStr(bf),count+1,format, ap);
   va_end(ap);
   
   assert(count == count2);
