@@ -1348,9 +1348,9 @@ int utl_bufFormat(buf_t bf, char *format, ...)
   %a alpha-numeric
   %x hex digit
   %d digit
-  %s space
+  %s space (includes NL)
   %n newline
-  %w white space (no nl)
+  %w white space (no NL)
   %l letter 
   
   %f floating point
@@ -1369,6 +1369,13 @@ typedef struct {
   char *matches[10][2];
 } pmx_t;
 
+
+
+int utl_pmxMatch(char *pat, char *str, pmx_t *p);
+#define pmxMatch utl_pmxMatch
+
+#ifdef UTL_LIB
+
 #define cur_pat(p)   (p)->cur_pat
 #define adv_pat(p)   ((p)->cur_pat += 1)
 
@@ -1378,11 +1385,6 @@ typedef struct {
 #define cur_start(p) (p)->matches[(p)->cur_lvl][0]
 #define cur_end(p)   (p)->matches[(p)->cur_lvl][0]
 #define cur_level(p) (p)->cur_lvl
-
-int utl_pmxMatch(char *pat, char *str, pmx_t *p);
-#define pmxMatch utl_pmxMatch
-
-#ifdef UTL_LIB
 
 static utl_skipatom(pmx_t *p)
 {
