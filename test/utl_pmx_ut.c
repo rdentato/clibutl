@@ -30,6 +30,10 @@ int main (int argc, char *argv[])
       TSTGROUP("simple") {
         TSTEQINT("simple letter (equal)",1,pmxMatch("a","a",&p));
         TSTEQINT("simple letter (different)",0,pmxMatch("a","b",&p));
+        TSTEQINT("Alpha char ",1,pmxMatch("%a","b",&p));
+        TSTEQINT("Alpha char (not)",0,pmxMatch("%a","(",&p));
+        TSTEQINT("Non-alpha char ",0,pmxMatch("%A","b",&p));
+        TSTEQINT("Non-alpha char (not)",1,pmxMatch("%A","(",&p));
       }
       TSTGROUP("alternate") {
         TSTEQINT("alternate letter (first)",1,pmxMatch("a|b","a",&p));

@@ -1420,6 +1420,8 @@ static int utl_atom(pmx_t *p)
     switch (*++pat) {
       case 'd' : if (isdigit(*str)) {r = 1; str++;}  break;
       case 'a' : if (isalpha(*str)) {r = 1; str++;}  break;
+      case 'D' : if (!isdigit(*str)) {r = 1; str++;}  break;
+      case 'A' : if (!isalpha(*str)) {r = 1; str++;}  break;
     }
   }
   else {
