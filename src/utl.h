@@ -1376,19 +1376,19 @@ int utl_pmxMatch(char *pat, char *str, pmx_t *p);
 
 #ifdef UTL_LIB
 
-#define cur_pat(p)   (p)->cur_pat
-#define adv_pat(p)   ((p)->cur_pat += 1)
+#define utl_cur_pat(p)   (p)->cur_pat
+#define utl_adv_pat(p)   ((p)->cur_pat += 1)
 
-#define cur_str(p)   ((p)->cur_str)
-#define adv_str(p)   ((p)->cur_str += 1)
+#define utl_cur_str(p)   ((p)->cur_str)
+#define utl_adv_str(p)   ((p)->cur_str += 1)
 
-#define cur_start(p) (p)->matches[(p)->cur_lvl][0]
-#define cur_end(p)   (p)->matches[(p)->cur_lvl][0]
-#define cur_level(p) (p)->cur_lvl
+#define utl_cur_start(p) (p)->matches[(p)->cur_lvl][0]
+#define utl_cur_end(p)   (p)->matches[(p)->cur_lvl][0]
+#define utl_cur_level(p) (p)->cur_lvl
 
 static utl_skipatom(pmx_t *p)
 {
-  char *pat = cur_pat(p);
+  char *pat = utl_cur_pat(p);
   int cnt = 0;
   
   if (!*pat) return;
@@ -1407,31 +1407,36 @@ static utl_skipatom(pmx_t *p)
     }
   }
   else pat++;
-  cur_pat(p) = pat;
+  utl_cur_pat(p) = pat;
 }
 
 static int utl_atom(pmx_t *p)
 {
   int r = 0;
-  char *str = cur_str(p);
-  char *pat = cur_pat(p);
-  if (*pat == '\0') {r = 1; }
+  int up = 0;
+  char *str = utl_cur_str(p);
+  char *pat = utl_cur_pat(p);
+  
+  if (*pat == '\0') {r = 1;}
   else if (*pat == '%') {
     switch (*++pat) {
-      case 'd' : if (isdigit(*str)) {r = 1; str++;}  break;
-      case 'a' : if (isalpha(*str)) {r = 1; str++;}  break;
+      case 'd' : if ( isdigit(*str)) {r = 1; str++;}  break;
+      case 'a' : if ( isalpha(*str)) {r = 1; str++;}  break;
       case 'D' : if (!isdigit(*str)) {r = 1; str++;}  break;
       case 'A' : if (!isalpha(*str)) {r = 1; str++;}  break;
+      default  : r = 0;
     }
   }
   else {
     if (*pat == *str) {r = 1;  str++;}
     pat++;
   }
+  
+  
   if (r) {
-    if (cur_start(p) == NULL) cur_start(p) = cur_str(p);
-    cur_end(p) = str;
-    cur_str(p) = str;
+    if (utl_cur_start(p) == NULL) utl_cur_start(p) = utl_cur_str(p);
+    utl_cur_end(p) = str;
+    utl_cur_str(p) = str;
   }
   p->cur_pat = pat;
   return r;
@@ -1442,10 +1447,10 @@ static int utl_term(pmx_t *p)
   int r = 0;
   char *old_pat = p->cur_pat;
   do {
-    if (cur_pat(p)[0] == '|') p->cur_pat += 1;
+    if (utl_cur_pat(p)[0] == '|') p->cur_pat += 1;
     r = utl_atom(p);
-  } while (r == 0 && cur_pat(p)[0] == '|');
-  while (cur_pat(p)[0] == '|') {
+  } while (r == 0 && utl_cur_pat(p)[0] == '|');
+  while (utl_cur_pat(p)[0] == '|') {
     p->cur_pat += 1;
     utl_skipatom(p);
   }
@@ -1458,9 +1463,9 @@ int utl_pmxMatch(char *pat, char *str, pmx_t *p)
   p->nmatches = 0;
   p->orig_str = str; p->cur_str = str;
   p->orig_pat = pat; p->cur_pat = pat; 
-  cur_level(p) = 0;
-  cur_start(p) = NULL;
-  cur_end(p) = NULL;
+  utl_cur_level(p) = 0;
+  utl_cur_start(p) = NULL;
+  utl_cur_end(p) = NULL;
   r =utl_term(p);
   return r;
 }

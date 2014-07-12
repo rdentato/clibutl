@@ -34,16 +34,20 @@ int main (int argc, char *argv[])
         TSTEQINT("Alpha char (not)",0,pmxMatch("%a","(",&p));
         TSTEQINT("Non-alpha char ",0,pmxMatch("%A","b",&p));
         TSTEQINT("Non-alpha char (not)",1,pmxMatch("%A","(",&p));
+        TSTEQINT("Digit char ",1,pmxMatch("%d","4",&p));
+        TSTEQINT("Digit char (not)",0,pmxMatch("%d","e",&p));
+        TSTEQINT("Non-digit char ",1,pmxMatch("%D","r",&p));
+        TSTEQINT("Non-digit char (not)",0,pmxMatch("%D","6",&p));
       }
       TSTGROUP("alternate") {
         TSTEQINT("alternate letter (first)",1,pmxMatch("a|b","a",&p));
-        TSTEQINT("pattern consumed",'\0',cur_pat(&p)[0]);
-        TSTFAILNOTE("pattern: '%s'",cur_pat(&p));
+        TSTEQINT("pattern consumed",'\0',utl_cur_pat(&p)[0]);
+        TSTFAILNOTE("pattern: '%s'",utl_cur_pat(&p));
         TSTEQINT("alternate letter (second)",1,pmxMatch("a|b","b",&p));
-        TSTEQINT("pattern consumed",'\0',cur_pat(&p)[0]);
+        TSTEQINT("pattern consumed",'\0',utl_cur_pat(&p)[0]);
         TSTEQINT("alternate letter (third)",1,pmxMatch("a|b|c","c",&p));
         TSTEQINT("alternate letter (fail)",0,pmxMatch("a|b|c","d",&p));
-        TSTEQINT("pattern consumed",'\0',cur_pat(&p)[0]);
+        TSTEQINT("pattern consumed",'\0',utl_cur_pat(&p)[0]);
       }
     }
   }
