@@ -202,7 +202,7 @@ utl_extern(const int utlZero, = 0);
 **
 **   Simple implementation of try/catch.
 ** .{{ c
-**   tryenv env = NULL;
+**   tryenv env = NULL;  // define an "environment" for trying and set to NULL
 **   try(env) {
 **      ... code ...
 **      if (something_failed) throw(env, ERR_OUTOFMEM)  // must be > 0 
@@ -215,7 +215,7 @@ utl_extern(const int utlZero, = 0);
 **   });
 ** .}}
 **
-**  This comes useful when you throw an exception form a called function.
+**  This comes useful when you throw an exception from a called function.
 **  The example below, handles the "out of mem" condition in the same place
 **  regardless of where the exception was raised.
 **
