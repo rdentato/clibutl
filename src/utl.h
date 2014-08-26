@@ -187,6 +187,7 @@ utl_extern(const int utlZero, = 0);
 #define utl_assum1(e,l) typedef struct {int utl_assumption[(e)?1:-1];} utl_assumption_##l
 #define utl_assum0(e,l) utl_assum1(e,l)
 #define utlAssume(e)    utl_assum0(e,__LINE__)
+#define utlAssert       assert
 
 
 #ifndef UTL_NOTRYCATCH
@@ -315,184 +316,20 @@ typedef struct utl_env_s {
 
 #endif
 
-#ifdef UTL_UNITTEST
-
-/* .% UnitTest
-** ===========
-**
-**   These macros will help you writing unit tests.  The log produced
-** is '<TAP 1.3=http://testanything.org> compatible and also contains
-** all the information about passing/failing.
-**
-**   They are available only if the symbol '|UTL_UNITTEST| is defined before
-** including the '|utl.h| header.
-** 
-**   '{UTL_UNITTEST} implies '{DEBUG}
-*/
-
-utl_extern(FILE *TST_FILE, = NULL);
-#define TSTFILE (TST_FILE?TST_FILE:stderr)
-
-/* Output is flushed every time to avoid we lose a message in case of
-** abnormal exit. 
-*/
-#define TSTWRITE(...) (fprintf(TSTFILE,__VA_ARGS__),fflush(TSTFILE))
-
-#define TSTTITLE(s) TSTWRITE("TAP version 13\n#\n# ** %s - (%s)\n",s,__FILE__)
-
-#define TST_INIT0 (TSTRES=TSTNUM=TSTGRP=TSTSEC=TSTTOT= \
-                               TSTGTT=TSTGPAS=TSTPASS=TSTNSK=TSTNTD=0)
-                                 
-#define TSTPLAN(s) for (TSTPASSED = TST_INIT0 + 1, TSTTITLE(s); \
-                                             TSTPASSED; TSTDONE(),TSTPASSED=0)
-                       
-/* Tests are divided in sections introduced by '{=TSTSECTION(title)} macro.
-** The macro reset the appropriate counters and prints the section header 
-*/
-#define TSTSECTION(s)  if ((TSTSTAT(), TSTGRP = 0, TSTSEC++, \
-                             TSTWRITE("#\n# * %d. %s (%s:%d)\n", \
-                             TSTSEC, s, __FILE__, __LINE__), TSTPASS=0)) ((void)0); \
-                       else                                               
-
-/* to disable an entire test section, just prepend '|_| or '|X|*/
- 
-#define XTSTSECTION(s) if (!utlZero) ((void)0); else 
-#define _TSTSECTION(s) XTSTSECTION(s)
-
-/* In each section, tests can be logically grouped so that different aspects
-** of related functions can be tested.
-*/
-#define TSTGROUP(s) \
-    if ((TSTWRITE("#\n# *   %d.%d %s\n",TSTSEC,++TSTGRP,s),TSTNUM=0)) ((void)0); else
-                     
-/* to disable a n entire test group , just prepend '|_| or '|X| */
-#define XTSTGROUP(s) if (!utlZero) ((void)0); else  
-#define _TSTGROUP(s) XTSTGROUP(s)
-
-/* Test code will be skipped if needed */
-#define TSTCODE   if (TSTSKP && *TSTSKP)   ((void)0); else  
-#define XTSTCODE  if (!utlZero) ((void)0); else
-#define _TSTCODE  XTSTCODE
-                     
-/* The single test is defined  with the '|TST(s,x)| macro.
-**   .['|s|] is a short string that identifies the test
-**    ['|x|] an assertion that has to be true for the test to succeed.
-**   ..
-*/
-#define XTST(s,x)
-
-#define TST(s,x) (TST_DO(s,((TSTSKP && *TSTSKP)?1:(x))),TST_WRDIR, TSTWRITE("\n"), TSTRES)
-
-#define TST_DO(s,x) (TSTRES = (x), TSTGTT++, TSTTOT++, TSTNUM++, \
-                     TSTPASSED = (TSTPASSED && (TSTRES || TSTTD)), \
-                     TSTWRITE("%s %4d - %s (:%d)", \
-                              (TSTRES? (TSTGPAS++,TSTPASS++,TSTOK) : TSTKO), \
-                               TSTGTT, s, __LINE__))
-
-#define TST_WRDIR \
-           ((TSTSKP && *TSTSKP)? (TSTNSK++, TSTWRITE(" # SKIP %s",TSTSKP)) \
-                   : (TSTTD ? (TSTNTD++, (TSTWRITE(" # TODO %s%s",TSTTD, \
-                                        (TSTRES?TSTWRN:utlEmptyString)))) : 0))
-
-#define TSTFAILED  (!TSTRES)
-
-/* You can skip a set of tests giving a reason.
-** Nested skips are not supported!
-*/
-#define TSTSKIP(x,r) for (TSTSKP=(x)?r:utlEmptyString; TSTSKP; TSTSKP=NULL)
-
-#define TSTTODO(r)   for (TSTTD=r; TSTTD; TSTTD=NULL)
-
-#define TSTNOTE(...) \
-                 (TSTWRITE("#      "),TSTWRITE(__VA_ARGS__), TSTWRITE("\n"))
-                                            
-#define TSTFAILNOTE(...) (TSTRES? 0 : (TSTNOTE(__VA_ARGS__)))
-
-#define TSTEXPECTED(f1,v1,f2,v2) \
-                             (TSTRES? 0 : (TSTNOTE("Expected "f1" got "f2,v1,v2)))
-
-#define TST_INT(s,e,r,o) do { int utl_exp = (e); int utl_ret = (r);\
-                             TST(s,utl_exp o utl_ret);\
-                             TSTEXPECTED("(int) "#o" %d",utl_exp,"%d",utl_ret); \
-                           } while (utlZero)
-
-                             
-#define TSTEQINT(s,e,r)  TST_INT(s,e,r, == )
-#define TSTNEQINT(s,e,r) TST_INT(s,e,r, != )
-#define TSTLTINT(s,e,r)  TST_INT(s,e,r, < )
-#define TSTLEINT(s,e,r)  TST_INT(s,e,r, <= )
-#define TSTGTINT(s,e,r)  TST_INT(s,e,r, > )
-#define TSTGEINT(s,e,r)  TST_INT(s,e,r, >= )
-
-#define TST_PTR(s,e,r,o)  do { void *utl_exp = (e); void *utl_ret = (r); \
-                              TST(s,utl_exp o utl_ret) ; \
-                              TSTEXPECTED("(ptr) "#o" 0x%p",utl_exp,"0x%p",utl_ret); \
-                            }  while (utlZero)
-
-                           
-#define TSTEQPTR(s,e,r)  TST_PTR(s,e,r, == )
-#define TSTNEQPTR(s,e,r) TST_PTR(s,e,r, != )
-#define TSTNULL(s,r)     TSTEQPTR(s,NULL,r)
-#define TSTNNULL(s,r)    TSTNEQPTR(s,NULL,r)
-
-              
-#define TSTBAILOUT(r) \
-          if (!(r)) ((void)0); else {TSTWRITE("Bail out! %s\n",r); TSTDONE(); exit(0);}
-
-/* At the end of a section, the accumulated stats can be printed out */
-#define TSTSTAT() \
-          (TSTTOT == 0 ? 0 : ( \
-           TSTWRITE("#\n# SECTION %d OK: %d/%d\n",TSTSEC,TSTPASS,TSTTOT), \
-           TSTTOT = 0))
-
-/* At the end of all the tests, the accumulated stats can be printed out */
-#define TSTDONE() \
-  (TSTGTT <= 0 ? 0 : ( TSTSTAT(),  \
-  TSTWRITE("#\n# TOTAL OK: %d/%d SKIP: %d TODO: %d\n",TSTGPAS,TSTGTT, \
-                                                              TSTNSK,TSTNTD), \
-  TSTWRITE("#\n# TEST PLAN: %s \n",TSTPASSED ? "PASSED" : "FAILED"), \
-  TSTWRITE("#\n1..%d\n",TSTGTT),fflush(TSTFILE)) )
-
-/* Execute a statement if a test succeeded */
-#define TSTIF_OK  if (TSTRES)
-
-/* Execute a statement if a test failed */
-#define TSTIF_NOTOK if (!TSTRES)
-
-static int    TSTRES    = 0;  /* Result of the last performed '|TST()| */
-static int    TSTNUM    = 0;  /* Last test number */
-static int    TSTGRP    = 0;  /* Current test group */
-static int    TSTSEC    = 0;  /* Current test SECTION*/
-static int    TSTTOT    = 0;  /* Number of tests executed */
-static int    TSTGTT    = 0;  /* Number of tests executed (Grand Total) */
-static int    TSTGPAS   = 0;  /* Number of tests passed (Grand Total) */
-static int    TSTPASS   = 0;  
-static int    TSTPASSED = 1;  
-static int    TSTNSK    = 0;  
-static int    TSTNTD    = 0;  
-static char  *TSTSKP    = NULL;
-static char  *TSTTD     = NULL;
-
-static const char *TSTOK  = "ok    ";
-static const char *TSTKO  = "not ok";
-static const char *TSTWRN = " (passed unexpectedly!)";
-
-
-#endif /* UTL_UNITTEST */
-
 /* .% Logging
 ** ==========
 **
 */
 
-#define log_D 7
-#define log_I 6
-#define log_M 5
-#define log_W 4
-#define log_E 3
-#define log_C 2
-#define log_A 1
-#define log_F 0
+#define log_D 8
+#define log_I 7
+#define log_M 6
+#define log_W 5
+#define log_E 4
+#define log_C 3
+#define log_A 2
+#define log_F 1
+#define log_T 0
 
 
 #define log_X (log_D + 1)
@@ -505,24 +342,29 @@ static const char *TSTWRN = " (passed unexpectedly!)";
 
 #ifndef UTL_NOLOGGING
 
-#define UTL_LOG_NEW 0x00    
-#define UTL_LOG_ADD 0x01    /* append to existing file */
-#define UTL_LOG_ERR 0x02    /* use stderr */
-#define UTL_LOG_OUT 0x04    /* use stdout */
+#define UTL_LOG_OUT 0x80    /* use stdout */
+#define UTL_LOG_ERR 0x40    /* use stderr */
+
+#define UTL_LOG_SKIP 0x01   /* skip tests */
+#define UTL_LOG_SKP0 0x02
+#define UTL_LOG_RES  0x04
 
 typedef struct {
   FILE          *file;
+  unsigned short rot;
   unsigned char  level;
   unsigned char  flags;
-  unsigned short rot;
-  char          *pre;
+  unsigned char  ok;
+  unsigned char  ko;
+  unsigned char  skp;
+  unsigned char  xx;
 } utl_log_s, *utlLogger;
 
-#define utl_log_stdout_init {NULL, log_W, UTL_LOG_OUT,0,NULL}
+#define utl_log_stdout_init {NULL, 0, log_W, UTL_LOG_OUT,0}
 utl_extern(utl_log_s utl_log_stdout , = utl_log_stdout_init);
 #define logStdout (&utl_log_stdout)
 
-#define utl_log_stderr_init {NULL, log_W, UTL_LOG_ERR,0,NULL}
+#define utl_log_stderr_init {NULL, 0, log_W, UTL_LOG_ERR,0}
 utl_extern(utl_log_s utl_log_stderr , = utl_log_stderr_init);
 #define logStderr (&utl_log_stderr)
 
@@ -543,9 +385,9 @@ utl_extern(utlLogger utl_logger , = logNull);
 **                         enviroment variable.
 */
 
-                                    /* 0   1   2   3   4   5   6   7   8   9    */
-                                    /* 0   4   8   12  16  20  24  28  32  36   */
-utl_extern(char const utl_log_abbrev[], = "FTL ALT CRT ERR WRN MSG INF DBG OFF LOG ");
+                                        /* 0   1   2   3   4   5   6   7   8   9   10 */
+                                        /* 0   4   8   12  16  20  24  28  32  36  40 */
+utl_extern(char const utl_log_abbrev[], = "TST FTL ALT CRT ERR WRN MSG INF DBG OFF LOG ");
 
 int   utl_log_level(utlLogger lg);
 int   utl_log_chrlevel(char *l);
@@ -625,8 +467,6 @@ int   logLevelEnv(utlLogger lg, char *var, char *level);
 #define logOpen(f,m)   utl_logOpen(f,m)
 #define logClose(l)    utl_log_close(l)
 
-#define logPre(l,s)      ((l)->pre = s)
-
 utlLogger utl_logOpen(char *fname, char *mode);
 utlLogger utl_logClose(utlLogger lg);
 void utl_log_write(utlLogger lg,int lv, int tstamp, char *format, ...);
@@ -659,6 +499,58 @@ void utl_log_write(utlLogger lg,int lv, int tstamp, char *format, ...);
 
 #define logAssert(lg,e)        utl_log_assert(lg, e, #e, __FILE__, __LINE__)
 
+#define logTest(lg,s,e)        if (lg && !(lg->flags & UTL_LOG_SKIP))\
+                                    utl_log_test(lg, (e), s, 0, __FILE__, __LINE__); \
+                               else utl_log_test(lg, 1, s, 1, __FILE__, __LINE__)
+                               
+#define logTestPlan(lg, s)      for((lg? utl_log_write(lg, log_T, 1, "PLN  %s (%s:%d)",s, __FILE__, __LINE__),\
+                                    lg->ok=lg->ko=lg->skp =0, lg->flags |= UTL_LOG_SKP0\
+                                  : 1); lg->flags & UTL_LOG_SKP0;lg->flags &= ~UTL_LOG_SKP0,logTestStat(lg)) 
+
+#define logTestNote(lg, ...)   utl_log_write(lg, log_T, 0, "     "__VA_ARGS__)
+
+#define logTestFailNote(lg, ...)  (lg && !(lg->flags & UTL_LOG_RES)? logTestNote(lg, __VA_ARGS__):0)
+
+#define logTestCode(lg) if (!(lg && !(lg->flags & UTL_LOG_SKIP))) (void)0; else 
+
+#define logTestStat(lg)        (lg? utl_log_write(lg, log_T, 1, "RES  KO: %d  OK: %d  SKIP: %d  TOT: %d  (:%d)", \
+                                    lg->ko, lg->ok, lg->skp, lg->ko + lg->ok + lg->skp,__LINE__) \
+                                  : 0)
+
+#define logTestSkip(lg,s,e)    for ( utl_log_testskip_init(lg, e, s,  __LINE__) ; \
+                                     utl_log_testskip_check(lg) ;\
+                                     utl_log_testskip_end(lg,  __LINE__) )
+
+#define log_testexpect(lg,e,f1,v1,f2,v2) \
+                             (e? (void)0 : (logTestNote(lg,"Expected "f1" got "f2,v1,v2)))
+
+#define log_testxxx(t1,t2,lg,s,e,r,o)  if (lg && !(lg->flags & UTL_LOG_SKIP)) { \
+                                   t1 utl_exp = (e); t1 utl_ret = (r); \
+                                   log_testexpect(lg,utl_log_test(lg, (utl_exp o utl_ret), s, 0, __FILE__, __LINE__), \
+                                                      "("#t1") "#o" "#t2,utl_exp,#t2,utl_ret); \
+                                 } \
+                                 else utl_log_test(lg, 1, s, 1, __FILE__, __LINE__)
+
+#define log_testint(lg,s,e,r,o) log_testxxx(int,%d,lg,s,e,r,o)
+#define log_testptr(lg,s,e,r,o) log_testxxx(void *,%p,lg,s,e,r,o)
+
+#define logTestEQInt(lg,s,e,r)  log_testint(lg,s,e,r, == )
+#define logTestNEInt(lg,s,e,r)  log_testint(lg,s,e,r, != )
+#define logTestGTInt(lg,s,e,r)  log_testint(lg,s,e,r, > )
+#define logTestGEInt(lg,s,e,r)  log_testint(lg,s,e,r, >= )
+#define logTestLTInt(lg,s,e,r)  log_testint(lg,s,e,r, < )
+#define logTestLEInt(lg,s,e,r)  log_testint(lg,s,e,r, <= )
+
+#define logTestEQPtr(lg,s,e,r)  log_testptr(lg,s,e,r, == )
+#define logTestNEPtr(lg,s,e,r)  log_testptr(lg,s,e,r, != )
+#define logTestGTPtr(lg,s,e,r)  log_testptr(lg,s,e,r, > )
+#define logTestGEPtr(lg,s,e,r)  log_testptr(lg,s,e,r, >= )
+#define logTestLTPtr(lg,s,e,r)  log_testptr(lg,s,e,r, < )
+#define logTestLEPtr(lg,s,e,r)  log_testptr(lg,s,e,r, <= )
+
+#define logTestNULL(lg,s,e)  logTestEQPtr(lg,s,e,NULL)                                     
+#define logTestNNULL(lg,s,e) logTestNEPtr(lg,s,e,NULL)                                     
+
 /*
 ** .v
 **   logError("Too many items at counter %d (%d)",numcounter,numitems);
@@ -684,10 +576,10 @@ FILE *utl_logFile(utlLogger lg)
 
 int   utl_log_chrlevel(char *l) {
   int i=0;
-  char c = l ? toupper(l[0]) : 'W';
+  char c = (l && *l)? toupper(l[0]) : 'W';
   
   while (utl_log_abbrev[i] != ' ' && utl_log_abbrev[i] != c) i+=4;
-  i = (i <= 4*7) ? (i>> 2) : log_W;
+  i = (i <= 4*log_D) ? (i>> 2) : log_W;
   return i;
 }
 
@@ -727,10 +619,9 @@ utlLogger utl_logOpen(char *fname, char *mode)
     if (lg) { 
       lg->flags = 0;
       lg->rot = 0;
-    lg->pre = NULL;
       lg->file = f;
-    /* Assume that log_L is the last level in utl_log_abbrev */
-    utlAssume( (log_L +1) == ((sizeof(utl_log_abbrev)-1)>>2));
+      /* Assume that log_L is the last level in utl_log_abbrev */
+      utlAssume( (log_L +1) == ((sizeof(utl_log_abbrev)-1)>>2));
       lg->level = log_L;
       utl_log_write(lg,log_L, 1, "%s \"%s\"", (md[0] == 'a') ? "ADDEDTO" : "CREATED",fname); 
       
@@ -787,7 +678,6 @@ void utl_log_write(utlLogger lg, int lv, int tstamp, char *format, ...)
     } else {
       strcpy(tstr,"                   ");          
     }
-    if (lg->pre) fprintf(f, "%s ",lg->pre);
     fprintf(f, "%s %.4s", tstr, utl_log_abbrev+(lv<<2));
     va_start(args, format);  vfprintf(f,format, args);  va_end(args);
     fputc('\n',f);
@@ -805,6 +695,49 @@ void utl_log_assert(utlLogger lg,int e,char *estr, char *file,int line)
 #endif
   }
 }
+
+int utl_log_test(utlLogger lg,int e,char *s, int skip, char *file,int line)
+{ 
+  char *msg;
+  
+  
+  if (lg) {
+    lg->flags &= ~UTL_LOG_RES;
+    if (!skip) {
+      if (e) {msg = "OK  "; lg->ok++; }
+      else   {msg = "KO  "; lg->ko++; }
+    }
+    else  {msg = "SKP "; lg->skp++;}
+    
+    if (e) lg->flags |=  UTL_LOG_RES;
+    
+    utl_log_write(lg, log_T, 1, "%s %s (:%d)",msg,s, line);
+  }
+  return e;
+}
+
+void utl_log_testskip_init(utlLogger lg, int e, char *estr,int line)
+{
+  if (lg) {
+    if (e) {
+      utl_log_write(lg, log_T, 1, "SKP  REASON: \"%s\" (:%d)",estr, line);
+      lg->flags |= UTL_LOG_SKIP;
+    }
+    lg->flags |= UTL_LOG_SKP0;
+  }
+}
+
+int utl_log_testskip_check(utlLogger lg)
+{
+  return lg && (lg->flags & UTL_LOG_SKP0);
+}
+
+void utl_log_testskip_end(utlLogger lg, int line)
+{
+  lg->flags &= ~(UTL_LOG_SKP0|UTL_LOG_SKIP);
+  utl_log_write(lg, log_T, 1, "SKP  END (:%d)", line);
+}
+
                  
 #endif  /*- UTL_LIB */
 
@@ -842,6 +775,36 @@ typedef void *utlLogger;
 #define logFile(x) NULL
 #define logStdout  NULL
 #define logStderr  NULL
+
+
+#define logTest(lg,s,e)        ((void)0)
+#define logTestPlan(lg, s)     if (!utlZero) (void)0; else
+#define logTestNote(lg, ...)    ((void)0)
+#define logTestFailNote(lg, ...) ((void)0) 
+#define logTestCode(lg)       
+#define logTestStat(lg)        ((void)0)
+#define logTestSkip(lg,s,e)    if (!utlZero) (void)0; else
+
+#define log_testint(lg,s,e,r,o) ((void)0)
+#define log_testptr(lg,s,e,r,o) ((void)0)
+
+#define logTestEQInt(lg,s,e,r)  ((void)0)
+#define logTestNEInt(lg,s,e,r)  ((void)0)
+#define logTestGTInt(lg,s,e,r)  ((void)0)
+#define logTestGEInt(lg,s,e,r)  ((void)0)
+#define logTestLTInt(lg,s,e,r)  ((void)0)
+#define logTestLEInt(lg,s,e,r)  ((void)0)
+                               
+#define logTestEQPtr(lg,s,e,r)  ((void)0)
+#define logTestNEPtr(lg,s,e,r)  ((void)0)
+#define logTestGTPtr(lg,s,e,r)  ((void)0)
+#define logTestGEPtr(lg,s,e,r)  ((void)0)
+#define logTestLTPtr(lg,s,e,r)  ((void)0)
+#define logTestLEPtr(lg,s,e,r)  ((void)0)
+                                
+#define logTestNULL(lg,s,e)     ((void)0)
+#define logTestNNULL(lg,s,e)    ((void)0)
+
 
 #endif /*- UTL_NOLOGGING */
 

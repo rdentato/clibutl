@@ -25,72 +25,54 @@ point p1;
 point p2;
 point *p;
 
+#define lg logStderr
+
 int main (int argc, char *argv[])
 {
-  logLevel(logStderr,"DBG");
-  logPre(logStderr,"#");
+  logLevel(lg,"DBG");
 
   p1.x =  1; p1.y =  2;
   p2.x = -1; p2.y = -2;
 
-  TSTPLAN("utl unit test: vec") {
+  logTestPlan(lg,"utl unit test: vec") {
   
-    TSTSECTION("vec creation") {
-      TSTGROUP("vecNew()") {
-        TSTCODE {
-          vv = vecNew(point);
-        }
-        TSTNNULL("Is not NULL", vv );
-        TSTEQINT("Mem Valid", utlMemValid, utlMemCheck(vv));
-        TSTEQINT("Len 0", 0, vecCount(vv) );
-      }
+    vv = vecNew(point);
+ 
+    logTestNNULL(lg,"Is not NULL", vv );
+    logTestEQInt(lg,"Mem Valid", utlMemValid, utlMemCheck(vv));
+    logTestEQInt(lg,"Len 0", 0, vecCount(vv) );
+
+    vecSet(vv,0,&p1);
+    logTestNNULL(lg,"Is not NULL", vv->vec );
+    p = vecGet(vv,0);
+    logTestEQInt(lg,"Set properly direct access", 1, p->x );
+    logTestEQInt(lg,"Len 1", 1, vecCount(vv) );
+
+    vecSet(vv,1,&p2);
+    logTestNNULL(lg,"Is not NULL", vv->vec );
+    p = vecGet(vv,1);
+    logTestEQInt(lg,"Set properly direct access", -1, p->x );
+    logTestEQInt(lg,"Len 1", 2, vecCount(vv) );
+
+    p = vecGet(vv,vecCount(vv)+1);
+    logTestNULL(lg,"Is Null",p);
+
+    p = vec(vv,point);
+    logTestNNULL(lg,"Is not Null",p);
+    
+    logTestSkip(lg,"Vec array is NULL", p==NULL) {
+      logTestEQInt(lg,"v[0]",2, p[0].y);
+      logTestEQInt(lg,"v[1]",-2, p[1].y);
     }
-    TSTSECTION("vec add") {
-      TSTGROUP("vec set() 1") {
-        vecSet(vv,0,&p1);
-        TSTNNULL("Is not NULL", vv->vec );
-        p = vecGet(vv,0);
-        TSTEQINT("Set properly direct access", 1, p->x );
-        TSTEQINT("Len 1", 1, vecCount(vv) );
-     }
-     TSTGROUP("vec set() 2") {
-        vecSet(vv,1,&p2);
-        TSTNNULL("Is not NULL", vv->vec );
-        p = vecGet(vv,1);
-        TSTEQINT("Set properly direct access", -1, p->x );
-        TSTEQINT("Len 1", 2, vecCount(vv) );
-      }
-    }
-    TSTSECTION("vec get") {
-      TSTGROUP("vec get outbound") {
-        p = vecGet(vv,vecCount(vv)+1);
-        TSTNULL("Is Null",p);
-      }
-      TSTGROUP("vec as array") {
-        p = vec(vv,point);
-        TSTNNULL("Is not Null",p);
-        TSTSKIP(p==NULL,"Vec array is NULL") {
-          TSTEQINT("v[0]",2, p[0].y);
-          TSTEQINT("v[1]",-2, p[1].y);
-        }
-      }
-    }
-    TSTSECTION("vec Resize") {
-      TSTGROUP("vec grow") {
-        vecResize(vv,30);
-        TSTLEINT("Grown up", 30, vv->max);
-      }
-      TSTGROUP("vec shrink") {
-        vecResize(vv,10);
-        TSTLEINT("Shrink", 10, vv->max);
-        TSTNOTE("Cur max: %d", vv->max);
-      }
-    }
-    TSTSECTION("vec cleanup") {
-      TSTGROUP("vec free") {
-        vv = vecFree(vv);
-        TSTNULL("Is NULL", vv );
-      }
-    }
+    
+    vecResize(vv,30);
+    logTestLEInt(lg,"Grown up", 30, vv->max);
+
+    vecResize(vv,10);
+    logTestLEInt(lg,"Shrink", 10, vv->max);
+    logTestNote(lg,"Cur max: %d", vv->max);
+
+    vv = vecFree(vv);
+    logTestNULL(lg,"Is NULL", vv );
   }
 }

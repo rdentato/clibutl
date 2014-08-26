@@ -17,27 +17,21 @@ int k=0;
 int c=0;
 chs_t s=NULL;
 
+#define lg logStderr
+
 int main (int argc, char *argv[])
 {
-
-  TSTPLAN("utl unit test: chs") {
+  logTesPlan(lg,"utl unit test: chs") {
   
-    TSTSECTION("chs creation") {
-      TSTGROUP("chsNew()") {
-        chsNew(s);
-        TSTNEQPTR("Is not NULL", NULL, s );
-      }
-    }
-    TSTSECTION("chs add") {
-      TSTGROUP("chs set()") {
-        TSTEQINT("Len 0", 0, chsLen(s) );
-        chsSetChr(s,0,'a');
-        TSTNEQPTR("Is not NULL", NULL, s );
-        TSTEQINT("Set properly direct access", 'a', s[0] );
-        TSTEQINT("Set properly (chrAt)", 'a', chsChrAt(s,0) );
-        TSTEQINT("Len 1", 1, chsLen(s) );
+    chsNew(s);
+    logTestNEPtr(lg,"Is not NULL", NULL, s );
+    logTestEQInt(lg,"Len 0", 0, chsLen(s) );
+
+    chsSetChr(s,0,'a');
+    logTestNEPtr(lg,"Is not NULL", NULL, s );
+    logTestEQInt(lg,"Set properly direct access", 'a', s[0] );
+    logTestEQInt(lg,"Set properly (chrAt)", 'a', chsChrAt(s,0) );
+    logTestEQInt(lg,"Len 1", 1, chsLen(s) );
         
-      }
-    }
   }
 }

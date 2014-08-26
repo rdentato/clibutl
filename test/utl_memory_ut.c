@@ -12,6 +12,8 @@
 
 #include "utl.h"
 
+#define lg logStderr
+
 int main (int argc, char *argv[])
 {
   char *ptr_a;
@@ -19,49 +21,41 @@ int main (int argc, char *argv[])
   int valid;
   int k;
   
-  TSTPLAN("utl unit test: memory check") {
-    utlMemLog = logOpen("memory.log","w");
-    logLevel(utlMemLog,"Info");
-
-    TSTSECTION("malloc") {
-      TSTGROUP("malloc") {
-        TSTCODE { ptr_a = malloc(32); }
-        TSTEQINT("Check Valid after malloc()",utlMemValid,utlMemCheck(ptr_a) );
-        TSTEQINT("Allocated memory is 32",32, utlMemAllocated);
-        
-        TSTCODE { free(ptr_a); }
-        TSTNEQINT("Check invalid after free", utlMemValid, utlMemCheck(ptr_a));
-        TSTEQINT("Allocated memory is 0",0,utlMemAllocated);
-        
-        TSTCODE { free(ptr_a); }
-        TSTNEQINT("Check invalid again",utlMemValid,utlMemCheck(ptr_a));
-        
-        TSTCODE { ptr_a = malloc(0); }
-        TSTEQINT("Check Valid after malloc(0)",utlMemValid,utlMemCheck(ptr_a) );
-        TSTCODE { free(ptr_a); }
-      }
-      
-      TSTGROUP("calloc") {
-        TSTCODE { ptr_a = calloc(8,4); }
-        TSTEQINT("Allocated 8x4 ", utlMemValid,utlMemCheck(ptr_a) );
-        TSTCODE {for (k=0,valid=0; k<32; k++) valid += ptr_a[k];} 
-        TSTEQINT("Memory is clear",0, valid);
-        TSTCODE { free(ptr_a); }
-      }
-      
-      TSTGROUP("overrun memory") {
-        TSTCODE { ptr_a = malloc(16);  }
-        TSTEQINT("Check Valid after malloc()",utlMemValid,utlMemCheck(ptr_a));
-        TSTEQINT("Allocated memory is 16",16,utlMemAllocated);
-        
-        TSTCODE { ptr_a[16] = '\0'; }
-        TSTEQINT("Check invalid after overrun",utlMemOverflow ,utlMemCheck(ptr_a) );
-        TSTCODE { free(ptr_a); }
-      
-      }
-    }
-    TSTNOTE("Check the file 'memory.log' to see the log of traced allocations");
-  }
+  utlMemLog = lg;
   
-  logClose(utlMemLog);
+  logTestPlan(lg,"utl unit test: memory check") {
+  
+    logLevel(utlMemLog,"Info");
+    
+    ptr_a = malloc(32); 
+    logTestEQInt(lg,"Check Valid after malloc()",utlMemValid,utlMemCheck(ptr_a) );
+    logTestEQInt(lg,"Allocated memory is 32",32, utlMemAllocated);
+    
+    free(ptr_a);
+    logTestNEInt(lg,"Check invalid after free", utlMemValid, utlMemCheck(ptr_a));
+    logTestEQInt(lg,"Allocated memory is 0",0,utlMemAllocated);
+    
+    free(ptr_a);
+    logTestNEInt(lg,"Check invalid again",utlMemValid,utlMemCheck(ptr_a));
+    
+    ptr_a = malloc(0);
+    logTestEQInt(lg,"Check Valid after malloc(0)",utlMemValid,utlMemCheck(ptr_a) );
+    
+    free(ptr_a); 
+    ptr_a = calloc(8,4);
+    logTestEQInt(lg,"Allocated 8x4 ", utlMemValid,utlMemCheck(ptr_a) );
+    
+    for (k=0,valid=0; k<32; k++) valid += ptr_a[k];
+    logTestEQInt(lg,"Memory is clear",0, valid);
+    free(ptr_a); 
+    
+    
+    ptr_a = malloc(16);  
+    logTestEQInt(lg,"Check Valid after malloc()",utlMemValid,utlMemCheck(ptr_a));
+    logTestEQInt(lg,"Allocated memory is 16",16,utlMemAllocated);
+    
+    ptr_a[16] = '\0'; 
+    logTestEQInt(lg,"Check invalid after overrun",utlMemOverflow ,utlMemCheck(ptr_a) );
+    free(ptr_a);   
+  }
 }

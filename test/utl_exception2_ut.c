@@ -16,12 +16,13 @@ char buf[512];
 int k=0;
 int c=0;
 
+#define lg logStderr 
 
 void uncatch()
 { 
   if (k==9999) {
-    TST("Exit for unhandled exception",1);
-    TSTDONE();
+    logTest(lg,"Exit for unhandled exception",1);
+    logTestStat(lg);
   }
 }
 
@@ -31,27 +32,22 @@ int main (int argc, char *argv[])
   
   atexit(uncatch);
   
-  TSTPLAN("utl unit test: unhandled") {
-    TSTSECTION("Handled catch") {
-      TSTGROUP("catch 1") {
-        TSTCODE {
-          k = 0;
-          try(env) { throw(env,2);}
-          catch({ 
-            case 1 : k = 1; break;
-            case 2 : k = 2; break;
-          });
-        } TSTEQINT("Exception caught", 2,k);
-        TSTCODE {
-          k = 9999;
-          try(env) { throw(env,4); }
-          catch ({
-            case 1: k = 1; break;
-            case 2: k = 2; break;
-            default : rethrow;
-          });
-        } TST("Exit for unhandled exception", 0);
-      }
-    }
+  logTestPlan(lg,"utl unit test: unhandled") {
+    k = 0;
+    try(env) { throw(env,2);}
+    catch({ 
+      case 1 : k = 1; break;
+      case 2 : k = 2; break;
+    });
+    logTestEQInt(lg,"Exception caught", 2,k);
+
+    k = 9999;
+    try(env) { throw(env,4); }
+    catch ({
+      case 1: k = 1; break;
+      case 2: k = 2; break;
+      default : rethrow;
+    });
+    logTest(lg,"Exit for unhandled exception", 0);
   } 
 }

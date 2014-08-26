@@ -16,25 +16,19 @@ char buf[512];
 int k=0;
 int c=0;
 
+#define lg logStderr
+
 int main (int argc, char *argv[])
 {
-
-  TSTPLAN("utl unit test: general") {
+ 
+  logTestPlan(lg, "utl unit test: general") {
   
-    TSTSECTION("General use constants") {
-      TSTGROUP("utlEmptyFun()") {
-        TSTNEQPTR("Is not NULL", NULL, utlEmptyFun );
-        TSTEQINT("Can be called", 0,utlEmptyFun());
-      }
+    logTestNEPtr(lg,"utlEmptyFun is not NULL", NULL, utlEmptyFun );
+    logTestEQInt(lg,"utlEmptyFun can be called", 0,utlEmptyFun());
   
-      TSTGROUP("utlEmptyString") {
-        TSTNEQPTR("Is not NULL", NULL,utlEmptyString);
-        TSTEQINT("Is empty", '\0', utlEmptyString[0]);
-      }
-  
-      TSTGROUP("utlZero") {
-        TSTEQINT("Is zero", 0, utlZero);
-      }
-    }
+    logTestNEPtr(lg,"utlEmptyString is not NULL", NULL,utlEmptyString);
+    logTestEQInt(lg,"utlEmptyString is empty", '\0', utlEmptyString[0]);
+    
+    logTestEQInt(lg,"utlZero is zero", 0, utlZero);
   }
 }

@@ -7,7 +7,7 @@
   atom = op? (class | char | '(' term ')' | '{' term '}')
   class = '%' classid | '[' '^'? range+ ']' 
   range = char | char '-' char
-  op = '*' | '?' | '+' | '!'
+  op = '*' | '?' | '+' | '!' | '&'
   
   %a alpha-numeric
   %x hex digit
@@ -84,8 +84,8 @@ static int utl_atom(pmx_t *p)
   char *pat = utl_cur_pat(p);
   
   if (*pat == '\0') {r = 1;}
-  else if (*pat == ')') {r = 1; pat++;}
-  else if (*pat == '(') {utl_push(p); pat++;}
+  else if (*pat == ')') {r = 1; utl_pmxpop(p); pat++;}
+  else if (*pat == '(') {utl_pmxpush(p); pat++;}
   else if (*pat == '%') {
     switch (*++pat) {
       case 'd' : if ( isdigit(*str)) {r = 1; str++;}  break;
