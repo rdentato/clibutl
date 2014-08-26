@@ -35,13 +35,10 @@
 **
 **   This file ('|utl.h|) provide the following basic elements:
 **
-**  .[Unit Testing]   A simple framework to create unit tests. Tests output
-**                    is compliant with the TAP '(Test Anything Protocol)
-**                    standard.
-**
-**   [Logging]        To print logging traces during program execution.
+**  .[Logging]        To print logging traces during program execution.
 **                    It offers multilevel logging similar to '|log4j|
 **                    but limited to files.
+**                    Included are functions to implement unit tests.
 **
 **   [Finite State Machine]
 **                    Macros to use FSM as if they were a native C control
@@ -77,7 +74,7 @@
 **       #define  UTL_C
 **       #include "utl.h"
 **  .}}
-**  and link it to your project.
+**  and add it to your project to your project.
 **
 */
 
@@ -107,12 +104,6 @@
 #ifdef UTL_MEMCHECK
 #ifdef UTL_NOLOGGING
 #undef UTL_NOLOGGING
-#endif
-#endif
-
-#ifdef UTL_UNITTEST
-#ifndef DEBUG
-#define DEBUG
 #endif
 #endif
 
