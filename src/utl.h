@@ -74,7 +74,7 @@
 **       #define  UTL_C
 **       #include "utl.h"
 **  .}}
-**  and add it to your project to your project.
+**  and add it to your project.
 **
 */
 
@@ -1118,7 +1118,8 @@ static int utl_vec_expand(vec_t v, size_t i)
    
   new_max = v->max;
   
-  if (new_max < 8) new_max = 8;
+  /* The minimum block should be able to contain a void * */
+  if (new_max < sizeof(void *)) new_max = sizeof(void *);
 
   while (new_max <= i) new_max *= 2; /* double */
    

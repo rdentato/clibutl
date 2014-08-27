@@ -27,7 +27,6 @@ all:  $(TESTS)
 	chmod +x ./run_tests.sh
 	./run_tests.sh 2>&1 | sed -n -e '/TST PLN/p' -e '/TST RES/p'
 
-
 t_buf$(_EXE): $(UTL_H)  utl_buf_ut.c
 	$(CC) $(CFLAGS) -c -o utl_buf_ut.$(_OBJ) utl_buf_ut.c
 	gcc -o $@ utl_buf_ut.$(_OBJ)
@@ -40,29 +39,25 @@ t_log$(_EXE): $(UTL_H)  utl_logging_ut.c
 	$(CC) $(CFLAGS) -c -o utl_logging_ut.$(_OBJ) utl_logging_ut.c
 	gcc -o $@ utl_logging_ut.$(_OBJ)
 
-t_log2$(_EXE): $(UTL_H)  utl_logging2_ut.c
-	$(CC) $(CFLAGS) -c -o utl_logging2_ut.$(_OBJ) utl_logging2_ut.c
-	gcc -o $@ utl_logging2_ut.$(_OBJ)
+t_general$(_EXE): $(UTL_H)  utl_general_ut.c
+	$(CC) $(CFLAGS) -c -o utl_general_ut.$(_OBJ) utl_general_ut.c
+	gcc -o $@ utl_general_ut.$(_OBJ)
 
-utl_general_ut.o: $(UTL_H) utl_general_ut.c
-t_general$(_EXE): utl_general_ut.o
-	gcc -o $@ $<
+t_try$(_EXE): $(UTL_H)  utl_exception_ut.c
+	$(CC) $(CFLAGS) -c -o utl_exception_ut.$(_OBJ) utl_exception_ut.c
+	gcc -o $@ utl_exception_ut.$(_OBJ)
 
-utl_exception_ut.o: $(UTL_H) utl_exception_ut.c
-t_try$(_EXE): utl_exception_ut.o
-	gcc -o $@ $<
-  
-utl_exception2_ut.o: $(UTL_H) utl_exception2_ut.c
-t_try2$(_EXE): utl_exception2_ut.o
-	gcc -o $@ $<
+t_try2$(_EXE): $(UTL_H)  utl_exception2_ut.c
+	$(CC) $(CFLAGS) -c -o utl_exception2_ut.$(_OBJ) utl_exception2_ut.c
+	gcc -o $@ utl_exception2_ut.$(_OBJ)
 
-utl_memory_ut.o: $(UTL_H) utl_memory_ut.c
-t_mem$(_EXE): utl_memory_ut.o
-	gcc -o $@ $<
+t_mem$(_EXE): $(UTL_H)  utl_memory_ut.c
+	$(CC) $(CFLAGS) -c -o utl_memory_ut.$(_OBJ) utl_memory_ut.c
+	gcc -o $@ utl_memory_ut.$(_OBJ)
 
-utl_fsm_ut.o: $(UTL_H) utl_fsm_ut.c
-t_fsm$(_EXE): utl_fsm_ut.o
-	gcc -o $@ $<
+t_fsm$(_EXE): $(UTL_H)  utl_fsm_ut.c
+	$(CC) $(CFLAGS) -c -o utl_fsm_ut.$(_OBJ) utl_fsm_ut.c
+	gcc -o $@ utl_fsm_ut.$(_OBJ)
 
 clean:
 	rm -f *.exe *.$(_OBJ) *.tmp *.log
