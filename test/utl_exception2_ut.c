@@ -50,4 +50,5 @@ int main (int argc, char *argv[])
     });
     logTest(lg,"Exit for unhandled exception", 0);
   } 
+  return 0;
 }

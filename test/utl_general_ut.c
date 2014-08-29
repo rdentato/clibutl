@@ -31,4 +31,5 @@ int main (int argc, char *argv[])
     
     logTestEQInt(lg,"utlZero is zero", 0, utlZero);
   }
+  return 0;
 }

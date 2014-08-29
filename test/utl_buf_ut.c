@@ -111,8 +111,8 @@ int main (int argc, char *argv[])
     logTestNEPtr(lg,"Is Not Null", NULL, s);
     s = bufFree(s);
     logTestEQPtr(lg,"Is Null", NULL, s);
-
   }
+  return 0;
 }
 
 /* TEST LINE LAST */

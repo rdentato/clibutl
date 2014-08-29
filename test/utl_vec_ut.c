@@ -75,4 +75,5 @@ int main (int argc, char *argv[])
     vv = vecFree(vv);
     logTestNULL(lg,"Is NULL", vv );
   }
+  return 0;
 }

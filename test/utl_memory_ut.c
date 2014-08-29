@@ -17,7 +17,7 @@
 int main (int argc, char *argv[])
 {
   char *ptr_a;
-  char *ptr_b;
+  // char *ptr_b;
   int valid;
   int k;
   
@@ -58,4 +58,5 @@ int main (int argc, char *argv[])
     logTestEQInt(lg,"Check invalid after overrun",utlMemOverflow ,utlMemCheck(ptr_a) );
     free(ptr_a);   
   }
+  return 0;
 }

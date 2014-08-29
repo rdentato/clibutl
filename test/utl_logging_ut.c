@@ -143,4 +143,5 @@ int main (int argc, char *argv[])
     if(f) fclose(f);
     
   }
+  return 0;
 }

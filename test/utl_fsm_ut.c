@@ -61,5 +61,16 @@ int main (int argc, char *argv[])
               break;
     });
     logTestEQInt(lg,"Nested Works?",1111,k);
+    
+    k=0;
+    fsm({
+      case fsmSTART: k = 1 ;fsmGoto(2);
+      case 2: if (k==1) fsmGoto(3); else fsmGoto(4);
+      case 4: fsmExit;
+      case 3: k++; fsmGoto(2);
+    });
+    logTestEQInt(lg,"fsmGoto in else",2,k);
   } 
+  
+  return 0;
 }

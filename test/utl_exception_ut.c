@@ -21,13 +21,12 @@ int c=0;
 void functhrow(tryenv env, int err)
 {
     throw(env, err);
-    TST("Returned to main",0); /* it's an error to be executed! */
+    logTest(lg,"Returned to main",0); /* it's an error to be executed! */
 }
 
 int main (int argc, char *argv[])
 {
   tryenv env = NULL;
-  int err;
   
   logTestPlan(lg,"utl unit test: try/catch") {
   
@@ -206,4 +205,5 @@ int main (int argc, char *argv[])
     logTestEQInt(lg,"Exception 10,20,2,3 caught", 132,k);
     logTestEQPtr(lg,"Env is null",NULL,env);
   }
+  return 0;
 }
