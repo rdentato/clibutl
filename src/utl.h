@@ -297,9 +297,9 @@ typedef struct utl_env_s {
                         x \
                 }} while (utlZero)
                          
-#define fsmGoto(x)  if (!utlZero) {utl_fsm_next = (x); break;} else utlZero=0
-#define fsmRestart  if (!utlZero) {utl_fsm_next = fsmSTART; break;} utlZero=0
-#define fsmExit     if (!utlZero) {utl_fsm_next = fsmEND; break;} utlZero=0
+#define fsmGoto(x)  if (!utlZero) {utl_fsm_next = (x); break;} else (utlZero<<=1)
+#define fsmRestart  if (!utlZero) {utl_fsm_next = fsmSTART; break;} (utlZero<<=1)
+#define fsmExit     if (!utlZero) {utl_fsm_next = fsmEND; break;} (utlZero<<=1)
 
 #endif
 
@@ -437,9 +437,11 @@ int   logLevelEnv(utlLogger lg, char *var, char *level);
 ** For example:
 ** .v  
 **   utlLogger lgr = NULL;
-**   logOpen(lgr,"file1.log","w") // Delete old log file and create a new one
+**   lgr=logOpen(lgr,"file1.log","w") // Delete old log file and create a new one
 **   ...
-**   logOpen(lgr,"file1.log","a") // Append to previous log file
+**   lgr=logClose(lgr);
+**   ...
+**   lgr=logOpen(lgr,"file1.log","a") // Append to previous log file
 ** .. 
 **
 **   There are three predefined loggers:
@@ -464,7 +466,7 @@ void utl_log_write(utlLogger lg,int lv, int tstamp, char *format, ...);
 
 #define logIf(lg,lc) utl_log_if(lg,utl_log_chrlevel(lc))
 
-#define utl_log_if(lg,lv) if ((lv) > utl_log_level(lg)) (utlZero=0) ; else
+#define utl_log_if(lg,lv) if ((lv) > utl_log_level(lg)) (utlZero<<=1) ; else
           
 #define logDebug(lg, ...)      utl_log_write(lg, log_D, 1, __VA_ARGS__)
 #define logInfo(lg, ...)       utl_log_write(lg, log_I, 1, __VA_ARGS__)
@@ -498,7 +500,7 @@ void utl_log_write(utlLogger lg,int lv, int tstamp, char *format, ...);
 
 #define logTestFailNote(lg, ...)  (lg && !(lg->flags & UTL_LOG_RES)? logTestNote(lg, __VA_ARGS__):0)
 
-#define logTestCode(lg) if (!(lg && !(lg->flags & UTL_LOG_SKIP))) utlZero=0; else 
+#define logTestCode(lg) if (!(lg && !(lg->flags & UTL_LOG_SKIP))) (utlZero<<=1); else 
 
 #define logTestStat(lg)        (lg? utl_log_write(lg, log_T, 1, "RES  KO: %d  OK: %d  SKIP: %d  TOT: %d  (:%d)", \
                                     lg->ko, lg->ok, lg->skp, lg->ko + lg->ok + lg->skp,__LINE__) \
@@ -509,7 +511,7 @@ void utl_log_write(utlLogger lg,int lv, int tstamp, char *format, ...);
                                      utl_log_testskip_end(lg,  __LINE__) )
 
 #define log_testexpect(lg,e,f1,v1,f2,v2) \
-                             (e? utlZero=0 : (logTestNote(lg,"Expected "f1" got "f2,v1,v2)))
+                             (e? (utlZero<<=1) : (logTestNote(lg,"Expected "f1" got "f2,v1,v2)))
 
 #define log_testxxx(t1,t2,lg,s,e,r,o)  if (lg && !(lg->flags & UTL_LOG_SKIP)) { \
                                    t1 utl_exp = (e); t1 utl_ret = (r); \
@@ -732,27 +734,27 @@ void utl_log_testskip_end(utlLogger lg, int line)
 
 #define logLevel(lg,lv)       log_W
 #define logLevelEnv(lg,v,l)   log_W     
-#define logDebug(lg, ...)     (utlZero=0)
-#define logInfo(lg, ...)      (utlZero=0)
-#define logMessage(lg, ...)   (utlZero=0)
-#define logWarn(lg, ...)      (utlZero=0)
-#define logError(lg, ...)     (utlZero=0)
-#define logCritical(lg, ...)  (utlZero=0)
-#define logAlarm(lg, ...)     (utlZero=0)
-#define logFatal(lg, ...)     (utlZero=0)
+#define logDebug(lg, ...)     (utlZero<<=1)
+#define logInfo(lg, ...)      (utlZero<<=1)
+#define logMessage(lg, ...)   (utlZero<<=1)
+#define logWarn(lg, ...)      (utlZero<<=1)
+#define logError(lg, ...)     (utlZero<<=1)
+#define logCritical(lg, ...)  (utlZero<<=1)
+#define logAlarm(lg, ...)     (utlZero<<=1)
+#define logFatal(lg, ...)     (utlZero<<=1)
 
-#define logDContinue(lg, ...) (utlZero=0)
-#define logIContinue(lg, ...) (utlZero=0)
-#define logMContinue(lg, ...) (utlZero=0)
-#define logWContinue(lg, ...) (utlZero=0)
-#define logEContinue(lg, ...) (utlZero=0)
-#define logCContinue(lg, ...) (utlZero=0)
-#define logAContinue(lg, ...) (utlZero=0)
-#define logFContinue(lg, ...) (utlZero=0)
+#define logDContinue(lg, ...) (utlZero<<=1)
+#define logIContinue(lg, ...) (utlZero<<=1)
+#define logMContinue(lg, ...) (utlZero<<=1)
+#define logWContinue(lg, ...) (utlZero<<=1)
+#define logEContinue(lg, ...) (utlZero<<=1)
+#define logCContinue(lg, ...) (utlZero<<=1)
+#define logAContinue(lg, ...) (utlZero<<=1)
+#define logFContinue(lg, ...) (utlZero<<=1)
 
-#define logAssert(lg,e)       (utlZero=0)
+#define logAssert(lg,e)       (utlZero<<=1)
 
-#define logIf(lg,lv) if (!utlZero) utlZero=0 ; else
+#define logIf(lg,lv) if (!utlZero) (utlZero<<=1) ; else
 
 #define logOpen(f,m)    NULL
 #define logClose(lg)    NULL
@@ -764,43 +766,43 @@ typedef void *utlLogger;
 #define logStderr  NULL
 
 
-#define logTest(lg,s,e)        (utlZero=0)
-#define logTestPlan(lg, s)     if (!utlZero) utlZero=0; else
-#define logTestNote(lg, ...)    (utlZero=0)
-#define logTestFailNote(lg, ...) (utlZero=0) 
+#define logTest(lg,s,e)        (utlZero<<=1)
+#define logTestPlan(lg, s)     if (!utlZero) (utlZero<<=1); else
+#define logTestNote(lg, ...)    (utlZero<<=1)
+#define logTestFailNote(lg, ...) (utlZero<<=1) 
 #define logTestCode(lg)       
-#define logTestStat(lg)        (utlZero=0)
-#define logTestSkip(lg,s,e)    if (!utlZero) utlZero=0; else
+#define logTestStat(lg)        (utlZero<<=1)
+#define logTestSkip(lg,s,e)    if (!utlZero) (utlZero<<=1); else
 
-#define log_testint(lg,s,e,r,o) (utlZero=0)
-#define log_testptr(lg,s,e,r,o) (utlZero=0)
+#define log_testint(lg,s,e,r,o) (utlZero<<=1)
+#define log_testptr(lg,s,e,r,o) (utlZero<<=1)
 
-#define logTestEQInt(lg,s,e,r)  (utlZero=0)
-#define logTestNEInt(lg,s,e,r)  (utlZero=0)
-#define logTestGTInt(lg,s,e,r)  (utlZero=0)
-#define logTestGEInt(lg,s,e,r)  (utlZero=0)
-#define logTestLTInt(lg,s,e,r)  (utlZero=0)
-#define logTestLEInt(lg,s,e,r)  (utlZero=0)
+#define logTestEQInt(lg,s,e,r)  (utlZero<<=1)
+#define logTestNEInt(lg,s,e,r)  (utlZero<<=1)
+#define logTestGTInt(lg,s,e,r)  (utlZero<<=1)
+#define logTestGEInt(lg,s,e,r)  (utlZero<<=1)
+#define logTestLTInt(lg,s,e,r)  (utlZero<<=1)
+#define logTestLEInt(lg,s,e,r)  (utlZero<<=1)
                                
-#define logTestEQPtr(lg,s,e,r)  (utlZero=0)
-#define logTestNEPtr(lg,s,e,r)  (utlZero=0)
-#define logTestGTPtr(lg,s,e,r)  (utlZero=0)
-#define logTestGEPtr(lg,s,e,r)  (utlZero=0)
-#define logTestLTPtr(lg,s,e,r)  (utlZero=0)
-#define logTestLEPtr(lg,s,e,r)  (utlZero=0)
+#define logTestEQPtr(lg,s,e,r)  (utlZero<<=1)
+#define logTestNEPtr(lg,s,e,r)  (utlZero<<=1)
+#define logTestGTPtr(lg,s,e,r)  (utlZero<<=1)
+#define logTestGEPtr(lg,s,e,r)  (utlZero<<=1)
+#define logTestLTPtr(lg,s,e,r)  (utlZero<<=1)
+#define logTestLEPtr(lg,s,e,r)  (utlZero<<=1)
                                 
-#define logTestNULL(lg,s,e)     (utlZero=0)
-#define logTestNNULL(lg,s,e)    (utlZero=0)
+#define logTestNULL(lg,s,e)     (utlZero<<=1)
+#define logTestNNULL(lg,s,e)    (utlZero<<=1)
 
 
 #endif /*- UTL_NOLOGGING */
 
 #ifdef NDEBUG
 #undef logDebug
-#define logDebug(lg,...) (utlZero=0)
+#define logDebug(lg,...) (utlZero<<=1)
 #endif  /*- NDEBUG */
 
-#define logNDebug(lg,...) (utlZero=0)
+#define logNDebug(lg,...) (utlZero<<=1)
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -1277,7 +1279,7 @@ int utl_bufFormat(buf_t bf, char *format, ...)
   count2 = vsnprintf(bufStr(bf),count+1,format, ap);
   va_end(ap);
   
-  assert(count == count2);
+  utlAssert(count == count2);
   
   return count2;
 }
