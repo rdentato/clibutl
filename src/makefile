@@ -26,5 +26,5 @@ libutl.$(_LIB) : $(LIBOBJ)
 	$(AR) $@ $(LIBOBJ)
 
 clean:
-	rm -f *.exe *.$(_OBJ) *.$(_LIB) *.tmp
+	rm -f *.$(_OBJ) *.$(_LIB) *.tmp
 

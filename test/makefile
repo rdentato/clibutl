@@ -5,7 +5,13 @@
 #   http://opensource.org/licenses/bsd-license.php
 #
 
+
 _EXE=.exe
+
+ifeq "$(COMSPEC)" ""
+_EXE=
+endif
+
 _OBJ=o
 CC=gcc
 _BAT=.sh
@@ -29,36 +35,36 @@ all:  $(TESTS)
 
 t_buf$(_EXE): $(UTL_H)  utl_buf_ut.c
 	$(CC) $(CFLAGS) -c -o utl_buf_ut.$(_OBJ) utl_buf_ut.c
-	gcc -o $@ utl_buf_ut.$(_OBJ)
+	$(CC) -o $@ utl_buf_ut.$(_OBJ)
 
 t_vec$(_EXE): $(UTL_H)  utl_vec_ut.c
 	$(CC) $(CFLAGS) -c -o utl_vec_ut.$(_OBJ) utl_vec_ut.c
-	gcc -o $@ utl_vec_ut.$(_OBJ)
+	$(CC) -o $@ utl_vec_ut.$(_OBJ)
 
 t_log$(_EXE): $(UTL_H)  utl_logging_ut.c
 	$(CC) $(CFLAGS) -c -o utl_logging_ut.$(_OBJ) utl_logging_ut.c
-	gcc -o $@ utl_logging_ut.$(_OBJ)
+	$(CC) -o $@ utl_logging_ut.$(_OBJ)
 
 t_general$(_EXE): $(UTL_H)  utl_general_ut.c
 	$(CC) $(CFLAGS) -c -o utl_general_ut.$(_OBJ) utl_general_ut.c
-	gcc -o $@ utl_general_ut.$(_OBJ)
+	$(CC) -o $@ utl_general_ut.$(_OBJ)
 
 t_try$(_EXE): $(UTL_H)  utl_exception_ut.c
 	$(CC) $(CFLAGS) -c -o utl_exception_ut.$(_OBJ) utl_exception_ut.c
-	gcc -o $@ utl_exception_ut.$(_OBJ)
+	$(CC) -o $@ utl_exception_ut.$(_OBJ)
 
 t_try2$(_EXE): $(UTL_H)  utl_exception2_ut.c
 	$(CC) $(CFLAGS) -c -o utl_exception2_ut.$(_OBJ) utl_exception2_ut.c
-	gcc -o $@ utl_exception2_ut.$(_OBJ)
+	$(CC) -o $@ utl_exception2_ut.$(_OBJ)
 
 t_mem$(_EXE): $(UTL_H)  utl_memory_ut.c
 	$(CC) $(CFLAGS) -c -o utl_memory_ut.$(_OBJ) utl_memory_ut.c
-	gcc -o $@ utl_memory_ut.$(_OBJ)
+	$(CC) -o $@ utl_memory_ut.$(_OBJ)
 
 t_fsm$(_EXE): $(UTL_H)  utl_fsm_ut.c
 	$(CC) $(CFLAGS) -c -o utl_fsm_ut.$(_OBJ) utl_fsm_ut.c
-	gcc -o $@ utl_fsm_ut.$(_OBJ)
+	$(CC) -o $@ utl_fsm_ut.$(_OBJ)
 
 clean:
-	rm -f *.exe *.$(_OBJ) *.tmp *.log
+	rm -f t_*$(_EXE) *.$(_OBJ) *.tmp *.log
 
