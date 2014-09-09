@@ -298,8 +298,8 @@ typedef struct utl_env_s {
                 }} while (utlZero)
                          
 #define fsmGoto(x)  if (!utlZero) {utl_fsm_next = (x); break;} else (utlZero<<=1)
-#define fsmRestart  if (!utlZero) {utl_fsm_next = fsmSTART; break;} (utlZero<<=1)
-#define fsmExit     if (!utlZero) {utl_fsm_next = fsmEND; break;} (utlZero<<=1)
+#define fsmRestart  fsmGoto(fsmStart)
+#define fsmExit     fsmGoto(fsmEnd)
 
 #endif
 
