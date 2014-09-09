@@ -171,10 +171,11 @@ utl_extern(int utlZero, = 0);
 ** http://www.drdobbs.com/compile-time-assertions/184401873
 */
 
-#define utl_assum1(e,l) typedef struct {int utl_assumption[(e)?1:-1];} utl_assumption_##l
+#define utl_assum1(e,l) void utl_assumption_##l ( char utl_assumption[(e)?1:-1]);
 #define utl_assum0(e,l) utl_assum1(e,l)
 #define utlAssume(e)    utl_assum0(e,__LINE__)
 #define utlAssert       assert
+
 
 
 #ifndef UTL_NOTRYCATCH
@@ -298,8 +299,8 @@ typedef struct utl_env_s {
                 }} while (utlZero)
                          
 #define fsmGoto(x)  if (!utlZero) {utl_fsm_next = (x); break;} else (utlZero<<=1)
-#define fsmRestart  fsmGoto(fsmStart)
-#define fsmExit     fsmGoto(fsmEnd)
+#define fsmRestart  fsmGoto(fsmSTART)
+#define fsmExit     fsmGoto(fsmEND)
 
 #endif
 
@@ -375,6 +376,9 @@ utl_extern(utlLogger utl_logger , = logNull);
                                         /* 0   1   2   3   4   5   6   7   8   9   10 */
                                         /* 0   4   8   12  16  20  24  28  32  36  40 */
 utl_extern(char const utl_log_abbrev[], = "TST FTL ALT CRT ERR WRN MSG INF DBG OFF LOG ");
+
+/* Assume that log_L is the last level in utl_log_abbrev */
+utlAssume( (log_L +1) == ((sizeof(utl_log_abbrev)-1)>>2));
 
 int   utl_log_level(utlLogger lg);
 int   utl_log_chrlevel(char *l);
@@ -609,8 +613,6 @@ utlLogger utl_logOpen(char *fname, char *mode)
       lg->flags = 0;
       lg->rot = 0;
       lg->file = f;
-      /* Assume that log_L is the last level in utl_log_abbrev */
-      utlAssume( (log_L +1) == ((sizeof(utl_log_abbrev)-1)>>2));
       lg->level = log_L;
       utl_log_write(lg,log_L, 1, "%s \"%s\"", (md[0] == 'a') ? "ADDEDTO" : "CREATED",fname); 
       
