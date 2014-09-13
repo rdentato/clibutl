@@ -24,7 +24,7 @@ TESTS = t_buf$(_EXE)     t_vec$(_EXE)  t_log$(_EXE)   \
 
 .SUFFIXES: .c .h $(_OBJ)
 
-CFLAGS= -I../src -g -Wall
+CFLAGS= $(CCFLAGS) -I../src -g -Wall
 
 .c.o:
 	$(CC) $(CFLAGS) -c -o $*.$(_OBJ) $*.c
