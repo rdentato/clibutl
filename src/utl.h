@@ -606,7 +606,7 @@ utlLogger utl_logOpen(char *fname, char *mode)
     if (md[0] != 'a' && md[0] != 'w') md[0] = 'a'; 
     f = fopen(fname,md);
   }
-  
+
   if (f) {
     lg = malloc(sizeof(utl_log_s));
     if (lg) { 
@@ -643,7 +643,8 @@ utlLogger utl_log_close(utlLogger lg)
 */
 static void utl_log_rotate(utlLogger lg)
 {
-  // TODO:
+   /* TODO:
+    */ 
 }
 
 void utl_log_write(utlLogger lg, int lv, int tstamp, char *format, ...)
@@ -1262,7 +1263,7 @@ inline int c99_vsnprintf(char* str, size_t size, const char* format, va_list ap)
   if (count == -1) count = _vscprintf(format, ap);
   return count;
 }
-#endif // UTL_ADD_SNPRINTF
+#endif /* UTL_ADD_SNPRINTF */
 /* }} */
 
 int utl_bufFormat(buf_t bf, char *format, ...)
