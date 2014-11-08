@@ -517,32 +517,41 @@ void utl_log_write(utlLogger lg,int lv, int tstamp, char *format, ...);
 #define log_testexpect(lg,e,f1,v1,f2,v2) \
                              (e? (utlZero<<=1) : (logTestNote(lg,"Expected "f1" got "f2,v1,v2)))
 
-#define log_testxxx(t1,t2,lg,s,e,r,o)  if (lg && !(lg->flags & UTL_LOG_SKIP)) { \
-                                   t1 utl_exp = (e); t1 utl_ret = (r); \
-                                   log_testexpect(lg,utl_log_test(lg, (utl_exp o utl_ret), s, 0, __FILE__, __LINE__), \
-                                                      "("#t1") "#o" "#t2,utl_exp,#t2,utl_ret); \
-                                 } \
-                                 else utl_log_test(lg, 1, s, 1, __FILE__, __LINE__)
+#define log_testxxx(t1,t2,lg,s,e,r,o,t)  \
+      if (lg && !(lg->flags & UTL_LOG_SKIP)) { \
+        t1 utl_exp = (e); t1 utl_ret = (r); \
+        log_testexpect(lg,utl_log_test(lg, t , s, 0, __FILE__, __LINE__), \
+                           "("#t1") "#o" "#t2,utl_exp,#t2,utl_ret); \
+      } \
+      else utl_log_test(lg, 1, s, 1, __FILE__, __LINE__)
 
-#define log_testint(lg,s,e,r,o) log_testxxx(int,%d,lg,s,e,r,o)
-#define log_testptr(lg,s,e,r,o) log_testxxx(void *,%p,lg,s,e,r,o)
+#define log_testint(lg,s,e,r,o) log_testxxx(int   ,%d,lg,s,e,r,o,(utl_exp o utl_ret))
+#define log_testptr(lg,s,e,r,o) log_testxxx(void *,%p,lg,s,e,r,o,(utl_exp o utl_ret))
+#define log_testdbl(lg,s,e,r,o) log_testxxx(double,%p,lg,s,e,r,o,(utl_exp o utl_ret))
 
-#define logTestEQInt(lg,s,e,r)  log_testint(lg,s,e,r, == )
-#define logTestNEInt(lg,s,e,r)  log_testint(lg,s,e,r, != )
-#define logTestGTInt(lg,s,e,r)  log_testint(lg,s,e,r, > )
-#define logTestGEInt(lg,s,e,r)  log_testint(lg,s,e,r, >= )
-#define logTestLTInt(lg,s,e,r)  log_testint(lg,s,e,r, < )
-#define logTestLEInt(lg,s,e,r)  log_testint(lg,s,e,r, <= )
+#define logTestEQint(lg,s,e,r)  log_testint(lg,s,e,r, == )
+#define logTestNEint(lg,s,e,r)  log_testint(lg,s,e,r, != )
+#define logTestGTint(lg,s,e,r)  log_testint(lg,s,e,r, >  )
+#define logTestGEint(lg,s,e,r)  log_testint(lg,s,e,r, >= )
+#define logTestLTint(lg,s,e,r)  log_testint(lg,s,e,r, <  )
+#define logTestLEint(lg,s,e,r)  log_testint(lg,s,e,r, <= )
 
-#define logTestEQPtr(lg,s,e,r)  log_testptr(lg,s,e,r, == )
-#define logTestNEPtr(lg,s,e,r)  log_testptr(lg,s,e,r, != )
-#define logTestGTPtr(lg,s,e,r)  log_testptr(lg,s,e,r, > )
-#define logTestGEPtr(lg,s,e,r)  log_testptr(lg,s,e,r, >= )
-#define logTestLTPtr(lg,s,e,r)  log_testptr(lg,s,e,r, < )
-#define logTestLEPtr(lg,s,e,r)  log_testptr(lg,s,e,r, <= )
+#define logTestEQdbl(lg,s,e,r)  log_testdbl(lg,s,e,r, == )
+#define logTestNEdbl(lg,s,e,r)  log_testdbl(lg,s,e,r, != )
+#define logTestGTdbl(lg,s,e,r)  log_testdbl(lg,s,e,r, >  )
+#define logTestGEdbl(lg,s,e,r)  log_testdbl(lg,s,e,r, >= )
+#define logTestLTdbl(lg,s,e,r)  log_testdbl(lg,s,e,r, <  )
+#define logTestLEdbl(lg,s,e,r)  log_testdbl(lg,s,e,r, <= )
 
-#define logTestNULL(lg,s,e)  logTestEQPtr(lg,s,e,NULL)                                     
-#define logTestNNULL(lg,s,e) logTestNEPtr(lg,s,e,NULL)                                     
+#define logTestEQptr(lg,s,e,r)  log_testptr(lg,s,e,r, == )
+#define logTestNEptr(lg,s,e,r)  log_testptr(lg,s,e,r, != )
+#define logTestGTptr(lg,s,e,r)  log_testptr(lg,s,e,r, >  )
+#define logTestGEptr(lg,s,e,r)  log_testptr(lg,s,e,r, >= )
+#define logTestLTptr(lg,s,e,r)  log_testptr(lg,s,e,r, <  )
+#define logTestLEptr(lg,s,e,r)  log_testptr(lg,s,e,r, <= )
+
+#define logTestNULL(lg,s,e)  logTestEQptr(lg,s,e,NULL)                                     
+#define logTestNNULL(lg,s,e) logTestNEptr(lg,s,e,NULL)                                     
 
 /*
 ** .v
@@ -1007,6 +1016,8 @@ void *utl_strdup(void *ptr, char *file, int line)
 
 #ifndef UTL_NOADT
 
+/** VECTORS **/
+
 typedef struct vec_s {
   size_t  max;
   size_t  cnt;
@@ -1040,47 +1051,6 @@ size_t utl_vecMax(vec_t v);
 
 void  *utl_vecVec(vec_t v);
 #define vec(v,ty)   ((ty *)utl_vecVec(v))
-
-#define buf_t vec_t
-int utl_bufSet(buf_t bf, size_t i, char c);
-
-#define bufNew() utl_vecNew(1)
-#define bufFree  utl_vecFree
-
-char utl_bufGet(buf_t bf, size_t i);
-#define bufGet   utl_bufGet
-
-int utl_bufSet(buf_t bf, size_t i, char c);
-#define bufSet   utl_bufSet
-
-int utl_bufAdd(buf_t bf, char c);
-#define bufAdd   utl_bufAdd
-
-int utl_bufAddStr(buf_t bf, char *s);
-#define bufAddStr  utl_bufAddStr
-
-#define bufResize utl_vecResize
-
-#define bufClr(bf) utl_bufSet(bf,0,'\0');
-
-int utl_bufFormat(buf_t bf, char *format, ...);
-#define bufFormat utl_bufFormat
-
-#define bufLen vecCount
-#define bufMax vecMax
-#define bufStr(b) vec(b,char)
-
-int utl_bufAddLine(buf_t bf, FILE *f);
-#define bufAddLine utl_bufAddLine
-
-int utl_bufAddFile(buf_t bf, FILE *f);
-#define bufAddFile utl_bufAddFile
-
-#if !defined(UTL_HAS_SNPRINTF) && defined(_MSC_VER) && (_MSC_VER < 1800)
-#define UTL_ADD_SNPRINTF
-#define snprintf  c99_snprintf
-#define vsnprintf c99_vsnprintf
-#endif
 
 #ifdef UTL_LIB
 
@@ -1173,6 +1143,53 @@ int utl_vecResize(vec_t v, size_t n)
   return 1;
 }
 
+
+#endif  /* UTL_LIB */
+
+
+/**  BUFFERS **/
+#define buf_t vec_t
+int utl_bufSet(buf_t bf, size_t i, char c);
+
+#define bufNew() utl_vecNew(1)
+#define bufFree  utl_vecFree
+
+char utl_bufGet(buf_t bf, size_t i);
+#define bufGet   utl_bufGet
+
+int utl_bufSet(buf_t bf, size_t i, char c);
+#define bufSet   utl_bufSet
+
+int utl_bufAdd(buf_t bf, char c);
+#define bufAdd   utl_bufAdd
+
+int utl_bufAddStr(buf_t bf, char *s);
+#define bufAddStr  utl_bufAddStr
+
+#define bufResize utl_vecResize
+
+#define bufClr(bf) utl_bufSet(bf,0,'\0');
+
+int utl_bufFormat(buf_t bf, char *format, ...);
+#define bufFormat utl_bufFormat
+
+#define bufLen vecCount
+#define bufMax vecMax
+#define bufStr(b) vec(b,char)
+
+int utl_bufAddLine(buf_t bf, FILE *f);
+#define bufAddLine utl_bufAddLine
+
+int utl_bufAddFile(buf_t bf, FILE *f);
+#define bufAddFile utl_bufAddFile
+
+#if !defined(UTL_HAS_SNPRINTF) && defined(_MSC_VER) && (_MSC_VER < 1800)
+#define UTL_ADD_SNPRINTF
+#define snprintf  c99_snprintf
+#define vsnprintf c99_vsnprintf
+#endif
+
+#ifdef UTL_LIB
 int utl_bufSet(buf_t bf, size_t i, char c)
 {
   char *s;
@@ -1287,7 +1304,40 @@ int utl_bufFormat(buf_t bf, char *format, ...)
   return count2;
 }
 
-#endif
+
+#endif /* UTL_LIB */
+
+
+/** TABLES (str->str) **/
+#define tbl_t vec_t
+
+tbl_t utl_tblNew(void);
+#define tblNew utl_tblNew
+
+void utl_tblFree(tbl_t tb);
+#define tblFree utl_tblFree
+
+long utl_tblNext(tbl_t tb, long ndx);
+#define tblNext utl_tblNext
+
+long utl_tblSet(char *key, char *val);
+long ult_tblGet(char *key);
+long ult_tblDel(tbl_t tb, long ndx);
+
+#ifdef UTL_LIB
+
+typedef struct {
+  char *key;
+  char *val;
+} tbl_s;
+
+tbl_t utl_tblNew()
+{
+  return vecNew(sizeof(tbl_s));
+}
+
+#endif /* UTL_LIB */
+
 #endif /* UTL_NOADT */
 
 #endif /* UTL_H */

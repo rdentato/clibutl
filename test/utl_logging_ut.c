@@ -27,34 +27,34 @@ int main (int argc, char *argv[])
     
     lg = NULL;
     logTestNULL(l,"logger is NULL",  lg);
-    logTestEQPtr(l,"log file is NULL", NULL,logFile(lg));
-    logTestEQInt(l,"log is disabled", log_X , logLevel(lg,"?") );
+    logTestEQptr(l,"log file is NULL", NULL,logFile(lg));
+    logTestEQint(l,"log is disabled", log_X , logLevel(lg,"?") );
     logTestCode(l) {
       logLevel(lg,"MSG");
-    } logTestEQInt(l,"NULL logger level can't be changed", log_X, logLevel(lg,"") );
+    } logTestEQint(l,"NULL logger level can't be changed", log_X, logLevel(lg,"") );
     
     logTestCode(l) {
       lg = logStdout;
     } 
     logTestNNULL(l,"logger is not NULL",lg);
-    logTestEQPtr(l,"log file is stdout", stdout,logFile(lg));
-    logTestEQInt(l,"logLevel is Warn", log_W, logLevel(lg,"") );
+    logTestEQptr(l,"log file is stdout", stdout,logFile(lg));
+    logTestEQint(l,"logLevel is Warn", log_W, logLevel(lg,"") );
     
     logTestCode(l) {
       logLevel(lg,"Msg");
-    } logTestEQInt(l,"Log level changed", log_M, logLevel(lg,"?") );
+    } logTestEQint(l,"Log level changed", log_M, logLevel(lg,"?") );
     
     logTestCode(l) {
       k = 0;
       logIf(lg,"Info")  { k+=1; } /* If level is at least INFO  */
       logIf(lg,"Warn")  { k+=10; } /* If level is at least WARN  */
       logIf(lg,"Error") { k+=100; } /* If level is at least ERROR */
-    } logTestEQInt(l,"logLevel() and logIf()", 110, k );
+    } logTestEQint(l,"logLevel() and logIf()", 110, k );
     
     logTestCode(l) {
       lg = logClose(lg);
     }
-    logTestEQPtr(l,"logger is NULL", NULL,lg);
+    logTestEQptr(l,"logger is NULL", NULL,lg);
     
     logTestCode(l) {
       lg = logStderr;
@@ -63,42 +63,42 @@ int main (int argc, char *argv[])
     #ifndef UTL_NOLOGGING
     logTestFailNote(l,"&log_stderr = %p logStderr = %p",&utl_log_stderr,logStderr);
     #endif
-    logTestEQPtr(l,"log file is stderr", stderr,logFile(lg));
-    logTestEQInt(l,"logLevel is Warn", log_W, logLevel(lg,"") );
+    logTestEQptr(l,"log file is stderr", stderr,logFile(lg));
+    logTestEQint(l,"logLevel is Warn", log_W, logLevel(lg,"") );
     
     logTestCode(l) {
       logLevel(lg,"Msg");
-    } logTestEQInt(l,"Log level changed", log_M, logLevel(lg,"?") );
+    } logTestEQint(l,"Log level changed", log_M, logLevel(lg,"?") );
     
     logTestCode(l) {
       k = 0;
       logIf(lg,"Info")  { k+=1; } /* If level is at least INFO  */
       logIf(lg,"Warn")  { k+=10; } /* If level is at least WARN  */
       logIf(lg,"Error") { k+=100; } /* If level is at least ERROR */
-    } logTestEQInt(l,"logLevel() and logIf()", 110, k );
+    } logTestEQint(l,"logLevel() and logIf()", 110, k );
     
     logTestCode(l) {
       lg = logClose(lg);
     }
-    logTestEQPtr(l,"logger is NULL", NULL,lg);
+    logTestEQptr(l,"logger is NULL", NULL,lg);
     
     logTestCode(l) {
       lg = logOpen("test.log","w"); 
     } 
     logTestNNULL(l,"logger is not NULL", lg);
     logTestNNULL(l,"log file is not NULL", logFile(lg));
-    logTestEQInt(l,"logLevel is Warn", log_W, logLevel(lg,"") );
+    logTestEQint(l,"logLevel is Warn", log_W, logLevel(lg,"") );
     
     logTestCode(l) {
       logLevel(lg,"Msg");
-    } logTestEQInt(l,"Log level changed", log_M, logLevel(lg,"") );
+    } logTestEQint(l,"Log level changed", log_M, logLevel(lg,"") );
     
     logTestCode(l) {
       k = 0;
       logIf(lg,"Info")  { k+=1; } /* If level is at least INFO  */
       logIf(lg,"Warn")  { k+=10; } /* If level is at least WARN  */
       logIf(lg,"Error") { k+=100; } /* If level is at least ERROR */
-    } logTestEQInt(l,"logLevel() and logIf()", 110, k );
+    } logTestEQint(l,"logLevel() and logIf()", 110, k );
     
     logTestCode(l) {
       lg = logClose(lg);
@@ -127,7 +127,7 @@ int main (int argc, char *argv[])
       p=buf;
       while (*p && *p != '\n') p++; *p='\0';
     }
-    logTestEQInt(l,"Log creating ok",0,strcmp(buf+20,"LOG CREATED \"test.log\""));
+    logTestEQint(l,"Log creating ok",0,strcmp(buf+20,"LOG CREATED \"test.log\""));
     logTestFailNote(l,"First line: [%s]",buf);
     
     logTestCode(l) {
@@ -137,7 +137,7 @@ int main (int argc, char *argv[])
       while (*p && *p != '\n') p++;
       *p='\0';
     }
-    logTestEQInt(l,"Log appending ok",0,strcmp(buf+20,"LOG ADDEDTO \"test.log\""));
+    logTestEQint(l,"Log appending ok",0,strcmp(buf+20,"LOG ADDEDTO \"test.log\""));
     logTestFailNote(l,"Second line: [%s]",buf);
     
     if(f) fclose(f);

@@ -39,20 +39,20 @@ int main (int argc, char *argv[])
     vv = vecNew(point);
  
     logTestNNULL(lg,"Is not NULL", vv );
-    logTestEQInt(lg,"Mem Valid", utlMemValid, utlMemCheck(vv));
-    logTestEQInt(lg,"Len 0", 0, vecCount(vv) );
+    logTestEQint(lg,"Mem Valid", utlMemValid, utlMemCheck(vv));
+    logTestEQint(lg,"Len 0", 0, vecCount(vv) );
 
     vecSet(vv,0,&p1);
     logTestNNULL(lg,"Is not NULL", vv->vec );
     p = vecGet(vv,0);
-    logTestEQInt(lg,"Set properly direct access", 1, p->x );
-    logTestEQInt(lg,"Len 1", 1, vecCount(vv) );
+    logTestEQint(lg,"Set properly direct access", 1, p->x );
+    logTestEQint(lg,"Len 1", 1, vecCount(vv) );
 
     vecSet(vv,1,&p2);
     logTestNNULL(lg,"Is not NULL", vv->vec );
     p = vecGet(vv,1);
-    logTestEQInt(lg,"Set properly direct access", -1, p->x );
-    logTestEQInt(lg,"Len 1", 2, vecCount(vv) );
+    logTestEQint(lg,"Set properly direct access", -1, p->x );
+    logTestEQint(lg,"Len 1", 2, vecCount(vv) );
 
     p = vecGet(vv,vecCount(vv)+1);
     logTestNULL(lg,"Is Null",p);
@@ -61,15 +61,15 @@ int main (int argc, char *argv[])
     logTestNNULL(lg,"Is not Null",p);
     
     logTestSkip(lg,"Vec array is NULL", p==NULL) {
-      logTestEQInt(lg,"v[0]",2, p[0].y);
-      logTestEQInt(lg,"v[1]",-2, p[1].y);
+      logTestEQint(lg,"v[0]",2, p[0].y);
+      logTestEQint(lg,"v[1]",-2, p[1].y);
     }
     
     vecResize(vv,30);
-    logTestLEInt(lg,"Grown up", 30, vv->max);
+    logTestLEint(lg,"Grown up", 30, vv->max);
 
     vecResize(vv,10);
-    logTestLEInt(lg,"Shrink", 10, vv->max);
+    logTestLEint(lg,"Shrink", 10, vv->max);
     logTestNote(lg,"Cur max: %d", vv->max);
 
     vv = vecFree(vv);

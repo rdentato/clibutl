@@ -28,34 +28,34 @@ int main (int argc, char *argv[])
     logLevel(utlMemLog,"Info");
     
     ptr_a = malloc(32); 
-    logTestEQInt(lg,"Check Valid after malloc()",utlMemValid,utlMemCheck(ptr_a) );
-    logTestEQInt(lg,"Allocated memory is 32",32, utlMemAllocated);
+    logTestEQint(lg,"Check Valid after malloc()",utlMemValid,utlMemCheck(ptr_a) );
+    logTestEQint(lg,"Allocated memory is 32",32, utlMemAllocated);
     
     free(ptr_a);
-    logTestNEInt(lg,"Check invalid after free", utlMemValid, utlMemCheck(ptr_a));
-    logTestEQInt(lg,"Allocated memory is 0",0,utlMemAllocated);
+    logTestNEint(lg,"Check invalid after free", utlMemValid, utlMemCheck(ptr_a));
+    logTestEQint(lg,"Allocated memory is 0",0,utlMemAllocated);
     
     free(ptr_a);
-    logTestNEInt(lg,"Check invalid again",utlMemValid,utlMemCheck(ptr_a));
+    logTestNEint(lg,"Check invalid again",utlMemValid,utlMemCheck(ptr_a));
     
     ptr_a = malloc(0);
-    logTestEQInt(lg,"Check Valid after malloc(0)",utlMemValid,utlMemCheck(ptr_a) );
+    logTestEQint(lg,"Check Valid after malloc(0)",utlMemValid,utlMemCheck(ptr_a) );
     
     free(ptr_a); 
     ptr_a = calloc(8,4);
-    logTestEQInt(lg,"Allocated 8x4 ", utlMemValid,utlMemCheck(ptr_a) );
+    logTestEQint(lg,"Allocated 8x4 ", utlMemValid,utlMemCheck(ptr_a) );
     
     for (k=0,valid=0; k<32; k++) valid += ptr_a[k];
-    logTestEQInt(lg,"Memory is clear",0, valid);
+    logTestEQint(lg,"Memory is clear",0, valid);
     free(ptr_a); 
     
     
     ptr_a = malloc(16);  
-    logTestEQInt(lg,"Check Valid after malloc()",utlMemValid,utlMemCheck(ptr_a));
-    logTestEQInt(lg,"Allocated memory is 16",16,utlMemAllocated);
+    logTestEQint(lg,"Check Valid after malloc()",utlMemValid,utlMemCheck(ptr_a));
+    logTestEQint(lg,"Allocated memory is 16",16,utlMemAllocated);
     
     ptr_a[16] = '\0'; 
-    logTestEQInt(lg,"Check invalid after overrun",utlMemOverflow ,utlMemCheck(ptr_a) );
+    logTestEQint(lg,"Check invalid after overrun",utlMemOverflow ,utlMemCheck(ptr_a) );
     free(ptr_a);   
   }
   return 0;

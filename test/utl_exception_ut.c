@@ -39,8 +39,8 @@ int main (int argc, char *argv[])
       case 2 :  k = 2; break;
       default:  k = 9; 
     }); 
-    logTestEQInt(lg,"Exception 1 caught", 1,k);
-    logTestEQPtr(lg,"Env is null",NULL,env);
+    logTestEQint(lg,"Exception 1 caught", 1,k);
+    logTestEQptr(lg,"Env is null",NULL,env);
     
     k = 0; env = NULL;
     try(env) {
@@ -52,8 +52,8 @@ int main (int argc, char *argv[])
       default:  k = 9;  
     });
     
-    logTestEQInt(lg,"Exception 2 caught", 2,k);
-    logTestEQPtr(lg,"Env is null",NULL,env);
+    logTestEQint(lg,"Exception 2 caught", 2,k);
+    logTestEQptr(lg,"Env is null",NULL,env);
     
     k = 0;
     try(env) { throw(env,3); }
@@ -62,8 +62,8 @@ int main (int argc, char *argv[])
       case 2 :  k = 2; break;
       default:  k = 9;  
     });
-    logTestEQInt(lg,"Exception not caught", 9,k);
-    logTestEQPtr(lg,"Env is null",NULL,env);
+    logTestEQint(lg,"Exception not caught", 9,k);
+    logTestEQptr(lg,"Env is null",NULL,env);
     
     k = 0;
     try(env) { functhrow(env,1); }
@@ -72,8 +72,8 @@ int main (int argc, char *argv[])
       case 2 :  k = 2; break;
       default:  k = 9; 
     }); 
-    logTestEQInt(lg,"Exception 1 caught", 1,k);
-    logTestEQPtr(lg,"Env is null",NULL,env);
+    logTestEQint(lg,"Exception 1 caught", 1,k);
+    logTestEQptr(lg,"Env is null",NULL,env);
     
     k = 0; env = NULL;
     try(env)  functhrow(env,2); 
@@ -82,8 +82,8 @@ int main (int argc, char *argv[])
       case 2 :  k = 2; break;
       default:  k = 9;  
     });
-    logTestEQInt(lg,"Exception 2 caught", 2,k);
-    logTestEQPtr(lg,"Env is null",NULL,env);
+    logTestEQint(lg,"Exception 2 caught", 2,k);
+    logTestEQptr(lg,"Env is null",NULL,env);
     
     k = 0;
     try(env) { functhrow(env,3); }
@@ -92,8 +92,8 @@ int main (int argc, char *argv[])
       case 2 :  k = 2; break;
       default:  k = 9;  
     });
-    logTestEQInt(lg,"Exception not caught", 9,k);
-    logTestEQPtr(lg,"Env is null",NULL,env);
+    logTestEQint(lg,"Exception not caught", 9,k);
+    logTestEQptr(lg,"Env is null",NULL,env);
     
     k = 0;
     try(env)      {
@@ -110,8 +110,8 @@ int main (int argc, char *argv[])
       case 1 : k += 1; break;
       case 2 : k += 2; break;
     });
-    logTestEQInt(lg,"Exception 20 caught", 20,k);
-    logTestEQPtr(lg,"Env is null",NULL,env);
+    logTestEQint(lg,"Exception 20 caught", 20,k);
+    logTestEQptr(lg,"Env is null",NULL,env);
     
     k = 0;
     try(env) {
@@ -130,8 +130,8 @@ int main (int argc, char *argv[])
       default : rethrow;
     });
     
-    logTestEQInt(lg,"Exception 2 caught", 2,k);
-    logTestEQPtr(lg,"Env is null",NULL,env);
+    logTestEQint(lg,"Exception 2 caught", 2,k);
+    logTestEQptr(lg,"Env is null",NULL,env);
     
     k = 0;
     env = NULL;
@@ -158,8 +158,8 @@ int main (int argc, char *argv[])
     catch(
      default: k += 300; logTestNote(lg,"6 %d %p %d",k,env,__LINE__);
     );
-    logTestEQInt(lg,"Inner try are invisible", 102,k);
-    logTestEQPtr(lg,"Env is null",NULL,env);
+    logTestEQint(lg,"Inner try are invisible", 102,k);
+    logTestEQptr(lg,"Env is null",NULL,env);
     
     k = 0;
     try(env)  { throw(env,2); }
@@ -168,8 +168,8 @@ int main (int argc, char *argv[])
       case 2 :  k += 2; functhrow(env,1);
       default:  k += 9;  
     });
-    logTestEQInt(lg,"Exception 2 then 1 caught", 3,k);
-    logTestEQPtr(lg,"Env is null",NULL,env);
+    logTestEQint(lg,"Exception 2 then 1 caught", 3,k);
+    logTestEQptr(lg,"Env is null",NULL,env);
     
     k = 0;
     try(env) {
@@ -185,8 +185,8 @@ int main (int argc, char *argv[])
       case 2 : k += 2; break;
     });
     
-    logTestEQInt(lg,"Exception 10,20,2 caught", 32,k);
-    logTestEQPtr(lg,"Env is null",NULL,env);
+    logTestEQint(lg,"Exception 10,20,2 caught", 32,k);
+    logTestEQptr(lg,"Env is null",NULL,env);
     
     k = 0;
     try(env) {
@@ -202,8 +202,8 @@ int main (int argc, char *argv[])
       case 2 : k += 2; functhrow(env,3);
       default: k += 100;  
     });
-    logTestEQInt(lg,"Exception 10,20,2,3 caught", 132,k);
-    logTestEQPtr(lg,"Env is null",NULL,env);
+    logTestEQint(lg,"Exception 10,20,2,3 caught", 132,k);
+    logTestEQptr(lg,"Env is null",NULL,env);
   }
   return 0;
 }

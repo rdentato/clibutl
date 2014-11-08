@@ -23,13 +23,13 @@ int main (int argc, char *argv[])
  
   logTestPlan(lg, "utl unit test: general") {
   
-    logTestNEPtr(lg,"utlEmptyFun is not NULL", NULL, utlEmptyFun );
-    logTestEQInt(lg,"utlEmptyFun can be called", 0,utlEmptyFun());
+    logTestNEptr(lg,"utlEmptyFun is not NULL", NULL, utlEmptyFun );
+    logTestEQint(lg,"utlEmptyFun can be called", 0,utlEmptyFun());
   
-    logTestNEPtr(lg,"utlEmptyString is not NULL", NULL,utlEmptyString);
-    logTestEQInt(lg,"utlEmptyString is empty", '\0', utlEmptyString[0]);
+    logTestNEptr(lg,"utlEmptyString is not NULL", NULL,utlEmptyString);
+    logTestEQint(lg,"utlEmptyString is empty", '\0', utlEmptyString[0]);
     
-    logTestEQInt(lg,"utlZero is zero", 0, utlZero);
+    logTestEQint(lg,"utlZero is zero", 0, utlZero);
   }
   return 0;
 }
