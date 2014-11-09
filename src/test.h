@@ -17,13 +17,13 @@
   do {\
     t1 utl_exp = (e); t1 utl_ret = (r); \
     if (!(x)) { \
-      fprintf(stderr, "Line %d: expected (" #t1 ") " #o " '" #t2 "' . Got '" #t2 "'\n",__LINE__,utl_exp,utl_ret); \
+      fprintf(stderr, "Line %d: Expected (" #t1 ") " #o " '" #t2 "'. Got '" #t2 "'\n",__LINE__,utl_exp,utl_ret); \
     } \
   } while (0)
                              
-#define tstint(e,o,r)   tst_0(int   ,%d,e,r,o, utl_exp o utl_ret)
-#define tstptr(e,o,r)   tst_0(void *,%p,e,r,o, utl_exp o utl_ret)
-#define tstdbl(e,o,r)   tst_0(double,%f,e,r,o, utl_exp o utl_ret)
+#define tstint(e,o,r)   tst_0(int   ,%d,e,r,o, utl_ret o utl_exp)
+#define tstptr(e,o,r)   tst_0(void *,%p,e,r,o, utl_ret o utl_exp)
+#define tstdbl(e,o,r)   tst_0(double,%f,e,r,o, utl_ret o utl_exp)
 #define tststr(e,r,o,n) tst_0(char *,%s,e,r,o, (1 << (1+strcmp(utl_ret, utl_exp))) & n)
 
 #define tstEQint(e,r)  tstint(e, == , r )
