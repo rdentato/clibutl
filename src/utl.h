@@ -341,18 +341,18 @@ typedef struct {
   FILE          *file;
   unsigned short rot;
   unsigned char  level;
+  unsigned char  last;
   unsigned char  flags;
   unsigned char  ok;
   unsigned char  ko;
   unsigned char  skp;
-  unsigned char  xx;
 } utl_log_s, *utlLogger;
 
-#define utl_log_stdout_init {NULL, 0, log_W, UTL_LOG_OUT,0}
+#define utl_log_stdout_init {NULL, 0, log_W, log_W, UTL_LOG_OUT,0}
 utl_extern(utl_log_s utl_log_stdout , = utl_log_stdout_init);
 utl_extern(utlLogger logStdout, = &utl_log_stdout);
 
-#define utl_log_stderr_init {NULL, 0, log_W, UTL_LOG_ERR,0}
+#define utl_log_stderr_init {NULL, 0, log_W, log_W, UTL_LOG_ERR,0}
 utl_extern(utl_log_s utl_log_stderr , = utl_log_stderr_init);
 utl_extern(utlLogger logStderr, = &utl_log_stderr);
 
@@ -481,14 +481,7 @@ void utl_log_write(utlLogger lg,int lv, int tstamp, char *format, ...);
 #define logAlarm(lg, ...)      utl_log_write(lg, log_A, 1, __VA_ARGS__)
 #define logFatal(lg, ...)      utl_log_write(lg, log_F, 1, __VA_ARGS__)
 
-#define logDContinue(lg, ...)  utl_log_write(lg, log_D, 0, __VA_ARGS__)
-#define logIContinue(lg, ...)  utl_log_write(lg, log_I, 0, __VA_ARGS__)
-#define logMContinue(lg, ...)  utl_log_write(lg, log_M, 0, __VA_ARGS__)
-#define logWContinue(lg, ...)  utl_log_write(lg, log_W, 0, __VA_ARGS__)
-#define logEContinue(lg, ...)  utl_log_write(lg, log_E, 0, __VA_ARGS__)
-#define logCContinue(lg, ...)  utl_log_write(lg, log_C, 0, __VA_ARGS__)
-#define logAContinue(lg, ...)  utl_log_write(lg, log_A, 0, __VA_ARGS__)
-#define logFContinue(lg, ...)  utl_log_write(lg, log_F, 0, __VA_ARGS__)
+#define logContinue(lg, ...)   utl_log_write(lg, -1, 0, __VA_ARGS__)
 
 #define logAssert(lg,e)        utl_log_assert(lg, e, #e, __FILE__, __LINE__)
 
@@ -525,33 +518,35 @@ void utl_log_write(utlLogger lg,int lv, int tstamp, char *format, ...);
       } \
       else utl_log_test(lg, 1, s, 1, __FILE__, __LINE__)
 
-#define log_testint(lg,s,e,r,o) log_testxxx(int   ,%d,lg,s,e,r,o,(utl_exp o utl_ret))
-#define log_testptr(lg,s,e,r,o) log_testxxx(void *,%p,lg,s,e,r,o,(utl_exp o utl_ret))
-#define log_testdbl(lg,s,e,r,o) log_testxxx(double,%p,lg,s,e,r,o,(utl_exp o utl_ret))
+#define log_testint(lg,s,e,r,o)   log_testxxx(int   ,%d,lg,s,e,r,o,(utl_ret o utl_exp))
+#define log_testptr(lg,s,e,r,o)   log_testxxx(void *,%p,lg,s,e,r,o,(utl_ret o utl_exp))
+#define log_testdbl(lg,s,e,r,o)   log_testxxx(double,%p,lg,s,e,r,o,(utl_ret o utl_exp))
+#define log_teststr(lg,s,e,r,o,n) log_testxxx(char *,%s,lg,s,e,r,o,(1 << (1+strcmp(utl_ret, utl_exp))) & n)
 
-#define logTestEQint(lg,s,e,r)  log_testint(lg,s,e,r, == )
-#define logTestNEint(lg,s,e,r)  log_testint(lg,s,e,r, != )
-#define logTestGTint(lg,s,e,r)  log_testint(lg,s,e,r, >  )
-#define logTestGEint(lg,s,e,r)  log_testint(lg,s,e,r, >= )
-#define logTestLTint(lg,s,e,r)  log_testint(lg,s,e,r, <  )
-#define logTestLEint(lg,s,e,r)  log_testint(lg,s,e,r, <= )
+#define logEQint(lg,s,e,r)       log_testint(lg,s,e,r, == )
+#define logNEint(lg,s,e,r)       log_testint(lg,s,e,r, != )
+#define logGTint(lg,s,e,r)       log_testint(lg,s,e,r, >  )
+#define logGEint(lg,s,e,r)       log_testint(lg,s,e,r, >= )
+#define logLTint(lg,s,e,r)       log_testint(lg,s,e,r, <  )
+#define logLEint(lg,s,e,r)       log_testint(lg,s,e,r, <= )
+                                 
+#define logEQdbl(lg,s,e,r)       log_testdbl(lg,s,e,r, == )
+#define logNEdbl(lg,s,e,r)       log_testdbl(lg,s,e,r, != )
+#define logGTdbl(lg,s,e,r)       log_testdbl(lg,s,e,r, >  )
+#define logGEdbl(lg,s,e,r)       log_testdbl(lg,s,e,r, >= )
+#define logLTdbl(lg,s,e,r)       log_testdbl(lg,s,e,r, <  )
+#define logLEdbl(lg,s,e,r)       log_testdbl(lg,s,e,r, <= )
+#define logEPSdbl(lg,s,d,e,r)    logLTdbl(lg,s,d,fabs((e)-(r)))
 
-#define logTestEQdbl(lg,s,e,r)  log_testdbl(lg,s,e,r, == )
-#define logTestNEdbl(lg,s,e,r)  log_testdbl(lg,s,e,r, != )
-#define logTestGTdbl(lg,s,e,r)  log_testdbl(lg,s,e,r, >  )
-#define logTestGEdbl(lg,s,e,r)  log_testdbl(lg,s,e,r, >= )
-#define logTestLTdbl(lg,s,e,r)  log_testdbl(lg,s,e,r, <  )
-#define logTestLEdbl(lg,s,e,r)  log_testdbl(lg,s,e,r, <= )
+#define logEQptr(lg,s,e,r)       log_testptr(lg,s,e,r, == )
+#define logNEptr(lg,s,e,r)       log_testptr(lg,s,e,r, != )
+#define logGTptr(lg,s,e,r)       log_testptr(lg,s,e,r, >  )
+#define logGEptr(lg,s,e,r)       log_testptr(lg,s,e,r, >= )
+#define logLTptr(lg,s,e,r)       log_testptr(lg,s,e,r, <  )
+#define logLEptr(lg,s,e,r)       log_testptr(lg,s,e,r, <= )
 
-#define logTestEQptr(lg,s,e,r)  log_testptr(lg,s,e,r, == )
-#define logTestNEptr(lg,s,e,r)  log_testptr(lg,s,e,r, != )
-#define logTestGTptr(lg,s,e,r)  log_testptr(lg,s,e,r, >  )
-#define logTestGEptr(lg,s,e,r)  log_testptr(lg,s,e,r, >= )
-#define logTestLTptr(lg,s,e,r)  log_testptr(lg,s,e,r, <  )
-#define logTestLEptr(lg,s,e,r)  log_testptr(lg,s,e,r, <= )
-
-#define logTestNULL(lg,s,e)  logTestEQptr(lg,s,e,NULL)                                     
-#define logTestNNULL(lg,s,e) logTestNEptr(lg,s,e,NULL)                                     
+#define logNULL(lg,s,e)          logEQptr(lg,s,e,NULL)                                     
+#define logNNULL(lg,s,e)         logNEptr(lg,s,e,NULL)                                     
 
 /*
 ** .v
@@ -670,8 +665,11 @@ void utl_log_write(utlLogger lg, int lv, int tstamp, char *format, ...)
   else if (lg->flags & UTL_LOG_ERR) f = stderr;
   else f = lg->file;
   
+  if (lv == -1) lv = lg->last;
+  
   lg_lv = lg->level;
   lv = lv & 0x0F;
+  lg->last = lv;
   if( lv <= lg_lv) {
     if (tstamp) {
       time(&t);
@@ -789,22 +787,22 @@ typedef void *utlLogger;
 #define log_testint(lg,s,e,r,o) (utlZero<<=1)
 #define log_testptr(lg,s,e,r,o) (utlZero<<=1)
 
-#define logTestEQInt(lg,s,e,r)  (utlZero<<=1)
-#define logTestNEInt(lg,s,e,r)  (utlZero<<=1)
-#define logTestGTInt(lg,s,e,r)  (utlZero<<=1)
-#define logTestGEInt(lg,s,e,r)  (utlZero<<=1)
-#define logTestLTInt(lg,s,e,r)  (utlZero<<=1)
-#define logTestLEInt(lg,s,e,r)  (utlZero<<=1)
+#define logEQInt(lg,s,e,r)  (utlZero<<=1)
+#define logNEInt(lg,s,e,r)  (utlZero<<=1)
+#define logGTInt(lg,s,e,r)  (utlZero<<=1)
+#define logGEInt(lg,s,e,r)  (utlZero<<=1)
+#define logLTInt(lg,s,e,r)  (utlZero<<=1)
+#define logLEInt(lg,s,e,r)  (utlZero<<=1)
                                
-#define logTestEQPtr(lg,s,e,r)  (utlZero<<=1)
-#define logTestNEPtr(lg,s,e,r)  (utlZero<<=1)
-#define logTestGTPtr(lg,s,e,r)  (utlZero<<=1)
-#define logTestGEPtr(lg,s,e,r)  (utlZero<<=1)
-#define logTestLTPtr(lg,s,e,r)  (utlZero<<=1)
-#define logTestLEPtr(lg,s,e,r)  (utlZero<<=1)
+#define logEQPtr(lg,s,e,r)  (utlZero<<=1)
+#define logNEPtr(lg,s,e,r)  (utlZero<<=1)
+#define logGTPtr(lg,s,e,r)  (utlZero<<=1)
+#define logGEPtr(lg,s,e,r)  (utlZero<<=1)
+#define logLTPtr(lg,s,e,r)  (utlZero<<=1)
+#define logLEPtr(lg,s,e,r)  (utlZero<<=1)
                                 
-#define logTestNULL(lg,s,e)     (utlZero<<=1)
-#define logTestNNULL(lg,s,e)    (utlZero<<=1)
+#define logNULL(lg,s,e)     (utlZero<<=1)
+#define logNNULL(lg,s,e)    (utlZero<<=1)
 
 
 #endif /*- UTL_NOLOGGING */
@@ -1114,13 +1112,30 @@ int utl_vecSet(vec_t v, size_t  i, void *e)
 
 void *utl_vecGet(vec_t v, size_t i)
 {
-  if (!v) return '\0';
+  if (!v) return NULL;
   if (i >= v->cnt) return NULL;
   return ((char *)(v->vec)) + (i*v->esz);
 }
 
+void *utl_vecTop(vec_t v)
+{
+  void *ret = NULL;
+  if (v && v->cnt) {
+    ret =  ((char *)(v->vec)) + (v->cnt*v->esz);
+  }
+  return ret;
+}
+
+void *utl_vecPop(vec_t v)
+{
+  void *ret;
+  if ((ret = utl_vecTop(v))) v->cnt -= 1;
+  return ret;
+}
+
 int utl_vecAdd(vec_t v, void *e)
 {
+  if (!v) return 0;
   return utl_vecSet(v,v->cnt,e);
 }
 
@@ -1139,13 +1154,21 @@ int utl_vecResize(vec_t v, size_t n)
     v->max = new_max;
     if (v->cnt > v->max) v->cnt = v->max;
   }
-  
   return 1;
 }
 
-
 #endif  /* UTL_LIB */
 
+
+/** STACKS **/
+
+#define stk_t          vec_t
+#define stkNew(ty)     vecNew(ty)
+#define stkCount(s)    vecCount(s)
+#define stkEmpty(s)  (!vecCount(s))
+#define stkPush(s,e)   vecAdd(s,e)
+#define stkTop(s)      utl_vecTop(s)
+#define stkPop(s)      utl_vecPop(s)
 
 /**  BUFFERS **/
 #define buf_t vec_t

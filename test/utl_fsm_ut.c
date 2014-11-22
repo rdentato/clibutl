@@ -27,13 +27,13 @@ int main (int argc, char *argv[])
     fsm ({
       case fsmSTART : k = 1; 
     });
-    logTestEQint(lg,"Start executed", 1,k);
+    logEQint(lg,"Start executed", 1,k);
     
     k = 0;
     fsm ({
       case OTHER : k = 1; 
     });
-    logTestEQint(lg,"No start state", 0,k);
+    logEQint(lg,"No start state", 0,k);
     
     k = 0;
     fsm ({
@@ -41,13 +41,13 @@ int main (int argc, char *argv[])
       case fsmSTART : k = 1; break;
       case 2 : k = 3; break;
     });
-    logTestEQint(lg,"Start is not the first", 1,k);
+    logEQint(lg,"Start is not the first", 1,k);
     
     fsm ({
       case fsmSTART : k = 1; break;
       case OTHER : k += 2; break;
     });
-    logTestEQint(lg,"No fallthrough",1,k);
+    logEQint(lg,"No fallthrough",1,k);
     
     k = 0;
     fsm({
@@ -60,7 +60,7 @@ int main (int argc, char *argv[])
               });
               break;
     });
-    logTestEQint(lg,"Nested Works?",1111,k);
+    logEQint(lg,"Nested Works?",1111,k);
     
     k=0;
     fsm({
@@ -69,7 +69,7 @@ int main (int argc, char *argv[])
       case 4: fsmExit;
       case 3: k++; fsmGoto(2);
     });
-    logTestEQint(lg,"fsmGoto in else",2,k);
+    logEQint(lg,"fsmGoto in else",2,k);
   } 
   
   return 0;

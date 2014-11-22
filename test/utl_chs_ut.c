@@ -24,14 +24,14 @@ int main (int argc, char *argv[])
   logTesPlan(lg,"utl unit test: chs") {
   
     chsNew(s);
-    logTestNEPtr(lg,"Is not NULL", NULL, s );
-    logTestEQInt(lg,"Len 0", 0, chsLen(s) );
+    logNEPtr(lg,"Is not NULL", NULL, s );
+    logEQInt(lg,"Len 0", 0, chsLen(s) );
 
     chsSetChr(s,0,'a');
-    logTestNEPtr(lg,"Is not NULL", NULL, s );
-    logTestEQInt(lg,"Set properly direct access", 'a', s[0] );
-    logTestEQInt(lg,"Set properly (chrAt)", 'a', chsChrAt(s,0) );
-    logTestEQInt(lg,"Len 1", 1, chsLen(s) );
+    logNEPtr(lg,"Is not NULL", NULL, s );
+    logEQInt(lg,"Set properly direct access", 'a', s[0] );
+    logEQInt(lg,"Set properly (chrAt)", 'a', chsChrAt(s,0) );
+    logEQInt(lg,"Len 1", 1, chsLen(s) );
         
   }
 }

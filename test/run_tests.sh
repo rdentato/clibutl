@@ -7,5 +7,5 @@
  
 for f in t_*
 do
-  ./$f
+  ./$f 2>&1 
 done

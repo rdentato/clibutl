@@ -31,7 +31,8 @@ CFLAGS= $(CCFLAGS) -I../src -g -Wall
 
 all:  $(TESTS)
 	chmod +x ./run_tests.sh
-	./run_tests.sh 2>&1 | sed -n -e '/TST PLN/p' -e '/TST RES/p'
+	./run_tests.sh > tests.log
+	sed -n -e '/TST PLN/p' -e '/TST RES/p' < tests.log
 
 t_buf$(_EXE): $(UTL_H)  utl_buf_ut.c
 	$(CC) $(CFLAGS) -c -o utl_buf_ut.$(_OBJ) utl_buf_ut.c
