@@ -111,6 +111,55 @@ int main (int argc, char *argv[])
     logNEptr(lg,"Is Not Null", NULL, s);
     s = bufFree(s);
     logEQptr(lg,"Is Null", NULL, s);
+    
+    logTestCode(lg) {
+      s = bufNew();
+      logTestSkip(lg,"Unable to create buffer!",!s) {
+        bufAddStr(s,"AC");
+        logTestNote(lg,"Buf: \"%s\"",bufStr(s));
+        logEQint(lg,"Created \"AC\"",2,bufLen(s));
+        bufIns(s,1,'B');
+        logTestNote(lg,"Buf: \"%s\"",bufStr(s));
+        logEQint(lg,"Inserted 'B'",3,bufLen(s));
+        logEQint(lg,"Inserted 'B'",0,strcmp(bufStr(s),"ABC"));
+        
+        bufIns(s,0,'@');
+        logTestNote(lg,"Buf: \"%s\"",bufStr(s));
+        logEQint(lg,"Inserted '@'",4,bufLen(s));
+        logEQint(lg,"Inserted '@'",0,strcmp(bufStr(s),"@ABC"));
+
+        bufIns(s,4,'D');
+        logTestNote(lg,"Buf: \"%s\"",bufStr(s));
+        logEQint(lg,"Inserted 'D'",5,bufLen(s));
+        logEQint(lg,"Inserted 'D'",0,strcmp(bufStr(s),"@ABCD"));
+
+        bufIns(s,100,'E');
+        logTestNote(lg,"Buf: \"%s\"",bufStr(s));
+        logEQint(lg,"Inserted 'E'",6,bufLen(s));
+        logEQint(lg,"Inserted 'E'",0,strcmp(bufStr(s),"@ABCDE"));
+
+        bufInsStr(s,0,"  ");
+        logTestNote(lg,"Buf: \"%s\"",bufStr(s));
+        logEQint(lg,"Inserted string \"  \"",8,bufLen(s));
+        logEQint(lg,"Inserted string \"  \"",0,strcmp(bufStr(s),"  @ABCDE"));
+
+        bufInsStr(s,3,"++");
+        logTestNote(lg,"Buf: \"%s\"",bufStr(s));
+        logEQint(lg,"Inserted string \"++\"",10,bufLen(s));
+        logEQint(lg,"Inserted string \"++\"",0,strcmp(bufStr(s),"  @++ABCDE"));
+
+        bufInsStr(s,10,"__");
+        logTestNote(lg,"Buf: \"%s\"",bufStr(s));
+        logEQint(lg,"Inserted string \"__\"",12,bufLen(s));
+        logEQint(lg,"Inserted string \"__\"",0,strcmp(bufStr(s),"  @++ABCDE__"));
+        
+        bufInsStr(s,120,"||");
+        logTestNote(lg,"Buf: \"%s\"",bufStr(s));
+        logEQint(lg,"Inserted string \"||\"",14,bufLen(s));
+        logEQint(lg,"Inserted string \"||\"",0,strcmp(bufStr(s),"  @++ABCDE__||"));
+     }
+      s = bufFree(s);
+    }
   }
   return 0;
 }

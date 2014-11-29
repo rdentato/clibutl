@@ -733,8 +733,11 @@ int utl_log_testskip_check(utlLogger lg)
 
 void utl_log_testskip_end(utlLogger lg, int line)
 {
-  lg->flags &= ~(UTL_LOG_SKP0|UTL_LOG_SKIP);
-  utl_log_write(lg, log_T, 1, "SKP  END (:%d)", line);
+  if (lg) {
+    if (lg->flags & UTL_LOG_SKIP)
+      utl_log_write(lg, log_T, 1, "SKP  END (:%d)", line);
+    lg->flags &= ~(UTL_LOG_SKP0|UTL_LOG_SKIP);
+  }
 }
 
                  
@@ -803,7 +806,6 @@ typedef void *utlLogger;
                                 
 #define logNULL(lg,s,e)     (utlZero<<=1)
 #define logNNULL(lg,s,e)    (utlZero<<=1)
-
 
 #endif /*- UTL_NOLOGGING */
 
@@ -1189,6 +1191,13 @@ int utl_bufAdd(buf_t bf, char c);
 int utl_bufAddStr(buf_t bf, char *s);
 #define bufAddStr  utl_bufAddStr
 
+int utl_bufIns(buf_t bf, size_t i, char c);
+#define bufIns(b,i,c) utl_bufIns(b,i,c)
+
+int utl_bufInsStr(buf_t bf, size_t i, char *s);
+#define bufInsStr(b,i,s) utl_bufInsStr(b,i,s)
+
+
 #define bufResize utl_vecResize
 
 #define bufClr(bf) utl_bufSet(bf,0,'\0');
@@ -1281,6 +1290,34 @@ int utl_bufAddFile(buf_t bf, FILE *f)
   } while (c != EOF);
   return n;
 }
+
+static int utl_buf_insert(buf_t bf, size_t i, size_t l, char *s)
+{
+  int n = 1;
+  int k;
+  char *b;
+  
+  if (!bf) return 0;
+  if (!s)  return 1;
+  if (l == 0) l = strlen(s);
+  if (l == 0) return 1;
+  if (i > bf->cnt) i = bf->cnt;
+
+  if (!utl_vec_expand(bf,bf->cnt+l+1)) return 0;
+  
+  b = bf->vec+i;
+  k = bf->cnt;
+  memmove(b+l, b, k-i);
+  memcpy(b,s,l);
+  utl_bufSet(bf, k +l, '\0');
+  return n;
+}
+
+int utl_bufInsStr(buf_t bf, size_t i, char *s)
+{ return utl_buf_insert(bf,i,0,s); }
+
+int utl_bufIns(buf_t bf, size_t i, char c)
+{ return utl_buf_insert(bf,i,1,&c); }
 
 
 /* {{ code from http://stackoverflow.com/questions/2915672 */
