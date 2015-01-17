@@ -165,6 +165,9 @@ utl_extern(char *utlEmptyString, = "");
 utl_extern(int utlZero, = 0);
 
 
+typedef int (*utl_cmp_t)(void *a, void *b);
+
+
 /* .% Assumptions (static assertions)
 ** ==================================
 **
@@ -186,7 +189,7 @@ utl_extern(int utlZero, = 0);
 ** complicate that the logic of errors handling obscures the logic of the 
 ** program itself.
 **   If an error happens in the '|try| section, you can '|throw()| an exception
-** (an error condition) and the control goes back to the '|catch| section
+** (an error condition) and the control goes last to the '|catch| section
 ** where the proper actions can be taken.
 **
 **   Simple implementation of try/catch.
@@ -227,17 +230,19 @@ utl_extern(int utlZero, = 0);
 **      case  ERR_OUTOFMEM : 
 **                 ... code ... // Handle all your cleanup here!
 **                 break;
-**   });
+**   })
 **
 ** .}}
 */ 
 
 
 typedef struct utl_env_s { 
+  uint32_t flags;
   jmp_buf jb;
   struct utl_env_s volatile *prev;
   struct utl_env_s volatile **orig;
 } *tryenv; 
+
 
 #define try(utl_env) \
             do { struct utl_env_s utl_cur_env; volatile int utl_err; \
@@ -247,11 +252,11 @@ typedef struct utl_env_s {
                  if ((utl_err = setjmp(utl_cur_env.jb))==0)
                  
 #define catch(y) if (utl_err) switch (utl_err) { \
-                      y \
-                   } \
-                   utl_err = 0;\
+                     y \
+                  } \
+                  utl_err = 0;\
                   *utl_cur_env.orig = utl_cur_env.prev; \
-                } while(0)
+                } while(0);
 
 #define throw(env,err) (env? longjmp(((tryenv)env)->jb, err): exit(err))
 #define rethrow        (*utl_cur_env.orig = utl_cur_env.prev,throw(*utl_cur_env.orig,utl_err))
@@ -275,14 +280,14 @@ typedef struct utl_env_s {
 **        }
 **
 **        case z : { ...
-**                   break;  // exit from the FSM
+**                   fsmExit;  // exit from the FSM
 **        }
 **
 **        case y : { ...
 **                   if (c == 1) fsmGoto(x);
 **                   fsmGoto(z);
 **        }
-**      });
+**      })
 ** ..
 **
 **   It's a good practice to include a drawing of the FSM in the technical
@@ -296,7 +301,8 @@ typedef struct utl_env_s {
                       for (utl_fsm_next=fsmSTART; utl_fsm_next>fsmEND;) \
                         switch((utl_fsm_state=utl_fsm_next, utl_fsm_next=fsmEND, utl_fsm_state)) { \
                         x \
-                }} while (utlZero)
+                        default: utl_fsm_next = fsmEND; \
+                }} while (utlZero);
                          
 #define fsmGoto(x)  if (!utlZero) {utl_fsm_next = (x); break;} else (utlZero<<=1)
 #define fsmRestart  fsmGoto(fsmSTART)
@@ -478,8 +484,20 @@ void utl_log_write(utlLogger lg,int lv, int tstamp, char *format, ...);
 #define logWarn(lg, ...)       utl_log_write(lg, log_W, 1, __VA_ARGS__)
 #define logError(lg, ...)      utl_log_write(lg, log_E, 1, __VA_ARGS__)
 #define logCritical(lg, ...)   utl_log_write(lg, log_C, 1, __VA_ARGS__)
-#define logAlarm(lg, ...)      utl_log_write(lg, log_A, 1, __VA_ARGS__)
+#define logAlert(lg, ...)      utl_log_write(lg, log_A, 1, __VA_ARGS__)
 #define logFatal(lg, ...)      utl_log_write(lg, log_F, 1, __VA_ARGS__)
+
+#define logClock(lg,x)         logClockStart(lg); \
+                                 x \
+                               logClockStop(lg); 
+
+#define logClockStart(lg)      do { \
+                                 clock_t utl_clk = clock(); \
+                                 utlLogger utl_l=lg;
+                                 
+#define logClockStop             logAlert(utl_l,"CLK  %ld (s/%ld) %s:%d",clock()-utl_clk, CLOCKS_PER_SEC,__FILE__,__LINE__);\
+                               } while (utlZero)
+
 
 #define logContinue(lg, ...)   utl_log_write(lg, -1, 0, __VA_ARGS__)
 
@@ -499,8 +517,8 @@ void utl_log_write(utlLogger lg,int lv, int tstamp, char *format, ...);
 
 #define logTestCode(lg) if (!(lg && !(lg->flags & UTL_LOG_SKIP))) (utlZero<<=1); else 
 
-#define logTestStat(lg)        (lg? utl_log_write(lg, log_T, 1, "RES  KO: %d  OK: %d  SKIP: %d  TOT: %d  (:%d)", \
-                                    lg->ko, lg->ok, lg->skp, lg->ko + lg->ok + lg->skp,__LINE__) \
+#define logTestStat(lg)        (lg? utl_log_write(lg, log_T, 1, "RES  KO:%3d  OK:%3d  SKIP:%3d  TOT:%3d  (%s:%d)", \
+                                    lg->ko, lg->ok, lg->skp, lg->ko + lg->ok + lg->skp,__FILE__, __LINE__) \
                                   : 0)
 
 #define logTestSkip(lg,s,e)    for ( utl_log_testskip_init(lg, e, s,  __LINE__) ; \
@@ -756,14 +774,7 @@ void utl_log_testskip_end(utlLogger lg, int line)
 #define logAlarm(lg, ...)     (utlZero<<=1)
 #define logFatal(lg, ...)     (utlZero<<=1)
 
-#define logDContinue(lg, ...) (utlZero<<=1)
-#define logIContinue(lg, ...) (utlZero<<=1)
-#define logMContinue(lg, ...) (utlZero<<=1)
-#define logWContinue(lg, ...) (utlZero<<=1)
-#define logEContinue(lg, ...) (utlZero<<=1)
-#define logCContinue(lg, ...) (utlZero<<=1)
-#define logAContinue(lg, ...) (utlZero<<=1)
-#define logFContinue(lg, ...) (utlZero<<=1)
+#define logContinue(lg, ...)  (utlZero<<=1)
 
 #define logAssert(lg,e)       (utlZero<<=1)
 
@@ -778,6 +789,7 @@ typedef void *utlLogger;
 #define logStdout  NULL
 #define logStderr  NULL
 
+#define logClock(lg,x)         x
 
 #define logTest(lg,s,e)        (utlZero<<=1)
 #define logTestPlan(lg, s)     if (!utlZero) (utlZero<<=1); else
@@ -816,6 +828,10 @@ typedef void *utlLogger;
 
 #define logNDebug(lg,...) (utlZero<<=1)
 
+#ifdef UTL_NOLOGCLOCK
+#undef  logClock
+#define logClock(lg,x)         x
+#endif
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 /*  .% Traced memory
@@ -1014,47 +1030,82 @@ void *utl_strdup(void *ptr, char *file, int line)
 
 #endif /* UTL_MEMCHECK */
 
-#ifndef UTL_NOADT
 
+#ifndef UTL_NOADT
 /** VECTORS **/
 
+
+typedef union val_u {
+  uint32_t    ui;
+   int32_t     i;
+      void    *p;
+      char    *s;
+     float     f;
+    double     d;
+  uint64_t  ui64;
+   int64_t   i64;
+   char       cs[sizeof(double)];
+   char        c;
+} val_t;
+
+utlAssume(sizeof(val_t) == sizeof(double));
+utlAssume(sizeof(val_t) == sizeof(uint64_t));
+
 typedef struct vec_s {
-  size_t  max;
-  size_t  cnt;
-  size_t  esz;
+  uint32_t  max;
+  uint32_t  cnt;
+  uint32_t  esz;
+  uint32_t  first;
+  uint32_t  last; 
+  utl_cmp_t cmp;
   void   *vec;
 } *vec_t;
 
-vec_t utl_vecNew(size_t esz);
+vec_t utl_vecNew(uint32_t esz);
 #define vecNew(ty) utl_vecNew(sizeof(ty))
 
 vec_t utl_vecFree(vec_t v);
 #define vecFree utl_vecFree
 
-int utl_vecSet(vec_t v, size_t i, void *e);
-#define vecSet utl_vecSet
+int utl_vecSet(vec_t v, uint32_t i, void *e);
+#define vecSetRaw utl_vecSet
+#define vecSet(ty,v,i,e) do { ty x = e; utl_vecSet(v,i,&x);} while(utlZero)
 
 int utl_vecAdd(vec_t v, void *e);
-#define vecAdd  utl_vecAdd
+#define vecAddRaw  utl_vecAdd
+#define vecAdd(ty,v,e) do { ty x = e; utl_vecAdd(v,&x);} while(utlZero)
 
-void *utl_vecGet(vec_t v, size_t  i);
-#define vecGet utl_vecGet
+int utl_vec_ins(vec_t v, uint32_t n, uint32_t l,void *e);
+#define vecInsRaw(v,i,e) utl_vec_ins(v,i,1,e);
+#define vecIns(ty,v,i,e) do { ty x = e; utl_vec_ins(v,i,1,&x);} while(utlZero)
+#define vecInsGap(v,i,n) utl_vec_ins(v,i,n,NULL)
 
-int utl_vecResize(vec_t v, size_t n);
+int utl_vec_valid_ndx(vec_t v, uint32_t i);
+
+#define utl_vec_getptr(v,i)  (((char *)((v)->vec)) + ((i)*v->esz))
+
+void *utl_vec_get(vec_t v, uint32_t  i);
+#define vecGetRaw utl_vec_get
+#define vecGet(ty,v,i,d) (utl_vec_valid_ndx(v,i) ? *((ty *)(utl_vec_getptr(v,i))) : d)
+
+int utl_vecResize(vec_t v, uint32_t n);
 #define vecResize utl_vecResize
 
-size_t utl_vecCount(vec_t v);
+uint32_t utl_vecCount(vec_t v);
 #define vecCount     utl_vecCount
 
-size_t utl_vecMax(vec_t v);
+uint32_t utl_vecMax(vec_t v);
 #define vecMax     utl_vecMax
 
+uint32_t utl_vecEsz(vec_t v);
+#define vecEsz     utl_vecEsz
+
 void  *utl_vecVec(vec_t v);
-#define vec(v,ty)   ((ty *)utl_vecVec(v))
+#define vec(ty, v) ((ty *)utl_vecVec(v))
 
 #ifdef UTL_LIB
 
-vec_t utl_vecNew(size_t esz)
+vec_t utl_vecNew(uint32_t esz)
 {
   vec_t v;
   v = malloc(sizeof(struct vec_s));
@@ -1076,113 +1127,109 @@ vec_t utl_vecFree(vec_t v)
   return NULL;
 }
 
-size_t utl_vecCount(vec_t v) { return v? v->cnt : 0; }
-size_t utl_vecMax(vec_t v)   { return v? v->max : 0; }
+uint32_t utl_vecCount(vec_t v) { return v? v->cnt : 0; }
+uint32_t utl_vecMax(vec_t v)   { return v? v->max : 0; }
+uint32_t utl_vecEsz(vec_t v)   { return v? v->esz : 0; }
 void  *utl_vecVec(vec_t v)   { return v? v->vec : NULL; } 
 
-static int utl_vec_expand(vec_t v, size_t i)
-{
-  unsigned long new_max;
-  char *new_vec = NULL;
-   
-  if (!v) return 0;
-   
-  new_max = v->max;
-  
-  /* The minimum block should be able to contain a void * */
-  if (new_max < sizeof(void *)) new_max = sizeof(void *);
+int utl_vec_valid_ndx(vec_t v, uint32_t i) { return (v && v->vec && i < v->cnt); }
 
-  while (new_max <= i) new_max *= 2; /* double */
-   
-  if (new_max > v->max) {
-    new_vec = realloc(v->vec,new_max * v->esz);
-    if (!new_vec) return 0;
-    v->vec = new_vec;
-    v->max = new_max;
-  }
-  return 1;
+static int utl_vec_expand(vec_t v, uint32_t i)
+{
+  if (utl_vec_valid_ndx(v,i)) return 1;
+  return utl_vecResize(v,i);
 }
 
-int utl_vecSet(vec_t v, size_t  i, void *e)
+int utl_vecResize(vec_t v, uint32_t n)
 {
-  if (!utl_vec_expand(v,i)) return 0;
-  
-  memcpy(((char *)(v->vec)) + (i * v->esz),e,v->esz);
-  if (i >= v->cnt) v->cnt = i+1;
-  return 1;
-}
-
-void *utl_vecGet(vec_t v, size_t i)
-{
-  if (!v) return NULL;
-  if (i >= v->cnt) return NULL;
-  return ((char *)(v->vec)) + (i*v->esz);
-}
-
-void *utl_vecTop(vec_t v)
-{
-  void *ret = NULL;
-  if (v && v->cnt) {
-    ret =  ((char *)(v->vec)) + (v->cnt*v->esz);
-  }
-  return ret;
-}
-
-void *utl_vecPop(vec_t v)
-{
-  void *ret;
-  if ((ret = utl_vecTop(v))) v->cnt -= 1;
-  return ret;
-}
-
-int utl_vecAdd(vec_t v, void *e)
-{
-  if (!v) return 0;
-  return utl_vecSet(v,v->cnt,e);
-}
-
-int utl_vecResize(vec_t v, size_t n)
-{
-  size_t new_max = 1;
+  uint32_t new_max = 1;
   char *new_vec = NULL;
   if (!v) return 0;
 
   while (new_max <= n) new_max *= 2;
   
   if (new_max != v->max) {
-    new_vec = realloc(v->vec,new_max * v->esz);
+    new_vec = realloc(v->vec, new_max * v->esz);
     if (!new_vec) return 0;
     v->vec = new_vec;
     v->max = new_max;
-    if (v->cnt > v->max) v->cnt = v->max;
+    if (v->cnt > v->max) v->cnt = v->max; /* in case of shrinking */
   }
+  return 1;
+}
+
+#define utl_vec_cpy(v,i,e) memcpy(((char *)(v->vec)) + (i * v->esz),e,v->esz)
+
+int utl_vecSet(vec_t v, uint32_t  i, void *e)
+{
+  if (!utl_vec_expand(v,i)) return 0;
+  utl_vec_cpy(v,i,e);
+  if (i >= v->cnt) v->cnt = i+1;
+  return 1;
+}
+
+void *utl_vec_get(vec_t v, uint32_t i)
+{
+  if (!utl_vec_valid_ndx(v,i)) return NULL;
+  return utl_vec_getptr(v,i);
+}
+
+void *utl_vecTop(vec_t v)
+{
+  if (!v || !v->cnt) return NULL;
+  return ((char *)(v->vec)) + ((v->cnt-1)*v->esz);
+}
+
+void utl_vecPop(vec_t v) { if (v && v->cnt) v->cnt -= 1; }
+
+int utl_vecAdd(vec_t v, void *e) { return utl_vecSet(v,v->cnt,e); }
+
+int utl_vec_ins(vec_t v, uint32_t i, uint32_t l,void *e)
+{
+  char *b;
+  uint32_t sz;
+  
+  if (!v) return 0;
+  if (l == 0) return 1;
+  if (i > v->cnt) i = v->cnt;
+
+  if (!utl_vec_expand(v,v->cnt+l+1)) return 0;
+  sz = v->esz;
+  b = v->vec+i*sz;
+  l = l*sz;
+  memmove(b+l, b, (v->cnt-i)*sz);
+  if (e)  memcpy(b,e,l);
+  else memset(b,0x00,l);
+  v->cnt += l;
   return 1;
 }
 
 #endif  /* UTL_LIB */
 
-
 /** STACKS **/
-
-#define stk_t          vec_t
-#define stkNew(ty)     vecNew(ty)
-#define stkCount(s)    vecCount(s)
-#define stkEmpty(s)  (!vecCount(s))
-#define stkPush(s,e)   vecAdd(s,e)
-#define stkTop(s)      utl_vecTop(s)
-#define stkPop(s)      utl_vecPop(s)
+ 
+#define stk_t             vec_t
+#define stkNew(ty)        vecNew(ty)
+#define stkFree           vecFree
+#define stkCount(s)       vecCount(s)
+#define stkEmpty(s)     (!vecCount(s))
+#define stkPushRaw(s,e)   vecAddRaw(s,e)
+#define stkPush(ty,s,e)   vecAdd(ty,s,e)
+#define stkTopRaw(s)      utl_vecTop(s)
+#define stkTop(ty,s,d)   (vecCount(s)? *((ty *)utl_vecTop(s)) : d)
+#define stkPop(s)         utl_vecPop(s)
 
 /**  BUFFERS **/
 #define buf_t vec_t
-int utl_bufSet(buf_t bf, size_t i, char c);
+int utl_bufSet(buf_t bf, uint32_t i, char c);
 
 #define bufNew() utl_vecNew(1)
 #define bufFree  utl_vecFree
 
-char utl_bufGet(buf_t bf, size_t i);
+char utl_bufGet(buf_t bf, uint32_t i);
 #define bufGet   utl_bufGet
 
-int utl_bufSet(buf_t bf, size_t i, char c);
+int utl_bufSet(buf_t bf, uint32_t i, char c);
 #define bufSet   utl_bufSet
 
 int utl_bufAdd(buf_t bf, char c);
@@ -1191,12 +1238,11 @@ int utl_bufAdd(buf_t bf, char c);
 int utl_bufAddStr(buf_t bf, char *s);
 #define bufAddStr  utl_bufAddStr
 
-int utl_bufIns(buf_t bf, size_t i, char c);
+int utl_bufIns(buf_t bf, uint32_t i, char c);
 #define bufIns(b,i,c) utl_bufIns(b,i,c)
 
-int utl_bufInsStr(buf_t bf, size_t i, char *s);
+int utl_bufInsStr(buf_t bf, uint32_t i, char *s);
 #define bufInsStr(b,i,s) utl_bufInsStr(b,i,s)
-
 
 #define bufResize utl_vecResize
 
@@ -1207,13 +1253,15 @@ int utl_bufFormat(buf_t bf, char *format, ...);
 
 #define bufLen vecCount
 #define bufMax vecMax
-#define bufStr(b) vec(b,char)
+#define bufStr(b) vec(char,b)
 
 int utl_bufAddLine(buf_t bf, FILE *f);
-#define bufAddLine utl_bufAddLine
+#define bufAddLine   utl_bufAddLine
+#define bufReadLine  utl_bufAddLine
 
 int utl_bufAddFile(buf_t bf, FILE *f);
-#define bufAddFile utl_bufAddFile
+#define bufAddFile   utl_bufAddFile
+#define bufReadFile  utl_bufAddFile
 
 #if !defined(UTL_HAS_SNPRINTF) && defined(_MSC_VER) && (_MSC_VER < 1800)
 #define UTL_ADD_SNPRINTF
@@ -1222,7 +1270,7 @@ int utl_bufAddFile(buf_t bf, FILE *f);
 #endif
 
 #ifdef UTL_LIB
-int utl_bufSet(buf_t bf, size_t i, char c)
+int utl_bufSet(buf_t bf, uint32_t i, char c)
 {
   char *s;
 
@@ -1239,7 +1287,7 @@ int utl_bufSet(buf_t bf, size_t i, char c)
   return 1;
 }
 
-char utl_bufGet(buf_t bf, size_t i)
+char utl_bufGet(buf_t bf, uint32_t i)
 {
   if (!bf) return '\0';
   if (i >= bf->cnt) return '\0';
@@ -1291,7 +1339,7 @@ int utl_bufAddFile(buf_t bf, FILE *f)
   return n;
 }
 
-static int utl_buf_insert(buf_t bf, size_t i, size_t l, char *s)
+static int utl_buf_insert(buf_t bf, uint32_t i, uint32_t l, char *s)
 {
   int n = 1;
   int k;
@@ -1309,21 +1357,21 @@ static int utl_buf_insert(buf_t bf, size_t i, size_t l, char *s)
   k = bf->cnt;
   memmove(b+l, b, k-i);
   memcpy(b,s,l);
-  utl_bufSet(bf, k +l, '\0');
+  utl_bufSet(bf, k+l, '\0');
   return n;
 }
 
-int utl_bufInsStr(buf_t bf, size_t i, char *s)
+int utl_bufInsStr(buf_t bf, uint32_t i, char *s)
 { return utl_buf_insert(bf,i,0,s); }
 
-int utl_bufIns(buf_t bf, size_t i, char c)
+int utl_bufIns(buf_t bf, uint32_t i, char c)
 { return utl_buf_insert(bf,i,1,&c); }
 
 
 /* {{ code from http://stackoverflow.com/questions/2915672 */
 #ifdef UTL_ADD_SNPRINTF
 
-inline int c99_snprintf(char* str, size_t size, const char* format, ...)
+inline int c99_snprintf(char* str, uint32_t size, const char* format, ...)
 {
   int count;
   va_list ap;
@@ -1333,7 +1381,7 @@ inline int c99_snprintf(char* str, size_t size, const char* format, ...)
   return count;
 }
 
-inline int c99_vsnprintf(char* str, size_t size, const char* format, va_list ap)
+inline int c99_vsnprintf(char* str, uint32_t size, const char* format, va_list ap)
 {
   int count = -1;
   if (size != 0)   count = _vsnprintf_s(str, size, _TRUNCATE, format, ap);
@@ -1363,42 +1411,150 @@ int utl_bufFormat(buf_t bf, char *format, ...)
   
   return count2;
 }
-
-
 #endif /* UTL_LIB */
 
 
-/** TABLES (str->str) **/
-#define tbl_t vec_t
+/**  QUEUE **/
+#define que_t vec_t
 
-tbl_t utl_tblNew(void);
-#define tblNew utl_tblNew
+#define queDelFirst(q)  utl_que_del(q, 'F')
+#define queDelLast(q)   utl_que_del(q, 'B')
+#define queDel          queDelFirst
+int utl_que_del(que_t qu, char where);
 
-void utl_tblFree(tbl_t tb);
-#define tblFree utl_tblFree
+#define queFirstRaw(q)    utl_que_get(q,'F')
+#define queLastRaw(q)     utl_que_get(q,'B')
+void *utl_que_get(que_t qu, char where);
 
-long utl_tblNext(tbl_t tb, long ndx);
-#define tblNext utl_tblNext
+#define queFirst(ty,q,d) (!(q) || queCount(q) == 0 ? d : *((ty *)queFirstRaw(q)))
+#define queLast(ty,q,d)  (!(q) || queCount(q) == 0 ? d : *((ty *)queLastRaw(q)))
 
-long utl_tblSet(char *key, char *val);
-long ult_tblGet(char *key);
-long ult_tblDel(tbl_t tb, long ndx);
+#define queAddFirstRaw(q,e)  utl_que_add(q,e,'F')
+#define queAddLastRaw(q,e)   utl_que_add(q,e,'B')
+#define queAddRaw queAddLastRaw
+int utl_que_add(que_t qu, void *e,char where);
+
+#define queAddFirst(ty,q,e)  do { ty x = e; utl_que_add(q,&x,'F'); } while (utlZero)
+#define queAddLast(ty,q,e)   do { ty x = e; utl_que_add(q,&x,'B'); } while (utlZero)
+#define queAdd queAddLast
+
+#define queNew(ty) utl_queNew(sizeof(ty))
+que_t utl_queNew(uint32_t esz);
+
+#define queEmpty utl_queEmpty
+int utl_queEmpty(que_t qu); 
+
+#define queMax   vecMax
+#define queCount vecCount
+#define queEsz   vecEsz
+#define queFree  vecFree
+
+#define que_first(q) ((q)->first)
+#define que_last(q)  ((q)->last)
 
 #ifdef UTL_LIB
 
-typedef struct {
-  char *key;
-  char *val;
-} tbl_s;
-
-tbl_t utl_tblNew()
+que_t utl_queNew(uint32_t esz)
 {
-  return vecNew(sizeof(tbl_s));
+  que_t qu = vecNew(esz);
+  if (qu) {
+    qu->first = qu->last = 0;
+    utl_vec_expand(qu,7);
+  }
+  return qu;
 }
 
-#endif /* UTL_LIB */
+int utl_queEmpty(que_t qu) { return (qu == NULL || queCount(qu) == 0); }
+
+int utl_que_expand(que_t qu)
+{
+  uint32_t new_max = 8;
+  uint32_t old_max = 0;
+  uint32_t n = 0;
+  uint32_t sz;
+
+  old_max = queMax(qu);
+  if (queCount(qu) < old_max) return 1; /* there's room enough */
+  
+  new_max = old_max * 2;
+
+  if (!utl_vec_expand(qu,new_max-1)) return 0; /* couldn't expand!! */
+  
+  /* Rearrange existing elements */
+  n = qu->last;
+  sz = queEsz(qu);
+  if (n < old_max / 2) { /* move elements 0 .. n-1 to the new space */
+     if (n > 0) memcpy(utl_vec_getptr(qu, old_max),  utl_vec_getptr(qu, 0),  n * sz);
+     qu->last = old_max+n;
+  } else { /* move elements n .. old_max-1 to the new space */
+     n = old_max-n; /* Elements to move */
+     memcpy(utl_vec_getptr(qu, new_max-n),  utl_vec_getptr(qu, qu->first),  n * sz);
+     qu->first = new_max-n;
+  }
+  
+  return 1;
+}
+
+int utl_que_add(que_t qu, void *e,char where)
+{
+  if (!utl_que_expand(qu)) return 0;
+  if (where == 'B') {
+    utl_vec_cpy(qu,qu->last,e);
+    qu->last = (qu->last +1) % queMax(qu);
+  }
+  else {
+    qu->first = (qu->first + vecMax(qu) - 1) % queMax(qu);
+    utl_vec_cpy(qu,qu->first,e);
+  }
+  qu->cnt++;
+  return 1;
+}
+
+int utl_que_del(que_t qu, char where)
+{
+  if (!qu) return 0;
+  if (queCount(qu) == 0) return 1;
+  if (where == 'B') 
+    qu->last = (qu->last + queMax(qu) - 1) % queMax(qu);
+  else 
+    qu->first = (qu->first +1) % queMax(qu);
+  qu->cnt--;
+  return 1;
+}
+
+void *utl_que_get(que_t qu, char where)
+{
+  uint32_t n;
+  if (queCount(qu) == 0) return NULL;
+  if (where == 'B') 
+    n = (qu->last + queMax(qu) - 1) % queMax(qu);
+  else 
+    n = qu->first;
+    
+  return utl_vec_getptr(qu, n);
+}
+
+#endif /* UTL_LIB */ 
+
+#define lst_t vec_t
+
+lst_t utl_lstNew(uint32_t esz, utl_cmp_t cmp);
+lst_t utl_lstFre(lst_t ll);
+
+uint32_t utl_lstFirst(lst_t ll);
+uint32_t utl_lstNext(lst_t ll,uint32_t i);
+uint32_t utl_lstPrev(lst_t ll,uint32_t i);
+uint32_t utl_lstAdd(lst_t ll,void *e);
+void   utl_lstDel(lst_t ll,uint32_t i);
+void  *utl_lstGet(lst_t ll,uint32_t i);
+uint32_t utl_lstSearch(lst_t ll,void *e);
+
+#ifdef UTL_LIB
+
+#endif /* UTL_LIB */ 
 
 #endif /* UTL_NOADT */
+
 
 #endif /* UTL_H */
 

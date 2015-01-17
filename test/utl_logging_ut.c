@@ -142,6 +142,12 @@ int main (int argc, char *argv[])
     
     if(f) fclose(f);
     
+    logClockStart(l) {
+      for (k=0;k<1000000;k++) (utlZero <<= 1);
+      logAlert(l,"Counted!");
+    } logClockStop;
+    
+    
   }
   return 0;
 }

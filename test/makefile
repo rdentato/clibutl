@@ -20,7 +20,7 @@ UTL_H=../src/utl.h
 
 TESTS = t_buf$(_EXE)     t_vec$(_EXE)  t_log$(_EXE)   \
         t_general$(_EXE) t_try$(_EXE)  t_try2$(_EXE)  \
-		t_mem$(_EXE)     t_fsm$(_EXE)  
+		t_mem$(_EXE)     t_fsm$(_EXE)  t_que$(_EXE)  
 
 .SUFFIXES: .c .h $(_OBJ)
 
@@ -32,7 +32,11 @@ CFLAGS= $(CCFLAGS) -I../src -g -Wall
 all:  $(TESTS)
 	chmod +x ./run_tests.sh
 	./run_tests.sh > tests.log
-	sed -n -e '/TST PLN/p' -e '/TST RES/p' < tests.log
+	sed -n -e '/TST RES/p' < tests.log
+
+t_que$(_EXE): $(UTL_H)  utl_que_ut.c
+	$(CC) $(CFLAGS) -c -o utl_que_ut.$(_OBJ) utl_que_ut.c
+	$(CC) -o $@ utl_que_ut.$(_OBJ)
 
 t_buf$(_EXE): $(UTL_H)  utl_buf_ut.c
 	$(CC) $(CFLAGS) -c -o utl_buf_ut.$(_OBJ) utl_buf_ut.c

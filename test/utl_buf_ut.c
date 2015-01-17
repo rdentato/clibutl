@@ -164,4 +164,5 @@ int main (int argc, char *argv[])
   return 0;
 }
 
+/* DO NOT REMOVE NEXT LINE. IT'S USED FOR TESTING */
 /* TEST LINE LAST */
