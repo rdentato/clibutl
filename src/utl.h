@@ -1034,31 +1034,13 @@ void *utl_strdup(void *ptr, char *file, int line)
 #ifndef UTL_NOADT
 /** VECTORS **/
 
-
-typedef union val_u {
-  uint32_t    ui;
-   int32_t     i;
-      void    *p;
-      char    *s;
-     float     f;
-    double     d;
-  uint64_t  ui64;
-   int64_t   i64;
-   char       cs[sizeof(double)];
-   char        c;
-} val_t;
-
-utlAssume(sizeof(val_t) == sizeof(double));
-utlAssume(sizeof(val_t) == sizeof(uint64_t));
-
 typedef struct vec_s {
   uint32_t  max;
   uint32_t  cnt;
   uint32_t  esz;
   uint32_t  first;
   uint32_t  last; 
-  utl_cmp_t cmp;
-  void   *vec;
+  void     *vec;
 } *vec_t;
 
 vec_t utl_vecNew(uint32_t esz);
@@ -1070,6 +1052,11 @@ vec_t utl_vecFree(vec_t v);
 int utl_vecSet(vec_t v, uint32_t i, void *e);
 #define vecSetRaw utl_vecSet
 #define vecSet(ty,v,i,e) do { ty x = e; utl_vecSet(v,i,&x);} while(utlZero)
+
+int utl_vecFill(vec_t v, uint32_t j, uint32_t i, void *e);
+#define vecFillRaw utl_vecFill
+#define vecFill(ty,v,j,i,e) do { ty x = e; utl_vecFill(v,j,i,&x);} while(utlZero)
+
 
 int utl_vecAdd(vec_t v, void *e);
 #define vecAddRaw  utl_vecAdd
@@ -1111,6 +1098,7 @@ vec_t utl_vecNew(uint32_t esz)
   v = malloc(sizeof(struct vec_s));
   if (v) {
     v->max = 0;    v->cnt = 0;
+    v->first = 0;  v->last = 0;
     v->esz = esz;  v->vec = NULL;
   }
   return v;
@@ -1120,8 +1108,9 @@ vec_t utl_vecFree(vec_t v)
 {
   if (v) {
     if (v->vec) free(v->vec);
-    v->max = 0;  v->cnt = 0;
-    v->esz = 0;  v->vec = NULL;
+    v->max = 0;    v->cnt = 0;
+    v->first = 0;  v->last = 0;
+    v->esz = 0;    v->vec = NULL;
     free(v);
   }
   return NULL;
@@ -1164,6 +1153,22 @@ int utl_vecSet(vec_t v, uint32_t  i, void *e)
 {
   if (!utl_vec_expand(v,i)) return 0;
   utl_vec_cpy(v,i,e);
+  if (i >= v->cnt) v->cnt = i+1;
+  return 1;
+}
+
+int utl_vecFill(vec_t v, uint32_t j, uint32_t i, void *e)
+{
+  char *p;
+  uint32_t sz;
+  
+  if ((j > i) || !utl_vec_expand(v,i)) return 0;
+  sz = v->esz;
+  p = ((char *)(v->vec)) + (j * sz);  
+  while ( j<=i) {
+    memcpy(p,e, sz);
+    j++, p += sz;
+  }
   if (i >= v->cnt) v->cnt = i+1;
   return 1;
 }
@@ -1458,7 +1463,6 @@ que_t utl_queNew(uint32_t esz)
 {
   que_t qu = vecNew(esz);
   if (qu) {
-    qu->first = qu->last = 0;
     utl_vec_expand(qu,7);
   }
   return qu;
@@ -1536,21 +1540,134 @@ void *utl_que_get(que_t qu, char where)
 
 #endif /* UTL_LIB */ 
 
-#define lst_t vec_t
+
+/*
+  SKIP LISTS
+
+We'll represent skip lists within an array (which is a vec_t). 
+
+.v
+    3 - --------------------------> +
+    2 - -----------> E -----------> +
+    1 - ------> C -> E ------> K -> +
+    0 - -> A -> C -> E -> G -> K -> + 
+    
+                                    1
+      0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9
+lst   +  -  6  8 11  0  A  8  C 11 11  E 15 17  0  G 17  K  0  0
+      
+      0  1  2  3 
+path  
+..
+
+ 
+*/
+
+
+typedef struct lst_s {
+  utl_cmp_t cmp;
+  vec_t     lst;
+  vec_t     dat;  
+  uint32_t  path[32];
+  uint32_t  flst[32]; 
+} *lst_t;
 
 lst_t utl_lstNew(uint32_t esz, utl_cmp_t cmp);
-lst_t utl_lstFre(lst_t ll);
+lst_t utl_lstFree(lst_t ll);
 
-uint32_t utl_lstFirst(lst_t ll);
-uint32_t utl_lstNext(lst_t ll,uint32_t i);
-uint32_t utl_lstPrev(lst_t ll,uint32_t i);
-uint32_t utl_lstAdd(lst_t ll,void *e);
-void   utl_lstDel(lst_t ll,uint32_t i);
-void  *utl_lstGet(lst_t ll,uint32_t i);
+void    *utl_lstFirst(lst_t ll);
+void    *utl_lstNext(lst_t ll);
+void    *utl_lstGet(lst_t ll,uint32_t i);
+int      utl_lstAdd(lst_t ll,void *e);
+int      utl_lstDel(lst_t ll,void *e);
 uint32_t utl_lstSearch(lst_t ll,void *e);
 
 #ifdef UTL_LIB
 
+static const uint32_t utl_lst_NULL     = 0xFFFFFFF0;
+static const uint32_t utl_lst_PLUSINF  = 0xFFFFFFF1;
+static const uint32_t utl_lst_MINUSINF = 0xFFFFFFF3;
+
+lst_t utl_lstNew(uint32_t esz, utl_cmp_t cmp)
+{
+  lst_t ll;
+  
+  ll = malloc(sizeof(struct lst_s));
+  if (ll) {
+     ll->cmp = cmp;
+     if ( (ll->lst = vecNew(uint32_t)) ) {
+       if ( (ll->dat = utl_vecNew(esz)) ) {
+         vecFill(uint32_t, ll->lst, 0,64, 0);
+         vecSet(uint32_t, ll->lst, 0, utl_lst_PLUSINF);
+         vecSet(uint32_t, ll->lst, 1, utl_lst_MINUSINF);
+       }
+       else { vecFree(ll->lst); free(ll); ll = NULL; }
+     }
+     else { free(ll); ll = NULL; }
+  }
+  return ll;
+}
+
+lst_t utl_lstFree(lst_t ll)
+{
+  if (ll) {
+    ll->dat = vecFree(ll->dat);
+    ll->ndx = vecFree(ll->lst);
+    free(ll);
+  }
+  return NULL;
+}
+
+#define lst_DATA(i)    ((i) & 0x07FFFFFF)
+#define lst_HEIGHT(i)  ((i) >> 27)
+
+static int utl_lst_cmp(lst_t ll, uint32_t i, void *e)
+{
+  void *p;
+  uint32_t j;
+  
+  if (i == 0) return  1;
+  if (i == 1) return -1;
+
+  j = vecGet(uint32_t, ll->lst, i);
+  p = vecGetRaw(ll->dat,lst_DATA(j));
+  return ll->cmp(p,e);
+}
+
+#define lst_maxheight(l) ((l)->lst->first)
+uint32_t lstSearch(lst_t ll, void *e)
+{
+  uint32_t ret = 0;
+  int lvl;
+  uint32_t *lst;
+  int res;
+  
+  if (ll) {
+    lvl = lst_maxheight(ll)
+    lst = vec(uint_32,ll->lst);
+    while(lvl-- > 0) {
+      ll->path[lvl] = 1;
+      while ( (res = utl_lst_cmp(ll,ll->path[lvl],e)) < 0) {
+        ll->path[lvl] =  vecGet(uint32_t, ll->lst, ll->path[lvl]);
+      }
+    }
+  }
+  return ret;
+}
+
+#if 0
+int utl_lstAdd(lst_t ll, void *e)
+{
+  uint32_t n;
+  
+  n = lstSearch(ll,e);
+  if (n != utl_lst_NULL) {
+    
+  }
+  return 1;
+}
+
+#endif
 #endif /* UTL_LIB */ 
 
 #endif /* UTL_NOADT */

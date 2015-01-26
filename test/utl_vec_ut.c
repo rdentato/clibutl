@@ -130,6 +130,17 @@ int main (int argc, char *argv[])
         
     vv = vecFree(vv);
     
+    vv = vecNew(int);
+    vecFill(int,vv,14,20,-37);
+    logEQint(lg,"Filled (count)",21,vecCount(vv));
+    logEQint(lg,"Filled (1st value)",-37,vecGet(int,vv,14,0));
+    logEQint(lg,"Filled (mid value)",-37,vecGet(int,vv,17,0));
+    logEQint(lg,"Filled (last value)",-37,vecGet(int,vv,20,0));
+    logNEint(lg,"Filled (before 1st)",-37,vecGet(int,vv,13,0));
+    
+    vv = vecFree(vv);
+    
+    
     vv = stkNew(int);
     stkPush(int,vv,3);
     stkPush(int,vv,2);
