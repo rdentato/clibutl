@@ -164,8 +164,8 @@ utl_extern(char *utlEmptyString, = "");
   
 utl_extern(int utlZero, = 0);
 
-
-typedef int (*utl_cmp_t)(void *a, void *b);
+typedef int (*utl_cmp_t)(const void *a, const void *b);
+typedef int (*utl_del_t)(const void *a);
 
 
 /* .% Assumptions (static assertions)
@@ -354,11 +354,11 @@ typedef struct {
   unsigned char  skp;
 } utl_log_s, *utlLogger;
 
-#define utl_log_stdout_init {NULL, 0, log_W, log_W, UTL_LOG_OUT,0}
+#define utl_log_stdout_init {NULL, 0, log_W, log_W, UTL_LOG_OUT,0,0,0}
 utl_extern(utl_log_s utl_log_stdout , = utl_log_stdout_init);
 utl_extern(utlLogger logStdout, = &utl_log_stdout);
 
-#define utl_log_stderr_init {NULL, 0, log_W, log_W, UTL_LOG_ERR,0}
+#define utl_log_stderr_init {NULL, 0, log_W, log_W, UTL_LOG_ERR,0,0,0}
 utl_extern(utl_log_s utl_log_stderr , = utl_log_stderr_init);
 utl_extern(utlLogger logStderr, = &utl_log_stderr);
 
@@ -539,7 +539,7 @@ void utl_log_write(utlLogger lg,int lv, int tstamp, char *format, ...);
 #define log_testint(lg,s,e,r,o)   log_testxxx(int   ,%d,lg,s,e,r,o,(utl_ret o utl_exp))
 #define log_testptr(lg,s,e,r,o)   log_testxxx(void *,%p,lg,s,e,r,o,(utl_ret o utl_exp))
 #define log_testdbl(lg,s,e,r,o)   log_testxxx(double,%p,lg,s,e,r,o,(utl_ret o utl_exp))
-#define log_teststr(lg,s,e,r,o,n) log_testxxx(char *,%s,lg,s,e,r,o,(1 << (1+strcmp(utl_ret, utl_exp))) & n)
+#define log_teststr(lg,x,e,r,o,n) log_testxxx(char *,%s,lg,x,e,r,o,(1 << (1+strcmp(utl_ret, utl_exp))) & n)
 
 #define logEQint(lg,s,e,r)       log_testint(lg,s,e,r, == )
 #define logNEint(lg,s,e,r)       log_testint(lg,s,e,r, != )
@@ -547,7 +547,7 @@ void utl_log_write(utlLogger lg,int lv, int tstamp, char *format, ...);
 #define logGEint(lg,s,e,r)       log_testint(lg,s,e,r, >= )
 #define logLTint(lg,s,e,r)       log_testint(lg,s,e,r, <  )
 #define logLEint(lg,s,e,r)       log_testint(lg,s,e,r, <= )
-                                 
+
 #define logEQdbl(lg,s,e,r)       log_testdbl(lg,s,e,r, == )
 #define logNEdbl(lg,s,e,r)       log_testdbl(lg,s,e,r, != )
 #define logGTdbl(lg,s,e,r)       log_testdbl(lg,s,e,r, >  )
@@ -565,6 +565,14 @@ void utl_log_write(utlLogger lg,int lv, int tstamp, char *format, ...);
 
 #define logNULL(lg,s,e)          logEQptr(lg,s,e,NULL)                                     
 #define logNNULL(lg,s,e)         logNEptr(lg,s,e,NULL)                                     
+
+#define logEQstr(lg,s,e,r)       log_teststr(lg,s,e,r, ==, 2 )
+#define logNEstr(lg,s,e,r)       log_teststr(lg,s,e,r, !=, 5 )
+#define logGTstr(lg,s,e,r)       log_teststr(lg,s,e,r, > , 4 )
+#define logGEstr(lg,s,e,r)       log_teststr(lg,s,e,r, >=, 6 )
+#define logLTstr(lg,s,e,r)       log_teststr(lg,s,e,r, < , 1 )
+#define logLEstr(lg,s,e,r)       log_teststr(lg,s,e,r, <=, 3 )
+
 
 /*
 ** .v
@@ -713,11 +721,10 @@ void utl_log_assert(utlLogger lg,int e,char *estr, char *file,int line)
   }
 }
 
-int utl_log_test(utlLogger lg,int e,char *s, int skip, char *file,int line)
+int utl_log_test(utlLogger lg,int e, char *s, int skip, char *file, int line)
 { 
   char *msg;
-  
-  
+    
   if (lg) {
     lg->flags &= ~UTL_LOG_RES;
     if (!skip) {
@@ -877,16 +884,16 @@ int utl_check(void *ptr,char *file, int line)
   if (ptr == NULL) return utlMemNull;
   p = utl_mem(ptr);
   if (memcmp(p->chk,BEG_CHK,4)) { 
-    logError(utlMemLog,"Invalid or double freed %p (%u %s %d)",p->data, \
+    logError(utlMemLog,"Invalid or double freed %p (%u %s:%d)",p->data, \
                                                utl_mem_allocated, file, line);     
     return utlMemInvalid; 
   }
   if (memcmp(p->data+p->size,END_CHK,4)) {
-    logError(utlMemLog,"Boundary overflow detected %p [%d] (%u %s %d)", \
+    logError(utlMemLog,"Boundary overflow detected %p [%d] (%u %s:%d)", \
                               p->data, p->size, utl_mem_allocated, file, line); 
     return utlMemOverflow;
   }
-  logInfo(utlMemLog,"Valid pointer %p (%u %s %d)",ptr, utl_mem_allocated, file, line); 
+  logInfo(utlMemLog,"Valid pointer %p (%u %s:%d)",ptr, utl_mem_allocated, file, line); 
   return utlMemValid; 
 }
 
@@ -894,18 +901,18 @@ void *utl_malloc(size_t size, char *file, int line )
 {
   utl_mem_t *p;
   
-  if (size == 0) logWarn(utlMemLog,"Shouldn't allocate 0 bytes (%u %s %d)", \
+  if (size == 0) logWarn(utlMemLog,"Shouldn't allocate 0 bytes (%u %s:%d)", \
                                                 utl_mem_allocated, file, line);
   p = malloc(sizeof(utl_mem_t) +size);
   if (p == NULL) {
-    logCritical(utlMemLog,"Out of Memory (%u %s %d)",utl_mem_allocated, file, line);
+    logCritical(utlMemLog,"Out of Memory (%u %s:%d)",utl_mem_allocated, file, line);
     return NULL;
   }
   p->size = size;
   memcpy(p->chk,BEG_CHK,4);
   memcpy(p->data+p->size,END_CHK,4);
   utl_mem_allocated += size;
-  logInfo(utlMemLog,"alloc %p [%d] (%u %s %d)",p->data,size,utl_mem_allocated,file,line);
+  logInfo(utlMemLog,"alloc %p [%d] (%u %s:%d)",p->data,size,utl_mem_allocated,file,line);
   return p->data;
 };
 
@@ -924,17 +931,17 @@ void utl_free(void *ptr, char *file, int line)
   utl_mem_t *p=NULL;
   
   switch (utl_check(ptr,file,line)) {
-    case utlMemNull  :    logWarn(utlMemLog,"free NULL (%u %s %d)", 
+    case utlMemNull  :    logWarn(utlMemLog,"free NULL (%u %s:%d)", 
                                                 utl_mem_allocated, file, line);
                           break;
                           
-    case utlMemOverflow : logWarn(utlMemLog, "Freeing an overflown block  (%u %s %d)", 
+    case utlMemOverflow : logWarn(utlMemLog, "Freeing an overflown block  (%u %s:%d)", 
                                                            utl_mem_allocated, file, line);
     case utlMemValid :    p = utl_mem(ptr); 
                           memcpy(p->chk,CLR_CHK,4);
                           utl_mem_allocated -= p->size;
                           if (p->size == 0)
-                            logWarn(utlMemLog,"Freeing a block of 0 bytes (%u %s %d)", 
+                            logWarn(utlMemLog,"Freeing a block of 0 bytes (%u %s:%d)", 
                                                 utl_mem_allocated, file, line);
 
                           logInfo(utlMemLog,"free %p [%d] (%u %s %d)", ptr, 
@@ -942,7 +949,7 @@ void utl_free(void *ptr, char *file, int line)
                           free(p);
                           break;
                           
-    case utlMemInvalid :  logError(utlMemLog,"free an invalid pointer! (%u %s %d)", \
+    case utlMemInvalid :  logError(utlMemLog,"free an invalid pointer! (%u %s:%d)", \
                                                 utl_mem_allocated, file, line);
                           break;
   }
@@ -953,25 +960,25 @@ void *utl_realloc(void *ptr, size_t size, char *file, int line)
   utl_mem_t *p;
   
   if (size == 0) {
-    logWarn(utlMemLog,"realloc() used as free() %p -> [0] (%u %s %d)",ptr,utl_mem_allocated, file, line);
+    logWarn(utlMemLog,"realloc() used as free() %p -> [0] (%u %s:%d)",ptr,utl_mem_allocated, file, line);
     utl_free(ptr,file,line); 
   } 
   else {
     switch (utl_check(ptr,file,line)) {
-      case utlMemNull   : logWarn(utlMemLog,"realloc() used as malloc() (%u %s %d)", \
+      case utlMemNull   : logWarn(utlMemLog,"realloc() used as malloc() (%u %s:%d)", \
                                              utl_mem_allocated, file, line);
                           return utl_malloc(size,file,line);
                         
       case utlMemValid  : p = utl_mem(ptr); 
                           p = realloc(p,sizeof(utl_mem_t) + size); 
                           if (p == NULL) {
-                            logCritical(utlMemLog,"Out of Memory (%u %s %d)", \
+                            logCritical(utlMemLog,"Out of Memory (%u %s:%d)", \
                                              utl_mem_allocated, file, line);
                             return NULL;
                           }
                           utl_mem_allocated -= p->size;
                           utl_mem_allocated += size; 
-                          logInfo(utlMemLog,"realloc %p [%d] -> %p [%d] (%u %s %d)", \
+                          logInfo(utlMemLog,"realloc %p [%d] -> %p [%d] (%u %s:%d)", \
                                           ptr, p->size, p->data, size, \
                                           utl_mem_allocated, file, line);
                           p->size = size;
@@ -990,14 +997,14 @@ void *utl_strdup(void *ptr, char *file, int line)
   size_t size;
   
   if (ptr == NULL) {
-    logWarn(utlMemLog,"strdup NULL (%u %s %d)", utl_mem_allocated, file, line);
+    logWarn(utlMemLog,"strdup NULL (%u %s:%d)", utl_mem_allocated, file, line);
     return NULL;
   }
   size = strlen(ptr)+1;
 
   dest = utl_malloc(size,file,line);
   if (dest) memcpy(dest,ptr,size);
-  logInfo(utlMemLog,"strdup %p [%d] -> %p (%u %s %d)", ptr, size, dest, \
+  logInfo(utlMemLog,"strdup %p [%d] -> %p (%u %s:%d)", ptr, size, dest, \
                                                 utl_mem_allocated, file, line);
   return dest;
 }
@@ -1030,49 +1037,68 @@ void *utl_strdup(void *ptr, char *file, int line)
 
 #endif /* UTL_MEMCHECK */
 
-
 #ifndef UTL_NOADT
+
+
 /** VECTORS **/
 
 typedef struct vec_s {
+  char      val[16];
   uint32_t  max;
   uint32_t  cnt;
   uint32_t  esz;
   uint32_t  first;
   uint32_t  last; 
+  uint32_t  flg; 
+  utl_cmp_t cmp;
+  utl_del_t del;
   void     *vec;
 } *vec_t;
 
-vec_t utl_vecNew(uint32_t esz);
-#define vecNew(ty) utl_vecNew(sizeof(ty))
+#define UTL_VEC_SORTED  1
+
+vec_t utl_vecNew(int esz, utl_cmp_t , utl_del_t);
+#define vecNew(...) utl_vecNew(utl_vec_ARGS(__VA_ARGS__))
+
+#define utl_vec_ARGS(...)    sizeof(utl_ARGS0(__VA_ARGS__, NULL, NULL, NULL)), utl_ARGS1(__VA_ARGS__, NULL, NULL, NULL), utl_ARGS2(__VA_ARGS__, NULL, NULL, NULL)
+#define utl_ARGS0(x, ...) x
+#define utl_ARGS1(x, y, ...) y
+#define utl_ARGS2(x, y, z, ...) z
 
 vec_t utl_vecFree(vec_t v);
 #define vecFree utl_vecFree
 
-int utl_vecSet(vec_t v, uint32_t i, void *e);
-#define vecSetRaw utl_vecSet
-#define vecSet(ty,v,i,e) do { ty x = e; utl_vecSet(v,i,&x);} while(utlZero)
+void *utl_vecSet(vec_t v, uint32_t i, void *e);
+#define vecSetPtr utl_vecSet
+#define vecSet(ty,v,i,e)   (*((ty *)v) = e, utl_vecSet(v,i,v))
+//#define vecSet(ty,v,i,e) do { ty x = e; utl_vecSet(v,i,&x);} while(utlZero)
 
-int utl_vecFill(vec_t v, uint32_t j, uint32_t i, void *e);
-#define vecFillRaw utl_vecFill
-#define vecFill(ty,v,j,i,e) do { ty x = e; utl_vecFill(v,j,i,&x);} while(utlZero)
+void *utl_vecFill(vec_t v, uint32_t j, uint32_t i, void *e);
+#define vecFillPtr utl_vecFill
+#define vecFill(ty,v,j,i,e)  (*((ty *)v) = e, utl_vecFill(v,j,i,v))
+//#define vecFill(ty,v,j,i,e) do { ty x = e; utl_vecFill(v,j,i,&x);} while(utlZero)
 
+void *utl_vecAdd(vec_t v, void *e); 
+#define vecAddPtr  utl_vecAdd
+#define vecAdd(ty,v,e)  (*((ty *)v) = e, utl_vecAdd(v,v))
+//#define vecAdd(ty,v,e) do { ty x = e; utl_vecAdd(v,&x);} while(utlZero)
 
-int utl_vecAdd(vec_t v, void *e);
-#define vecAddRaw  utl_vecAdd
-#define vecAdd(ty,v,e) do { ty x = e; utl_vecAdd(v,&x);} while(utlZero)
-
-int utl_vec_ins(vec_t v, uint32_t n, uint32_t l,void *e);
-#define vecInsRaw(v,i,e) utl_vec_ins(v,i,1,e);
-#define vecIns(ty,v,i,e) do { ty x = e; utl_vec_ins(v,i,1,&x);} while(utlZero)
+void *utl_vec_ins(vec_t v, uint32_t n, uint32_t l,void *e);
+#define vecInsPtr(v,i,e) utl_vec_ins(v,i,1,e);
+#define vecIns(ty,v,i,e) (*((ty *)v) = e, utl_vec_ins(v,i,1,v))
+//#define vecIns(ty,v,i,e) do { ty x = e; utl_vec_ins(v,i,1,&x);} while(utlZero)
 #define vecInsGap(v,i,n) utl_vec_ins(v,i,n,NULL)
 
-int utl_vec_valid_ndx(vec_t v, uint32_t i);
+int utl_vec_del(vec_t v, uint32_t i, uint32_t l);
+#define vecDel(v,i) utl_vec_del(v,i,1)
 
-#define utl_vec_getptr(v,i)  (((char *)((v)->vec)) + ((i)*v->esz))
+static int utl_vec_valid_ndx(vec_t v, uint32_t i);
+
+#define utl_vec_getptr(v,i)  (((char *)((v)->vec)) + ((i)*((v)->esz)))
+#define utl_vec_cpy(v,i,e)   memcpy(utl_vec_getptr(v,i), e, (v)->esz)
 
 void *utl_vec_get(vec_t v, uint32_t  i);
-#define vecGetRaw utl_vec_get
+#define vecGetPtr utl_vec_get
 #define vecGet(ty,v,i,d) (utl_vec_valid_ndx(v,i) ? *((ty *)(utl_vec_getptr(v,i))) : d)
 
 int utl_vecResize(vec_t v, uint32_t n);
@@ -1090,16 +1116,46 @@ uint32_t utl_vecEsz(vec_t v);
 void  *utl_vecVec(vec_t v);
 #define vec(ty, v) ((ty *)utl_vecVec(v))
 
+#define vecSorted(v, c) if (!v) {} else qsort(v->vec, v->cnt, v->esz, (v->flg |= UTL_VEC_SORTED, v->cmp = c))
+#define vecUnsorted(v) (v? v->cmp = NULL : utlZero <<=1)
+
+void *utl_vecsearch(vec_t v, void *e);
+#define vecSearchPtr(v,e) utl_vecsearch(v,e)
+#define vecSearch(ty,v,e)   (*((ty *)v) = e, utl_vecsearch(v,v))
+
 #ifdef UTL_LIB
 
-vec_t utl_vecNew(uint32_t esz)
+
+/*
+** Integer log base 2 of 32 bits integer values.
+**   llog2(0) == llog2(1) == 0
+*/
+static short utl_llog2(uint32_t n)
+{
+#if defined(__GNUC__)
+  return (31 - __builtin_clzl(n));
+#else
+  register uint32_t l = 0;
+  register uint32_t x = n;
+  if (x & 0xFFFF0000) {l |= 16; x >>= 16;} /* 11111111111111110000000000000000 */
+  if (x & 0xFF00)     {l |= 8;  x >>= 8 ;} /* 1111111100000000*/
+  if (x & 0xF0)       {l |= 4;  x >>= 4 ;} /* 11110000*/
+  if (x & 0xC)        {l |= 2;  x >>= 2 ;} /* 1100 */
+  if (x & 2)          {l |= 1;  }          /* 10 */
+  return l;
+#endif
+}
+
+
+vec_t utl_vecNew(int esz, utl_cmp_t cmp, utl_del_t del)
 {
   vec_t v;
   v = malloc(sizeof(struct vec_s));
   if (v) {
     v->max = 0;    v->cnt = 0;
     v->first = 0;  v->last = 0;
-    v->esz = esz;  v->vec = NULL;
+    v->esz = esz;  v->vec = NULL; v->flg = 0;
+    v->cmp = cmp;  v->del = del;
   }
   return v;
 }
@@ -1119,15 +1175,13 @@ vec_t utl_vecFree(vec_t v)
 uint32_t utl_vecCount(vec_t v) { return v? v->cnt : 0; }
 uint32_t utl_vecMax(vec_t v)   { return v? v->max : 0; }
 uint32_t utl_vecEsz(vec_t v)   { return v? v->esz : 0; }
-void  *utl_vecVec(vec_t v)   { return v? v->vec : NULL; } 
+void    *utl_vecVec(vec_t v)   { return v? v->vec : NULL; } 
 
-int utl_vec_valid_ndx(vec_t v, uint32_t i) { return (v && v->vec && i < v->cnt); }
+static int utl_vec_valid_ndx(vec_t v, uint32_t i)
+{ return (v && v->vec && i < v->cnt); }
 
 static int utl_vec_expand(vec_t v, uint32_t i)
-{
-  if (utl_vec_valid_ndx(v,i)) return 1;
-  return utl_vecResize(v,i);
-}
+{ return ((utl_vec_valid_ndx(v,i)) || (utl_vecResize(v,i) >= 0)); }
 
 int utl_vecResize(vec_t v, uint32_t n)
 {
@@ -1139,38 +1193,43 @@ int utl_vecResize(vec_t v, uint32_t n)
   
   if (new_max != v->max) {
     new_vec = realloc(v->vec, new_max * v->esz);
-    if (!new_vec) return 0;
+    if (!new_vec) return -1;
     v->vec = new_vec;
     v->max = new_max;
     if (v->cnt > v->max) v->cnt = v->max; /* in case of shrinking */
   }
-  return 1;
+  return v->cnt;
 }
 
-#define utl_vec_cpy(v,i,e) memcpy(((char *)(v->vec)) + (i * v->esz),e,v->esz)
-
-int utl_vecSet(vec_t v, uint32_t  i, void *e)
+void *utl_vecSet(vec_t v, uint32_t  i, void *e)
 {
-  if (!utl_vec_expand(v,i)) return 0;
-  utl_vec_cpy(v,i,e);
-  if (i >= v->cnt) v->cnt = i+1;
-  return 1;
+  void *p = NULL; 
+  if (utl_vec_expand(v,i)) {
+    p = utl_vec_getptr(v,i);
+    if (e) memcpy(p, e, v->esz);
+    if (i >= v->cnt) v->cnt = i+1;
+    v->flg &= ~UTL_VEC_SORTED;
+  }
+  return p;
 }
 
-int utl_vecFill(vec_t v, uint32_t j, uint32_t i, void *e)
+void *utl_vecFill(vec_t v, uint32_t j, uint32_t i, void *e)
 {
-  char *p;
+  char *p = NULL;
+  void *pos = NULL;
   uint32_t sz;
   
-  if ((j > i) || !utl_vec_expand(v,i)) return 0;
+  if ((j > i) || !utl_vec_expand(v,i)) return NULL;
   sz = v->esz;
-  p = ((char *)(v->vec)) + (j * sz);  
+  pos = utl_vec_getptr(v,j);
+  p = pos;  
   while ( j<=i) {
     memcpy(p,e, sz);
     j++, p += sz;
   }
   if (i >= v->cnt) v->cnt = i+1;
-  return 1;
+  v->flg &= ~UTL_VEC_SORTED;
+  return pos;
 }
 
 void *utl_vec_get(vec_t v, uint32_t i)
@@ -1187,26 +1246,100 @@ void *utl_vecTop(vec_t v)
 
 void utl_vecPop(vec_t v) { if (v && v->cnt) v->cnt -= 1; }
 
-int utl_vecAdd(vec_t v, void *e) { return utl_vecSet(v,v->cnt,e); }
-
-int utl_vec_ins(vec_t v, uint32_t i, uint32_t l,void *e)
+void *utl_vecAdd(vec_t v, void *e) 
 {
+  void *pos = NULL;
+  
+  if (!v) return 0;
+  if (v->cmp) {
+    pos = vecSearchPtr(v,e);
+    if (pos) {
+      memcpy(pos,e,v->esz);    
+    }
+    else {
+      pos = utl_vec_getptr(v,v->first);
+      vecInsPtr(v,v->first,e);
+    }
+    v->flg |= UTL_VEC_SORTED;
+  }
+  else  {
+    pos = utl_vec_getptr(v,v->cnt);
+    utl_vecSet(v,v->cnt,e);
+  }
+  return pos;
+}
+
+void *utl_vec_ins(vec_t v, uint32_t i, uint32_t l,void *e)
+{
+  char *b = NULL;
+  uint32_t sz;
+  
+  if (!v) return b;
+  if (l == 0) return b;
+  if (i > v->cnt) i = v->cnt;
+
+  if (utl_vec_expand(v,v->cnt+l+1)) {
+    sz = v->esz;
+    b = v->vec+i*sz;
+    l = l*sz;
+    memmove(b+l, b, (v->cnt-i)*sz);
+    if (e)  memcpy(b,e,l);
+    else memset(b,0x00,l);
+    v->cnt += l;
+    v->flg &= ~UTL_VEC_SORTED;
+  }
+  return b;
+}
+
+int utl_vec_del(vec_t v, uint32_t i,uint32_t l)
+{
+  uint32_t cnt;
   char *b;
   uint32_t sz;
   
-  if (!v) return 0;
-  if (l == 0) return 1;
-  if (i > v->cnt) i = v->cnt;
+  cnt = vecCount(v);
+  if (i < cnt) {
+  
+    if (i+l > cnt) l = cnt-i-1;
+  
+    if (i < cnt-l) {
+      sz = v->esz;
+      b = v->vec+i*sz;
+      memmove(b,b+l*sz,(cnt-i-l)*sz);
+    }
+  
+    v->cnt -= l;
+  }
+  
+  return v->cnt;
+}
 
-  if (!utl_vec_expand(v,v->cnt+l+1)) return 0;
-  sz = v->esz;
-  b = v->vec+i*sz;
-  l = l*sz;
-  memmove(b+l, b, (v->cnt-i)*sz);
-  if (e)  memcpy(b,e,l);
-  else memset(b,0x00,l);
-  v->cnt += l;
-  return 1;
+
+void *utl_vecsearch(vec_t v, void *e)
+{
+  uint32_t ndx =0;
+  uint32_t i =0;
+  int k;
+  int res = 1;
+  void *ret = NULL;
+  
+  if (!v || !v->cmp) return NULL;
+  
+  k = v->cnt;
+  if (k > 0) {
+    for (k = utl_llog2(k); res && k >= 0; k--) {
+      i = ndx | 1<<k;
+      if (i < v->cnt) {
+        ret = vecGetPtr(v,i);
+        res = v->cmp(e, ret);
+        logDebug(logStderr,"ndx: k=%d i=%d ndx=%d (cmp=%d)",k,i,ndx,res);
+        if (res > 0)  ndx = i;
+      }
+    }
+    if (res) ret = NULL;
+  } 
+  v->first = ndx;
+  return ret;
 }
 
 #endif  /* UTL_LIB */
@@ -1218,17 +1351,138 @@ int utl_vec_ins(vec_t v, uint32_t i, uint32_t l,void *e)
 #define stkFree           vecFree
 #define stkCount(s)       vecCount(s)
 #define stkEmpty(s)     (!vecCount(s))
-#define stkPushRaw(s,e)   vecAddRaw(s,e)
+#define stkPushPtr(s,e)   vecAddPtr(s,e)
 #define stkPush(ty,s,e)   vecAdd(ty,s,e)
-#define stkTopRaw(s)      utl_vecTop(s)
+#define stkTopPtr(s)      utl_vecTop(s)
 #define stkTop(ty,s,d)   (vecCount(s)? *((ty *)utl_vecTop(s)) : d)
 #define stkPop(s)         utl_vecPop(s)
+
+/**  QUEUE **/
+#define que_t vec_t
+
+#define queDelFirst(q)  utl_que_del(q, 'F')
+#define queDelLast(q)   utl_que_del(q, 'B')
+#define queDel          queDelFirst
+int utl_que_del(que_t qu, char where);
+
+#define queFirstPtr(q)    utl_que_get(q,'F')
+#define queLastPtr(q)     utl_que_get(q,'B')
+void *utl_que_get(que_t qu, char where);
+
+#define queFirst(ty,q,d) (!(q) || queCount(q) == 0 ? d : *((ty *)queFirstPtr(q)))
+#define queLast(ty,q,d)  (!(q) || queCount(q) == 0 ? d : *((ty *)queLastPtr(q)))
+
+#define queAddFirstPtr(q,e)  utl_que_add(q,e,'F')
+#define queAddLastPtr(q,e)   utl_que_add(q,e,'B')
+#define queAddPtr queAddLastPtr
+int utl_que_add(que_t qu, void *e,char where);
+
+#define queAddFirst(ty,q,e)  do { ty x = e; utl_que_add(q,&x,'F'); } while (utlZero)
+#define queAddLast(ty,q,e)   do { ty x = e; utl_que_add(q,&x,'B'); } while (utlZero)
+#define queAdd queAddLast
+
+#define queNew(ty) utl_queNew(sizeof(ty))
+que_t utl_queNew(uint32_t esz);
+
+#define queEmpty utl_queEmpty
+int utl_queEmpty(que_t qu); 
+
+#define queMax   vecMax
+#define queCount vecCount
+#define queEsz   vecEsz
+#define queFree  vecFree
+
+#define que_first(q) ((q)->first)
+#define que_last(q)  ((q)->last)
+
+#ifdef UTL_LIB
+
+que_t utl_queNew(uint32_t esz)
+{
+  que_t qu = vecNew(esz);
+  if (qu) {
+    utl_vec_expand(qu,7);
+  }
+  return qu;
+}
+
+int utl_queEmpty(que_t qu) { return (qu == NULL || queCount(qu) == 0); }
+
+int utl_que_expand(que_t qu)
+{
+  uint32_t new_max = 8;
+  uint32_t old_max = 0;
+  uint32_t n = 0;
+  uint32_t sz;
+
+  old_max = queMax(qu);
+  if (queCount(qu) < old_max) return 1; /* there's room enough */
+  
+  new_max = old_max * 2;
+
+  if (!utl_vec_expand(qu,new_max-1)) return 0; /* couldn't expand!! */
+  
+  /* Rearrange existing elements */
+  n = qu->last;
+  sz = queEsz(qu);
+  if (n < old_max / 2) { /* move elements 0 .. n-1 to the new space */
+     if (n > 0) memcpy(utl_vec_getptr(qu, old_max),  utl_vec_getptr(qu, 0),  n * sz);
+     qu->last = old_max+n;
+  } else { /* move elements n .. old_max-1 to the new space */
+     n = old_max-n; /* Elements to move */
+     memcpy(utl_vec_getptr(qu, new_max-n),  utl_vec_getptr(qu, qu->first),  n * sz);
+     qu->first = new_max-n;
+  }
+  
+  return 1;
+}
+
+int utl_que_add(que_t qu, void *e,char where)
+{
+  if (!utl_que_expand(qu)) return 0;
+  if (where == 'B') {
+    utl_vec_cpy(qu,qu->last,e);
+    qu->last = (qu->last +1) % queMax(qu);
+  }
+  else {
+    qu->first = (qu->first + vecMax(qu) - 1) % queMax(qu);
+    utl_vec_cpy(qu,qu->first,e);
+  }
+  qu->cnt++;
+  return 1;
+}
+
+int utl_que_del(que_t qu, char where)
+{
+  if (!qu) return 0;
+  if (queCount(qu) == 0) return 1;
+  if (where == 'B') 
+    qu->last = (qu->last + queMax(qu) - 1) % queMax(qu);
+  else 
+    qu->first = (qu->first +1) % queMax(qu);
+  qu->cnt--;
+  return 1;
+}
+
+void *utl_que_get(que_t qu, char where)
+{
+  uint32_t n;
+  if (queCount(qu) == 0) return NULL;
+  if (where == 'B') 
+    n = (qu->last + queMax(qu) - 1) % queMax(qu);
+  else 
+    n = qu->first;
+    
+  return utl_vec_getptr(qu, n);
+}
+
+#endif /* UTL_LIB */ 
 
 /**  BUFFERS **/
 #define buf_t vec_t
 int utl_bufSet(buf_t bf, uint32_t i, char c);
 
-#define bufNew() utl_vecNew(1)
+#define bufNew() utl_vecNew(1,NULL,NULL)
 #define bufFree  utl_vecFree
 
 char utl_bufGet(buf_t bf, uint32_t i);
@@ -1418,260 +1672,7 @@ int utl_bufFormat(buf_t bf, char *format, ...)
 }
 #endif /* UTL_LIB */
 
-
-/**  QUEUE **/
-#define que_t vec_t
-
-#define queDelFirst(q)  utl_que_del(q, 'F')
-#define queDelLast(q)   utl_que_del(q, 'B')
-#define queDel          queDelFirst
-int utl_que_del(que_t qu, char where);
-
-#define queFirstRaw(q)    utl_que_get(q,'F')
-#define queLastRaw(q)     utl_que_get(q,'B')
-void *utl_que_get(que_t qu, char where);
-
-#define queFirst(ty,q,d) (!(q) || queCount(q) == 0 ? d : *((ty *)queFirstRaw(q)))
-#define queLast(ty,q,d)  (!(q) || queCount(q) == 0 ? d : *((ty *)queLastRaw(q)))
-
-#define queAddFirstRaw(q,e)  utl_que_add(q,e,'F')
-#define queAddLastRaw(q,e)   utl_que_add(q,e,'B')
-#define queAddRaw queAddLastRaw
-int utl_que_add(que_t qu, void *e,char where);
-
-#define queAddFirst(ty,q,e)  do { ty x = e; utl_que_add(q,&x,'F'); } while (utlZero)
-#define queAddLast(ty,q,e)   do { ty x = e; utl_que_add(q,&x,'B'); } while (utlZero)
-#define queAdd queAddLast
-
-#define queNew(ty) utl_queNew(sizeof(ty))
-que_t utl_queNew(uint32_t esz);
-
-#define queEmpty utl_queEmpty
-int utl_queEmpty(que_t qu); 
-
-#define queMax   vecMax
-#define queCount vecCount
-#define queEsz   vecEsz
-#define queFree  vecFree
-
-#define que_first(q) ((q)->first)
-#define que_last(q)  ((q)->last)
-
-#ifdef UTL_LIB
-
-que_t utl_queNew(uint32_t esz)
-{
-  que_t qu = vecNew(esz);
-  if (qu) {
-    utl_vec_expand(qu,7);
-  }
-  return qu;
-}
-
-int utl_queEmpty(que_t qu) { return (qu == NULL || queCount(qu) == 0); }
-
-int utl_que_expand(que_t qu)
-{
-  uint32_t new_max = 8;
-  uint32_t old_max = 0;
-  uint32_t n = 0;
-  uint32_t sz;
-
-  old_max = queMax(qu);
-  if (queCount(qu) < old_max) return 1; /* there's room enough */
-  
-  new_max = old_max * 2;
-
-  if (!utl_vec_expand(qu,new_max-1)) return 0; /* couldn't expand!! */
-  
-  /* Rearrange existing elements */
-  n = qu->last;
-  sz = queEsz(qu);
-  if (n < old_max / 2) { /* move elements 0 .. n-1 to the new space */
-     if (n > 0) memcpy(utl_vec_getptr(qu, old_max),  utl_vec_getptr(qu, 0),  n * sz);
-     qu->last = old_max+n;
-  } else { /* move elements n .. old_max-1 to the new space */
-     n = old_max-n; /* Elements to move */
-     memcpy(utl_vec_getptr(qu, new_max-n),  utl_vec_getptr(qu, qu->first),  n * sz);
-     qu->first = new_max-n;
-  }
-  
-  return 1;
-}
-
-int utl_que_add(que_t qu, void *e,char where)
-{
-  if (!utl_que_expand(qu)) return 0;
-  if (where == 'B') {
-    utl_vec_cpy(qu,qu->last,e);
-    qu->last = (qu->last +1) % queMax(qu);
-  }
-  else {
-    qu->first = (qu->first + vecMax(qu) - 1) % queMax(qu);
-    utl_vec_cpy(qu,qu->first,e);
-  }
-  qu->cnt++;
-  return 1;
-}
-
-int utl_que_del(que_t qu, char where)
-{
-  if (!qu) return 0;
-  if (queCount(qu) == 0) return 1;
-  if (where == 'B') 
-    qu->last = (qu->last + queMax(qu) - 1) % queMax(qu);
-  else 
-    qu->first = (qu->first +1) % queMax(qu);
-  qu->cnt--;
-  return 1;
-}
-
-void *utl_que_get(que_t qu, char where)
-{
-  uint32_t n;
-  if (queCount(qu) == 0) return NULL;
-  if (where == 'B') 
-    n = (qu->last + queMax(qu) - 1) % queMax(qu);
-  else 
-    n = qu->first;
-    
-  return utl_vec_getptr(qu, n);
-}
-
-#endif /* UTL_LIB */ 
-
-
-/*
-  SKIP LISTS
-
-We'll represent skip lists within an array (which is a vec_t). 
-
-.v
-    3 - --------------------------> +
-    2 - -----------> E -----------> +
-    1 - ------> C -> E ------> K -> +
-    0 - -> A -> C -> E -> G -> K -> + 
-    
-                                    1
-      0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5  6  7  8  9
-lst   +  -  6  8 11  0  A  8  C 11 11  E 15 17  0  G 17  K  0  0
-      
-      0  1  2  3 
-path  
-..
-
- 
-*/
-
-
-typedef struct lst_s {
-  utl_cmp_t cmp;
-  vec_t     lst;
-  vec_t     dat;  
-  uint32_t  path[32];
-  uint32_t  flst[32]; 
-} *lst_t;
-
-lst_t utl_lstNew(uint32_t esz, utl_cmp_t cmp);
-lst_t utl_lstFree(lst_t ll);
-
-void    *utl_lstFirst(lst_t ll);
-void    *utl_lstNext(lst_t ll);
-void    *utl_lstGet(lst_t ll,uint32_t i);
-int      utl_lstAdd(lst_t ll,void *e);
-int      utl_lstDel(lst_t ll,void *e);
-uint32_t utl_lstSearch(lst_t ll,void *e);
-
-#ifdef UTL_LIB
-
-static const uint32_t utl_lst_NULL     = 0xFFFFFFF0;
-static const uint32_t utl_lst_PLUSINF  = 0xFFFFFFF1;
-static const uint32_t utl_lst_MINUSINF = 0xFFFFFFF3;
-
-lst_t utl_lstNew(uint32_t esz, utl_cmp_t cmp)
-{
-  lst_t ll;
-  
-  ll = malloc(sizeof(struct lst_s));
-  if (ll) {
-     ll->cmp = cmp;
-     if ( (ll->lst = vecNew(uint32_t)) ) {
-       if ( (ll->dat = utl_vecNew(esz)) ) {
-         vecFill(uint32_t, ll->lst, 0,64, 0);
-         vecSet(uint32_t, ll->lst, 0, utl_lst_PLUSINF);
-         vecSet(uint32_t, ll->lst, 1, utl_lst_MINUSINF);
-       }
-       else { vecFree(ll->lst); free(ll); ll = NULL; }
-     }
-     else { free(ll); ll = NULL; }
-  }
-  return ll;
-}
-
-lst_t utl_lstFree(lst_t ll)
-{
-  if (ll) {
-    ll->dat = vecFree(ll->dat);
-    ll->ndx = vecFree(ll->lst);
-    free(ll);
-  }
-  return NULL;
-}
-
-#define lst_DATA(i)    ((i) & 0x07FFFFFF)
-#define lst_HEIGHT(i)  ((i) >> 27)
-
-static int utl_lst_cmp(lst_t ll, uint32_t i, void *e)
-{
-  void *p;
-  uint32_t j;
-  
-  if (i == 0) return  1;
-  if (i == 1) return -1;
-
-  j = vecGet(uint32_t, ll->lst, i);
-  p = vecGetRaw(ll->dat,lst_DATA(j));
-  return ll->cmp(p,e);
-}
-
-#define lst_maxheight(l) ((l)->lst->first)
-uint32_t lstSearch(lst_t ll, void *e)
-{
-  uint32_t ret = 0;
-  int lvl;
-  uint32_t *lst;
-  int res;
-  
-  if (ll) {
-    lvl = lst_maxheight(ll)
-    lst = vec(uint_32,ll->lst);
-    while(lvl-- > 0) {
-      ll->path[lvl] = 1;
-      while ( (res = utl_lst_cmp(ll,ll->path[lvl],e)) < 0) {
-        ll->path[lvl] =  vecGet(uint32_t, ll->lst, ll->path[lvl]);
-      }
-    }
-  }
-  return ret;
-}
-
-#if 0
-int utl_lstAdd(lst_t ll, void *e)
-{
-  uint32_t n;
-  
-  n = lstSearch(ll,e);
-  if (n != utl_lst_NULL) {
-    
-  }
-  return 1;
-}
-
-#endif
-#endif /* UTL_LIB */ 
-
 #endif /* UTL_NOADT */
-
 
 #endif /* UTL_H */
 

@@ -22,6 +22,10 @@ TESTS = t_buf$(_EXE)     t_vec$(_EXE)  t_log$(_EXE)   \
         t_general$(_EXE) t_try$(_EXE)  t_try2$(_EXE)  \
 		t_mem$(_EXE)     t_fsm$(_EXE)  t_que$(_EXE)  
 
+TESTS = t_buf$(_EXE)     t_que$(_EXE)      t_vec$(_EXE)   \
+        t_log$(_EXE)     t_general$(_EXE)  t_try$(_EXE)  \
+        t_try2$(_EXE)    t_mem$(_EXE)      t_fsm$(_EXE)  \
+		
 .SUFFIXES: .c .h $(_OBJ)
 
 CFLAGS= $(CCFLAGS) -I../src -g -Wall

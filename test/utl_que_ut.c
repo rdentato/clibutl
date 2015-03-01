@@ -45,33 +45,33 @@ int main (int argc, char *argv[])
     logEQint(lg,"Default capacity",8,queMax(qq));
     logEQint(lg,"Empty queue",0,queCount(qq));
     
-    queAddRaw(qq,&p1);
+    queAddPtr(qq,&p1);
     logEQint(lg,"Added p1",1,queCount(qq));
-    queAddRaw(qq,&p2);
+    queAddPtr(qq,&p2);
     logEQint(lg,"Added p2",2,queCount(qq));
     
-    p = queFirstRaw(qq);
+    p = queFirstPtr(qq);
     logNNULL(lg,"Has first", p);
     logEQint(lg,"First correct",p1.x,p->x);
-    p = queLastRaw(qq);
+    p = queLastPtr(qq);
     logNNULL(lg,"Has first", p);
     logEQint(lg,"Last correct",p2.x,p->x);
     
     queDel(qq);
     logEQint(lg,"Deleted First",1,queCount(qq));
-    p = queFirstRaw(qq);
+    p = queFirstPtr(qq);
     logNNULL(lg,"Has first", p);
     logEQint(lg,"First correct",p2.x,p->x);
 
-    pp = queLastRaw(qq);
+    pp = queLastPtr(qq);
     logNNULL(lg,"Has last", p);
     logEQptr(lg,"Last same as First",p,pp);
     
     queDelLast(qq);
     logEQint(lg,"Deleted Last",0,queCount(qq));
-    p = queFirstRaw(qq);
+    p = queFirstPtr(qq);
     logNULL(lg,"Has no first", p);
-    pp = queLastRaw(qq);
+    pp = queLastPtr(qq);
     logNULL(lg,"Has no Last", pp);
 
     queDel(qq);

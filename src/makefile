@@ -20,11 +20,15 @@ CFLAGS=-O3
 .c.o:
 	$(CC) $(CFLAGS) -c -o $*.$(_OBJ) $*.c
 
+
 LIBOBJ = utl.$(_OBJ)
 
 libutl.$(_LIB) : $(LIBOBJ) 
 	$(AR) $@ $(LIBOBJ)
-
+	
+utl.c: utl.h
+	touch $*.c
+	
 clean:
 	rm -f *.$(_OBJ) *.$(_LIB) *.tmp
 

@@ -85,7 +85,7 @@ int main (int argc, char *argv[])
     }
     {
       FILE *f = fopen(__FILE__,"r");
-      size_t k;
+      size_t k = 0;
       size_t n=0;
       logTestSkip(lg,"Unable to open file "__FILE__,!f) {
         logTestCode(lg) {
