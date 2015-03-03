@@ -25,7 +25,8 @@ TESTS = t_buf$(_EXE)     t_vec$(_EXE)  t_log$(_EXE)   \
 TESTS = t_buf$(_EXE)     t_que$(_EXE)      t_vec$(_EXE)   \
         t_log$(_EXE)     t_general$(_EXE)  t_try$(_EXE)  \
         t_try2$(_EXE)    t_mem$(_EXE)      t_fsm$(_EXE)  \
-		
+	    t_vecperf$(_EXE)  \
+		 
 .SUFFIXES: .c .h $(_OBJ)
 
 CFLAGS= $(CCFLAGS) -I../src -g -Wall
@@ -49,6 +50,10 @@ t_buf$(_EXE): $(UTL_H)  utl_buf_ut.c
 t_vec$(_EXE): $(UTL_H)  utl_vec_ut.c
 	$(CC) $(CFLAGS) -c -o utl_vec_ut.$(_OBJ) utl_vec_ut.c
 	$(CC) -o $@ utl_vec_ut.$(_OBJ)
+
+t_vecperf$(_EXE): $(UTL_H)  utl_vecperf_ut.c
+	$(CC) $(CFLAGS) -c -o utl_vecperf_ut.$(_OBJ) utl_vecperf_ut.c
+	$(CC) -o $@ utl_vecperf_ut.$(_OBJ)
 
 t_log$(_EXE): $(UTL_H)  utl_logging_ut.c
 	$(CC) $(CFLAGS) -c -o utl_logging_ut.$(_OBJ) utl_logging_ut.c
