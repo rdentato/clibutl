@@ -1055,7 +1055,7 @@ typedef struct vec_s {
   void     *vec;
 } *vec_t;
 
-#define UTL_VEC_SORTED  1
+#define UTL_VEC_SORTED  1UL
 
 vec_t utl_vecNew(int esz, utl_cmp_t , utl_del_t);
 #define vecNew(...) utl_vecNew(utl_vec_ARGS(__VA_ARGS__))
@@ -1116,7 +1116,7 @@ uint32_t utl_vecEsz(vec_t v);
 void  *utl_vecVec(vec_t v);
 #define vec(ty, v) ((ty *)utl_vecVec(v))
 
-#define vecSorted(v, c) if (!v) {} else qsort(v->vec, v->cnt, v->esz, (v->flg |= UTL_VEC_SORTED, v->cmp = c))
+#define vecSorted(v, c) qsort(v->vec, v->cnt, v->esz, (v->flg |= UTL_VEC_SORTED, v->cmp = c))
 #define vecUnsorted(v) (v? v->cmp = NULL : utlZero <<=1)
 
 void *utl_vecsearch(vec_t v, void *e);
@@ -1125,7 +1125,7 @@ void *utl_vecsearch(vec_t v, void *e);
 
 #ifdef UTL_LIB
 
-
+#if 0
 /*
 ** Integer log base 2 of 32 bits integer values.
 **   llog2(0) == llog2(1) == 0
@@ -1145,7 +1145,7 @@ static short utl_llog2(uint32_t n)
   return l;
 #endif
 }
-
+#endif
 
 vec_t utl_vecNew(int esz, utl_cmp_t cmp, utl_del_t del)
 {
@@ -1253,6 +1253,7 @@ void *utl_vecAdd(vec_t v, void *e)
   if (!v) return 0;
   if (v->cmp) {
     pos = vecSearchPtr(v,e);
+    logDebug(logStderr,"Found? %p n:%d c:%d",pos, v->first, v->cnt);
     if (pos) {
       memcpy(pos,e,v->esz);    
     }
@@ -1278,16 +1279,17 @@ void *utl_vec_ins(vec_t v, uint32_t i, uint32_t l,void *e)
   if (l == 0) return b;
   if (i > v->cnt) i = v->cnt;
 
+  logDebug(logStderr,"Inserting before %d count:%d len:%d",i,v->cnt,l);
   if (utl_vec_expand(v,v->cnt+l+1)) {
     sz = v->esz;
     b = v->vec+i*sz;
-    l = l*sz;
-    memmove(b+l, b, (v->cnt-i)*sz);
-    if (e)  memcpy(b,e,l);
-    else memset(b,0x00,l);
+    memmove(b+(l*sz), b, (v->cnt-i)*sz);
+    if (e)  memcpy(b,e,(l*sz));
+    else memset(b,0x00,l*sz);
     v->cnt += l;
     v->flg &= ~UTL_VEC_SORTED;
   }
+  logDebug(logStderr,"Inserting after %d count:%d len:%d",i,v->cnt,l);
   return b;
 }
 
@@ -1307,10 +1309,8 @@ int utl_vec_del(vec_t v, uint32_t i,uint32_t l)
       b = v->vec+i*sz;
       memmove(b,b+l*sz,(cnt-i-l)*sz);
     }
-  
     v->cnt -= l;
   }
-  
   return v->cnt;
 }
 
@@ -1318,27 +1318,26 @@ int utl_vec_del(vec_t v, uint32_t i,uint32_t l)
 void *utl_vecsearch(vec_t v, void *e)
 {
   uint32_t ndx =0;
-  uint32_t i =0;
-  int k;
   int res = 1;
   void *ret = NULL;
+  int a,b;
   
-  if (!v || !v->cmp) return NULL;
+  if (vecCount(v) == 0 || !v->cmp) return NULL;
   
-  k = v->cnt;
-  if (k > 0) {
-    for (k = utl_llog2(k); res && k >= 0; k--) {
-      i = ndx | 1<<k;
-      if (i < v->cnt) {
-        ret = vecGetPtr(v,i);
-        res = v->cmp(e, ret);
-        logDebug(logStderr,"ndx: k=%d i=%d ndx=%d (cmp=%d)",k,i,ndx,res);
-        if (res > 0)  ndx = i;
-      }
-    }
-    if (res) ret = NULL;
+  if (!(v->flg & UTL_VEC_SORTED)) vecSorted(v,v->cmp);
+  
+  a = 0;
+  b = v->cnt-1; 
+  while (res && a <= b) {
+    ndx = (a + b) / 2;
+    ret = vecGetPtr(v,ndx);
+    res = v->cmp(ret,e);
+    logDebug(logStderr,"ndx: %d (cmp=%d) [%d,%d]",ndx,res,a,b);
+    if      (res > 0)  b = ndx -1; 
+    else if (res < 0)  a = ndx +1;
   } 
-  v->first = ndx;
+  if (res) ret = NULL;
+  v->first = ndx + (res < 0);
   return ret;
 }
 

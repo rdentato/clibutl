@@ -63,6 +63,7 @@ int main (int argc, char *argv[])
 
     vecSetPtr(vv,0,&p1);
     logNNULL(lg,"Is not NULL", vv->vec );
+    
     p = vecGetPtr(vv,0);
     logEQint(lg,"Set properly direct access", 1, p->x );
     logEQint(lg,"Len 1", 1, vecCount(vv) );
@@ -210,8 +211,7 @@ int main (int argc, char *argv[])
     vv = stkFree(vv);
   
     int *p;
-    char *q;
-  
+ 
     vv = vecNew(int);
     vecSet(int,vv,0,15);
     vecSet(int,vv,1,3);
@@ -223,6 +223,10 @@ int main (int argc, char *argv[])
     logEQint(lg,"Sort 2", 12, vecGet(int, vv, 1, -1));
     logEQint(lg,"Sort 3", 15, vecGet(int, vv, 2, -1));
     
+    p = vecSearch(int, vv, 3);
+    logNNULL(lg,"Found (int)",p);
+    p = vecSearch(int, vv, 15);
+    logNNULL(lg,"Found (int)",p);
     p = vecSearch(int, vv, 12);
     logNNULL(lg,"Found (int)",p);
     p = vecSearch(int, vv, 14);
@@ -244,37 +248,56 @@ int main (int argc, char *argv[])
     logEQstr(lg,"Sort str 3", "zz", vecGet(char *, vv,2,"??"));
     vv = vecFree(vv);
 
-    vv = vecNew(int);
-  
-    for (k=0; k< 20; k++) {
-      vecSet(int, vv, k, rand());
-    }
-    logEQint(lg,"Insert random",20,vecCount(vv));
-    
-    for (k=0; k<19; k++) {
-      if (vecGet(int,vv,k,-1) > vecGet(int,vv,k+1,-1)) {
-        logInfo(lg,"Unsorted at %d",k);
-        break;
-      }
-    }
-    
-    vecSorted(vv,intcmp);
-    
-    for (k=0; k<19; k++) {
-      if (vecGet(int,vv,k,-1) > vecGet(int,vv,k+1,-1)) {
-        logInfo(lg,"Unsorted at %d",k);
-        break;
-      }
-    }
-    
-    logEQint(lg,"All sorted",19, k);
-    
-    for (k=0; k<100; k++) {
-       
+    vv = vecNew(int,intcmp);
+
+    /* except 0,4,9 */    
+    vecSet(int, vv, 6, 5);
+    vecSet(int, vv, 5, 3);
+    vecSet(int, vv, 4, 2);
+    vecSet(int, vv, 3, 1);
+    vecSet(int, vv, 2, 8);
+    vecSet(int, vv, 1, 7);
+    vecSet(int, vv, 0, 6);
+
+    logInfo(logStderr,"0 1 2 3 4 5 6 7 8");
+    { int *vi = vec(int,vv);
+      logInfo(logStderr,"%d %d %d %d %d %d %d", vi[0], vi[1], vi[2], vi[3], vi[4], vi[5], vi[6]);
     }
 
-    vv = vecFree(vv);
-
+    p=vecSearch(int,vv,3);
+    
+    logNNULL(logStderr,"Found 3",p);
+    
+    logInfo(logStderr,"0 1 2 3 4 5 6 7 8 9");
+    { int *vi = vec(int,vv);
+      logInfo(logStderr,"%d %d %d %d %d %d %d", vi[0], vi[1], vi[2], vi[3], vi[4], vi[5], vi[6]);
+    }
+    
+    vecAdd(int,vv,0);
+    logEQint(logStderr,"Added (pos)",8,vv->cnt);
+    logEQint(logStderr,"Added (val)",0,vec(int,vv)[0]);
+    logInfo(logStderr,"0 1 2 3 4 5 6 7 8 9");
+    { int *vi = vec(int,vv);
+      logInfo(logStderr,"%d %d %d %d %d %d %d", vi[0], vi[1], vi[2], vi[3], vi[4], vi[5], vi[6]);
+    }
+    
+    vecAdd(int,vv,4);
+    logEQint(logStderr,"Added (pos)",9,vv->cnt);
+    logEQint(logStderr,"Added (val)",4,vec(int,vv)[4]);
+    
+    logInfo(logStderr,"0 1 2 3 4 5 6 7 8 9");
+    { int *vi = vec(int,vv);
+      logInfo(logStderr,"%d %d %d %d %d %d %d", vi[0], vi[1], vi[2], vi[3], vi[4], vi[5], vi[6]);
+    }
+    
+    vecAdd(int,vv,9);
+    logEQint(logStderr,"Added (pos)",10,vv->cnt);
+    logEQint(logStderr,"Added (val)",9,vec(int,vv)[9]);
+    logInfo(logStderr,"0 1 2 3 4 5 6 7 8 9");
+    { int *vi = vec(int,vv);
+      logInfo(logStderr,"%d %d %d %d %d %d %d %d %d %d", vi[0], vi[1], vi[2], vi[3], vi[4], vi[5], vi[6], vi[7], vi[8], vi[9]);
+    }
+    
   }
   
   return 0;
