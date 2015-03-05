@@ -1017,6 +1017,10 @@ void *utl_strdup(void *ptr, char *file, int line)
 #define calloc(n,s)   utl_calloc(n,s,__FILE__,__LINE__)
 #define realloc(p,n)  utl_realloc(p,n,__FILE__,__LINE__)
 #define free(p)       utl_free(p,__FILE__,__LINE__)
+
+#ifdef strdup
+#undef strdup
+#endif
 #define strdup(p)     utl_strdup(p,__FILE__,__LINE__)
 
 #define utlMemCheck(p)    utl_check(p,__FILE__, __LINE__)
