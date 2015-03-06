@@ -49,7 +49,9 @@ int pstrcmp(const void *a, const void *b)
 int main (int argc, char *argv[])
 {
   logLevel(lg,"ALT");
-  c = 100000000;
+  c = 100000;
+  
+  if (argc > 1) c = atoi(argv[1]);
   
   logTestPlan(lg,"Performance vec") {
     vv=vecNew(int);
@@ -60,12 +62,13 @@ int main (int argc, char *argv[])
     } 
     logClockStop;
     logEQint(lg,"Set numbers forward", c,vecCount(vv));
+#if 0
     logClockStart(lg);
     vecSorted(vv,intcmp);   
     logClockStop;
-
-    vv = vecFree(vv);
+#endif
     
+    vv = vecFree(vv);
     vv=vecNew(int);
     logClockStart(lg);
     for (k=0; k<c; k++) {
@@ -73,10 +76,12 @@ int main (int argc, char *argv[])
     } 
     logClockStop;
     logEQint(lg,"Set numbers forward", c,vecCount(vv));
+#if 0    
     
     logClockStart(lg);
     vecSorted(vv,intcmp);   
     logClockStop;
+#endif    
     
     vv = vecFree(vv);
   }

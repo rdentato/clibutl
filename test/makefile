@@ -18,14 +18,10 @@ _BAT=.sh
 
 UTL_H=../src/utl.h
 
-TESTS = t_buf$(_EXE)     t_vec$(_EXE)  t_log$(_EXE)   \
-        t_general$(_EXE) t_try$(_EXE)  t_try2$(_EXE)  \
-		t_mem$(_EXE)     t_fsm$(_EXE)  t_que$(_EXE)  
-
 TESTS = t_buf$(_EXE)     t_que$(_EXE)      t_vec$(_EXE)   \
         t_log$(_EXE)     t_general$(_EXE)  t_try$(_EXE)  \
         t_try2$(_EXE)    t_mem$(_EXE)      t_fsm$(_EXE)  \
-	    t_vecperf$(_EXE)  \
+	      t_vecperf$(_EXE)  \
 		 
 .SUFFIXES: .c .h $(_OBJ)
 
@@ -54,6 +50,13 @@ t_vec$(_EXE): $(UTL_H)  utl_vec_ut.c
 t_vecperf$(_EXE): $(UTL_H)  utl_vecperf_ut.c
 	$(CC) $(CFLAGS) -c -o utl_vecperf_ut.$(_OBJ) utl_vecperf_ut.c
 	$(CC) -o $@ utl_vecperf_ut.$(_OBJ)
+
+GLIB_INC=$(shell pkg-config --cflags glib-2.0)
+GLIB_LIB=$(shell pkg-config --libs glib-2.0)
+
+t_gvecperf$(_EXE): $(UTL_H)  utl_gvecperf_ut.c
+	$(CC) $(CFLAGS) $(GLIB_INC) -c -o utl_gvecperf_ut.$(_OBJ) utl_gvecperf_ut.c
+	$(CC) -o $@ utl_gvecperf_ut.$(_OBJ) $(GLIB_LIB)
 
 t_log$(_EXE): $(UTL_H)  utl_logging_ut.c
 	$(CC) $(CFLAGS) -c -o utl_logging_ut.$(_OBJ) utl_logging_ut.c
