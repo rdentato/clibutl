@@ -22,11 +22,15 @@ typedef struct {
   int x; int y;
 } point;
 
+point p0;
 point p1;
 point p2;
-point *p;
+point pp;
+point *pt;
+
 
 int *v;
+int *p;
 
 #define lg logStderr
 
@@ -45,6 +49,15 @@ int pstrcmp(const void *a, const void *b)
   return strcmp(aa,bb);
 }
 
+int pointcmp(const void *a, const void *b)
+{
+  const point *pa = a, *pb = b;
+  int n;
+
+  n = pa->x - pb->x;  // Only one point for each x
+  //if (n==0) n = pa->y - pb->y;
+  return n;
+}
 
 int main (int argc, char *argv[])
 {
@@ -64,33 +77,33 @@ int main (int argc, char *argv[])
     vecSetPtr(vv,0,&p1);
     logNNULL(lg,"Is not NULL", vv->vec );
     
-    p = vecGetPtr(vv,0);
-    logEQint(lg,"Set properly direct access", 1, p->x );
+    pt = vecGetPtr(vv,0);
+    logEQint(lg,"Set properly direct access", 1, pt->x );
     logEQint(lg,"Len 1", 1, vecCount(vv) );
 
     vecSetPtr(vv,1,&p2);
     logNNULL(lg,"Is not NULL", vv->vec );
-    p = vecGetPtr(vv,1);
-    logEQint(lg,"Set properly direct access", -1, p->x );
+    pt = vecGetPtr(vv,1);
+    logEQint(lg,"Set properly direct access", -1, pt->x );
     logEQint(lg,"Len 1", 2, vecCount(vv) );
 
-    p = vecGetPtr(vv,vecCount(vv)+1);
-    logNULL(lg,"Is Null",p);
+    pt = vecGetPtr(vv,vecCount(vv)+1);
+    logNULL(lg,"Is Null",pt);
 
-    p = vec(point,vv);
-    logNNULL(lg,"Is not Null",p);
+    pt = vec(point,vv);
+    logNNULL(lg,"Is not Null",pt);
     
-    logTestSkip(lg,"Vec array is NULL", p==NULL) {
-      logEQint(lg,"v[0]",2, p[0].y);
-      logEQint(lg,"v[1]",-2, p[1].y);
+    logTestSkip(lg,"Vec array is NULL", pt==NULL) {
+      logEQint(lg,"v[0]",2, pt[0].y);
+      logEQint(lg,"v[1]",-2, pt[1].y);
     }
     
     vecResize(vv,30);
-    logGEint(lg,"Grown up", 30, vv->max);
+    logGEint(lg,"Grown up", 30, vecMax(vv));
 
     vecResize(vv,10);
-    logGEint(lg,"Shrink", 10, vv->max);
-    logTestNote(lg,"Cur max: %d", vv->max);
+    logGEint(lg,"Shrink", 10, vecMax(vv));
+    logTestNote(lg,"Cur max: %d", vecMax(vv));
 
     vv = vecFree(vv);
     logNULL(lg,"Is NULL", vv );
@@ -210,8 +223,6 @@ int main (int argc, char *argv[])
     logEQint(lg,"stkEmpty",1,stkEmpty(vv));
     vv = stkFree(vv);
   
-    int *p;
- 
     vv = vecNew(int);
     vecSet(int,vv,0,15);
     vecSet(int,vv,1,3);
@@ -259,45 +270,95 @@ int main (int argc, char *argv[])
     vecSet(int, vv, 1, 7);
     vecSet(int, vv, 0, 6);
 
-    logInfo(logStderr,"0 1 2 3 4 5 6 7 8");
+    logInfo(lg,"0 1 2 3 4 5 6 7 8");
     { int *vi = vec(int,vv);
-      logInfo(logStderr,"%d %d %d %d %d %d %d", vi[0], vi[1], vi[2], vi[3], vi[4], vi[5], vi[6]);
+      logInfo(lg,"%d %d %d %d %d %d %d", vi[0], vi[1], vi[2], vi[3], vi[4], vi[5], vi[6]);
     }
-
+    
+    logEQint(lg,"unsorted", 0, vecSorted(vv));
+    
     p=vecSearch(int,vv,3);
     
-    logNNULL(logStderr,"Found 3",p);
+    logNEint(lg,"sorted", 0, vecSorted(vv));
     
-    logInfo(logStderr,"0 1 2 3 4 5 6 7 8 9");
+    logNNULL(lg,"Found 3",p);
+    
+    logInfo(lg,"0 1 2 3 4 5 6 7 8 9");
     { int *vi = vec(int,vv);
-      logInfo(logStderr,"%d %d %d %d %d %d %d", vi[0], vi[1], vi[2], vi[3], vi[4], vi[5], vi[6]);
+      logInfo(lg,"%d %d %d %d %d %d %d", vi[0], vi[1], vi[2], vi[3], vi[4], vi[5], vi[6]);
     }
     
     vecAdd(int,vv,0);
-    logEQint(logStderr,"Added (pos)",8,vv->cnt);
-    logEQint(logStderr,"Added (val)",0,vec(int,vv)[0]);
-    logInfo(logStderr,"0 1 2 3 4 5 6 7 8 9");
+    logEQint(lg,"Added (pos)",8,vv->cnt);
+    logEQint(lg,"Added (val)",0,vec(int,vv)[0]);
+    logInfo(lg,"0 1 2 3 4 5 6 7 8 9");
     { int *vi = vec(int,vv);
-      logInfo(logStderr,"%d %d %d %d %d %d %d", vi[0], vi[1], vi[2], vi[3], vi[4], vi[5], vi[6]);
+      logInfo(lg,"%d %d %d %d %d %d %d", vi[0], vi[1], vi[2], vi[3], vi[4], vi[5], vi[6]);
     }
     
     vecAdd(int,vv,4);
-    logEQint(logStderr,"Added (pos)",9,vv->cnt);
-    logEQint(logStderr,"Added (val)",4,vec(int,vv)[4]);
+    logEQint(lg,"Added (pos)",9,vv->cnt);
+    logEQint(lg,"Added (val)",4,vec(int,vv)[4]);
     
-    logInfo(logStderr,"0 1 2 3 4 5 6 7 8 9");
+    logInfo(lg,"0 1 2 3 4 5 6 7 8 9");
     { int *vi = vec(int,vv);
-      logInfo(logStderr,"%d %d %d %d %d %d %d", vi[0], vi[1], vi[2], vi[3], vi[4], vi[5], vi[6]);
+      logInfo(lg,"%d %d %d %d %d %d %d", vi[0], vi[1], vi[2], vi[3], vi[4], vi[5], vi[6]);
     }
     
     vecAdd(int,vv,9);
-    logEQint(logStderr,"Added (pos)",10,vv->cnt);
-    logEQint(logStderr,"Added (val)",9,vec(int,vv)[9]);
-    logInfo(logStderr,"0 1 2 3 4 5 6 7 8 9");
+    logEQint(lg,"Added (pos)",10,vv->cnt);
+    logEQint(lg,"Added (val)",9,vec(int,vv)[9]);
+    logInfo(lg,"0 1 2 3 4 5 6 7 8 9");
     { int *vi = vec(int,vv);
-      logInfo(logStderr,"%d %d %d %d %d %d %d %d %d %d", vi[0], vi[1], vi[2], vi[3], vi[4], vi[5], vi[6], vi[7], vi[8], vi[9]);
+      logInfo(lg,"%d %d %d %d %d %d %d %d %d %d", vi[0], vi[1], vi[2], vi[3], vi[4], vi[5], vi[6], vi[7], vi[8], vi[9]);
     }
+   
+    vv = vecFree(vv);
+
+    vv = vecNew(point,pointcmp);
+  
+    p0.x =-1; p0.y =-1;
+    p1.x = 1; p1.y = 1;
+    p2.x = 0; p2.y = 1;
     
+    vecAdd(point, vv, p1);
+    logEQint(lg,"added p1",1,vecCount(vv));
+    
+    pp = vecGet(point , vv, 0, p0);
+    
+    logEQint(lg,"got back (x)",p1.x,pp.x);
+    logEQint(lg,"got back (y)",p1.y,pp.y);
+    
+    pp = vecGet(point , vv, 13, p0);
+    
+    logEQint(lg,"got default back (x)",p0.x,pp.x);
+    logEQint(lg,"got default back (y)",p0.y,pp.y);
+    
+    vecAdd(point, vv, p2);
+    logEQint(lg,"added p2",2,vecCount(vv));
+    
+    pp = vecGet(point , vv, 0, p0);
+    
+    logEQint(lg,"got back p2 (x) sorted at 0",p2.x,pp.x);
+    logEQint(lg,"got back p2 (y) sorted at 0",p2.y,pp.y);
+    
+    pp = vecGet(point , vv, 1, p0);
+    
+    logEQint(lg,"got back p1 (x) sorted at 1",p1.x,pp.x);
+    logEQint(lg,"got back p1 (y) sorted at 1",p1.y,pp.y);
+    
+    pp.y++;
+    
+    vecAdd(point,vv,pp);
+    logEQint(lg,"Not added a point (changed)",2,vecCount(vv));
+    pp.y = -1;
+    pp = vecGet(point , vv, 1, p0);
+    logEQint(lg,"got back p1 (x) sorted at 1",p1.x,pp.x);
+    logEQint(lg,"got back p1 (y) changed at 1",p1.y+1,pp.y);
+    
+    
+    vv = vecFree(vv);
+   
   }
   
   return 0;

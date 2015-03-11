@@ -383,8 +383,10 @@ utl_extern(utlLogger utl_logger , = logNull);
                                         /* 0   4   8   12  16  20  24  28  32  36  40 */
 utl_extern(char const utl_log_abbrev[], = "TST FTL ALT CRT ERR WRN MSG INF DBG OFF LOG ");
 
+#ifdef UTL_LIB
 /* Assume that log_L is the last level in utl_log_abbrev */
 utlAssume( (log_L +1) == ((sizeof(utl_log_abbrev)-1)>>2));
+#endif
 
 int   utl_log_level(utlLogger lg);
 int   utl_log_chrlevel(char *l);
@@ -1043,11 +1045,8 @@ void *utl_strdup(void *ptr, char *file, int line)
 
 #ifndef UTL_NOADT
 
-
 /** VECTORS **/
-
 typedef struct vec_s {
-  char      val[16];
   uint32_t  max;
   uint32_t  cnt;
   uint32_t  esz;
@@ -1057,14 +1056,17 @@ typedef struct vec_s {
   utl_cmp_t cmp;
   utl_del_t del;
   void     *vec;
+  char      val[0];
 } *vec_t;
 
 #define UTL_VEC_SORTED  1UL
 
 vec_t utl_vecNew(int esz, utl_cmp_t , utl_del_t);
-#define vecNew(...) utl_vecNew(utl_vec_ARGS(__VA_ARGS__))
+#define vecNew(...) utl_vecNew(utl_vecNew_ARGS(__VA_ARGS__))
 
-#define utl_vec_ARGS(...)    sizeof(utl_ARGS0(__VA_ARGS__, NULL, NULL, NULL)), utl_ARGS1(__VA_ARGS__, NULL, NULL, NULL), utl_ARGS2(__VA_ARGS__, NULL, NULL, NULL)
+#define utl_vecNew_ARGS(...)    sizeof(utl_ARGS0(__VA_ARGS__, NULL, NULL, NULL)),\
+                                utl_ARGS1(__VA_ARGS__, NULL, NULL, NULL), \
+                                utl_ARGS2(__VA_ARGS__, NULL, NULL, NULL)
 #define utl_ARGS0(x, ...) x
 #define utl_ARGS1(x, y, ...) y
 #define utl_ARGS2(x, y, z, ...) z
@@ -1074,30 +1076,26 @@ vec_t utl_vecFree(vec_t v);
 
 void *utl_vecSet(vec_t v, uint32_t i, void *e);
 #define vecSetPtr utl_vecSet
-#define vecSet(ty,v,i,e)   (*((ty *)v) = e, utl_vecSet(v,i,v))
-//#define vecSet(ty,v,i,e) do { ty x = e; utl_vecSet(v,i,&x);} while(utlZero)
+#define vecSet(ty,v,i,e)   (*((ty *)(v)->val) = (e), utl_vecSet(v,i,(v)->val))
 
 void *utl_vecFill(vec_t v, uint32_t j, uint32_t i, void *e);
 #define vecFillPtr utl_vecFill
-#define vecFill(ty,v,j,i,e)  (*((ty *)v) = e, utl_vecFill(v,j,i,v))
-//#define vecFill(ty,v,j,i,e) do { ty x = e; utl_vecFill(v,j,i,&x);} while(utlZero)
+#define vecFill(ty,v,j,i,e)  (*((ty *)(v)->val) = (e), utl_vecFill(v,j,i,(v)->val))
 
 void *utl_vecAdd(vec_t v, void *e); 
 #define vecAddPtr  utl_vecAdd
-#define vecAdd(ty,v,e)  (*((ty *)v) = e, utl_vecAdd(v,v))
-//#define vecAdd(ty,v,e) do { ty x = e; utl_vecAdd(v,&x);} while(utlZero)
+#define vecAdd(ty,v,e)  (*((ty *)(v)->val) = (e), utl_vecAdd(v,(v)->val))
 
 void *utl_vec_ins(vec_t v, uint32_t n, uint32_t l,void *e);
 #define vecInsPtr(v,i,e) utl_vec_ins(v,i,1,e);
-#define vecIns(ty,v,i,e) (*((ty *)v) = e, utl_vec_ins(v,i,1,v))
-//#define vecIns(ty,v,i,e) do { ty x = e; utl_vec_ins(v,i,1,&x);} while(utlZero)
+#define vecIns(ty,v,i,e) (*((ty *)(v)->val) = (e), utl_vec_ins(v,i,1,(v)->val))
 #define vecInsGap(v,i,n) utl_vec_ins(v,i,n,NULL)
 
 int utl_vec_del(vec_t v, uint32_t i, uint32_t l);
 #define vecDel(v,i) utl_vec_del(v,i,1)
 
-static int utl_vec_valid_ndx(vec_t v, uint32_t i);
-
+#define utl_vec_valid_ndx(v, i)  ((v) && (v)->vec && ((i) < v->cnt))
+#define utl_vec_expand(v, i) ((utl_vec_valid_ndx(v,i)) || (utl_vecResize(v,i) >= 0))
 #define utl_vec_getptr(v,i)  (((char *)((v)->vec)) + ((i)*((v)->esz)))
 #define utl_vec_cpy(v,i,e)   memcpy(utl_vec_getptr(v,i), e, (v)->esz)
 
@@ -1120,12 +1118,15 @@ uint32_t utl_vecEsz(vec_t v);
 void  *utl_vecVec(vec_t v);
 #define vec(ty, v) ((ty *)utl_vecVec(v))
 
-#define vecSorted(v, c) qsort(v->vec, v->cnt, v->esz, (v->flg |= UTL_VEC_SORTED, v->cmp = c))
-#define vecUnsorted(v) (v? v->cmp = NULL : utlZero <<=1)
+int utl_vec_sort(vec_t v, utl_cmp_t c) ;
+#define vecSorted(...) utl_vec_sort(utl_vecSorted_ARGS(__VA_ARGS__)) 
+#define utl_vecSorted_ARGS(...) utl_ARGS0(__VA_ARGS__, NULL), utl_ARGS1(__VA_ARGS__, NULL)
+
+#define vecUnsorted(v) if (!v) {} else {v->cmp = NULL; v->flg &= ~UTL_VEC_SORTED;}
 
 void *utl_vecsearch(vec_t v, void *e);
 #define vecSearchPtr(v,e) utl_vecsearch(v,e)
-#define vecSearch(ty,v,e)   (*((ty *)v) = e, utl_vecsearch(v,v))
+#define vecSearch(ty,v,e)   (*((ty *)(v)->val) = (e), utl_vecsearch(v,(v)->val))
 
 #ifdef UTL_LIB
 
@@ -1154,7 +1155,7 @@ static short utl_llog2(uint32_t n)
 vec_t utl_vecNew(int esz, utl_cmp_t cmp, utl_del_t del)
 {
   vec_t v;
-  v = malloc(sizeof(struct vec_s));
+  v = malloc(sizeof(struct vec_s)+esz);
   if (v) {
     v->max = 0;    v->cnt = 0;
     v->first = 0;  v->last = 0;
@@ -1180,12 +1181,6 @@ uint32_t utl_vecCount(vec_t v) { return v? v->cnt : 0; }
 uint32_t utl_vecMax(vec_t v)   { return v? v->max : 0; }
 uint32_t utl_vecEsz(vec_t v)   { return v? v->esz : 0; }
 void    *utl_vecVec(vec_t v)   { return v? v->vec : NULL; } 
-
-static int utl_vec_valid_ndx(vec_t v, uint32_t i)
-{ return (v && v->vec && i < v->cnt); }
-
-static int utl_vec_expand(vec_t v, uint32_t i)
-{ return ((utl_vec_valid_ndx(v,i)) || (utl_vecResize(v,i) >= 0)); }
 
 int utl_vecResize(vec_t v, uint32_t n)
 {
@@ -1257,9 +1252,9 @@ void *utl_vecAdd(vec_t v, void *e)
   if (!v) return 0;
   if (v->cmp) {
     pos = vecSearchPtr(v,e);
-    logDebug(logStderr,"Found? %p n:%d c:%d",pos, v->first, v->cnt);
+    logNDebug(logStderr,"Found? %p n:%d c:%d",pos, v->first, v->cnt);
     if (pos) {
-      memcpy(pos,e,v->esz);    
+      memcpy(pos,e,v->esz);
     }
     else {
       pos = utl_vec_getptr(v,v->first);
@@ -1283,7 +1278,7 @@ void *utl_vec_ins(vec_t v, uint32_t i, uint32_t l,void *e)
   if (l == 0) return b;
   if (i > v->cnt) i = v->cnt;
 
-  logDebug(logStderr,"Inserting before %d count:%d len:%d",i,v->cnt,l);
+  logNDebug(logStderr,"Inserting before %d count:%d len:%d",i,v->cnt,l);
   if (utl_vec_expand(v,v->cnt+l+1)) {
     sz = v->esz;
     b = v->vec+i*sz;
@@ -1293,7 +1288,7 @@ void *utl_vec_ins(vec_t v, uint32_t i, uint32_t l,void *e)
     v->cnt += l;
     v->flg &= ~UTL_VEC_SORTED;
   }
-  logDebug(logStderr,"Inserting after %d count:%d len:%d",i,v->cnt,l);
+  logNDebug(logStderr,"Inserting after %d count:%d len:%d",i,v->cnt,l);
   return b;
 }
 
@@ -1318,6 +1313,15 @@ int utl_vec_del(vec_t v, uint32_t i,uint32_t l)
   return v->cnt;
 }
 
+int utl_vec_sort(vec_t v, utl_cmp_t c) 
+{
+  if (c) {
+    v->cmp = c;
+    qsort(v->vec, v->cnt, v->esz, v->cmp);
+    v->flg |= UTL_VEC_SORTED;
+  }
+  return v->flg & UTL_VEC_SORTED;
+}
 
 void *utl_vecsearch(vec_t v, void *e)
 {
@@ -1336,7 +1340,7 @@ void *utl_vecsearch(vec_t v, void *e)
     ndx = (a + b) / 2;
     ret = vecGetPtr(v,ndx);
     res = v->cmp(ret,e);
-    logDebug(logStderr,"ndx: %d (cmp=%d) [%d,%d]",ndx,res,a,b);
+    logNDebug(logStderr,"ndx: %d (cmp=%d) [%d,%d]",ndx,res,a,b);
     if      (res > 0)  b = ndx -1; 
     else if (res < 0)  a = ndx +1;
   } 
@@ -1375,13 +1379,15 @@ void *utl_que_get(que_t qu, char where);
 #define queFirst(ty,q,d) (!(q) || queCount(q) == 0 ? d : *((ty *)queFirstPtr(q)))
 #define queLast(ty,q,d)  (!(q) || queCount(q) == 0 ? d : *((ty *)queLastPtr(q)))
 
-#define queAddFirstPtr(q,e)  utl_que_add(q,e,'F')
-#define queAddLastPtr(q,e)   utl_que_add(q,e,'B')
+#define queAddFirstPtr(q,e)  utl_que_add_front(q,e)
+#define queAddLastPtr(q,e)   utl_que_add_back(q,e)
 #define queAddPtr queAddLastPtr
-int utl_que_add(que_t qu, void *e,char where);
 
-#define queAddFirst(ty,q,e)  do { ty x = e; utl_que_add(q,&x,'F'); } while (utlZero)
-#define queAddLast(ty,q,e)   do { ty x = e; utl_que_add(q,&x,'B'); } while (utlZero)
+void *utl_que_add_front(que_t qu, void *e);
+void *utl_que_add_back(que_t qu, void *e);
+
+#define queAddFirst(ty,q,e)  (*((ty *)(q)->val) = (e), utl_que_add_front(q,(q)->val))
+#define queAddLast(ty,q,e)   (*((ty *)(q)->val) = (e), utl_que_add_back(q,(q)->val))
 #define queAdd queAddLast
 
 #define queNew(ty) utl_queNew(sizeof(ty))
@@ -1403,9 +1409,7 @@ int utl_queEmpty(que_t qu);
 que_t utl_queNew(uint32_t esz)
 {
   que_t qu = vecNew(esz);
-  if (qu) {
-    utl_vec_expand(qu,7);
-  }
+  utlZero *= utl_vec_expand(qu,7); // to avoid warnings
   return qu;
 }
 
@@ -1440,19 +1444,28 @@ int utl_que_expand(que_t qu)
   return 1;
 }
 
-int utl_que_add(que_t qu, void *e,char where)
+void *utl_que_add_front(que_t qu, void *e)
 {
-  if (!utl_que_expand(qu)) return 0;
-  if (where == 'B') {
-    utl_vec_cpy(qu,qu->last,e);
+  void *p = NULL;
+  if (utl_que_expand(qu)) {
+    qu->first = (qu->first + queMax(qu) - 1) % queMax(qu);
+    p = utl_vec_getptr(qu,qu->first);
+    memcpy(p,e,qu->esz);
+    qu->cnt++;
+  }
+  return p;
+}
+
+void *utl_que_add_back(que_t qu, void *e)
+{
+  void *p = NULL;
+  if (utl_que_expand(qu)) {
+    p = utl_vec_getptr(qu,qu->last);
+    memcpy(p,e,qu->esz);
     qu->last = (qu->last +1) % queMax(qu);
+    qu->cnt++;
   }
-  else {
-    qu->first = (qu->first + vecMax(qu) - 1) % queMax(qu);
-    utl_vec_cpy(qu,qu->first,e);
-  }
-  qu->cnt++;
-  return 1;
+  return p;
 }
 
 int utl_que_del(que_t qu, char where)
