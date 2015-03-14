@@ -489,6 +489,9 @@ void utl_log_write(utlLogger lg,int lv, int tstamp, char *format, ...);
 #define logAlert(lg, ...)      utl_log_write(lg, log_A, 1, __VA_ARGS__)
 #define logFatal(lg, ...)      utl_log_write(lg, log_F, 1, __VA_ARGS__)
 
+#define logdbg(...)  logDebug(logStderr,__VA_ARGS__)
+#define logNdbg(...) 
+
 #define logClock(lg,x)         logClockStart(lg); \
                                  x \
                                logClockStop(lg); 
@@ -783,6 +786,7 @@ void utl_log_testskip_end(utlLogger lg, int line)
 #define logAlarm(lg, ...)     (utlZero<<=1)
 #define logFatal(lg, ...)     (utlZero<<=1)
 
+#define logdbg(...)           (utlZero<<=1)
 #define logContinue(lg, ...)  (utlZero<<=1)
 
 #define logAssert(lg,e)       (utlZero<<=1)
