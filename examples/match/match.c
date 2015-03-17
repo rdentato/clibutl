@@ -73,7 +73,92 @@ int uchr(char **s)
 #define utl_endpat(c) (!(c) || ((c) == '|') || ((c) == ')'))
 int utl_expr(char **ppat, char **pstr, vec_t v);
 
-int fact(char **ppat, char **pstr, vec_t v)
+/*  Use of v->first and v->last
+ * 
+ *  We need a stack to keep track of parenthesis and a counter
+ *  to know the highest level of parenthesis.
+ * *
+ */
+
+utlAssume(sizeof(uint32_t) == 2 * sizeof(uint16_t));
+
+int utl_match_push(vec_t v, int n)
+{
+  int sp = -1;
+  uint32_t stk;
+  uint16_t *ndx;
+  
+  if (v) {
+    ndx = (uint16_t *)&(v->last);
+    sp = ndx[0]; stk = v->first;
+    logdbg("push stk: %08X sp: %d val: %X",v->first,ndx[0],n);
+    n &= 0x0F; /* the numbers in the stack will be in the range 0-15 */
+    if (sp < 8) {
+      stk &= ~(0x0F << (4*sp));  /* clear old value */
+      stk |=  (n    << (4*sp));  /* set new value */
+      sp++;
+      ndx[0] = sp; v->first = stk;
+    }
+  }  
+  return sp;
+}
+
+int utl_match_pop(vec_t v)
+{
+  int sp;
+  uint32_t stk;
+  uint16_t *ndx;
+  int n = -1;  
+  
+  if (v) {
+    ndx = (uint16_t *)&(v->last);
+    sp = ndx[0]; stk = v->first;
+    if (sp > 0) {
+      sp--;
+      n   = stk & (0x0F << (4*sp));  /* isolate top value */
+      n >>= 4 * sp;                  /*  */
+      ndx[0] = sp;
+    }
+    logdbg("pop from stk: %08X sp: %d val: %X",v->first,ndx[0], n);
+  }  
+  return n;
+}
+
+int utl_match_open(vec_t v,char *s)
+{
+  uint16_t *ndx;
+  int n = -1;
+  if (v) {
+    ndx = (uint16_t *)&(v->last);
+    n = ndx[1];
+    logdbg("expr( %p %d",v,n);
+    if (n < 10) {
+      vecSet(char *,v,n*2, s);
+      vecSet(char *,v,n*2+1, s);
+      utl_match_push(v,n);
+      n++;
+      ndx[1] = n;
+    }
+  }
+  return n;
+}
+
+int utl_match_close(vec_t v, char *s)
+{
+  int n = -1;
+
+  if (v) {
+    n = utl_match_pop(v);
+    logdbg("expr) %p %d",v,n);
+    if (n >= 0) {
+      vecSet(char *,v,n*2+1, s);
+    }
+  }
+  return n;
+}
+
+
+int utl_fact(char **ppat, char **pstr, vec_t v)
 {
   int ret = 0;
   char *p = *ppat;
@@ -106,7 +191,7 @@ int fact(char **ppat, char **pstr, vec_t v)
     cp = uchr(&p);
     c = uchr(&s);
     ret = ( cp == c);
-    logdbg("fact: '%c' == '%c' (%d)",cp,c,ret);
+    logNdbg("fact: '%c' == '%c' (%d)",cp,c,ret);
   }  
 
   *ppat = p;           /* Pattern is always consumed */
@@ -126,8 +211,8 @@ int utl_term(char **ppat, char **pstr, vec_t v)
   if (*p == '!') {inv = 1; p++ ;} 
   while(!utl_endpat(*p)) {  /* to handle * and + */
     *ppat = p;
-    logdbg("term: [%s] [%s]",p,s);
-    ret = fact(&p,&s,v);
+    logNdbg("term: [%s] [%s]",p,s);
+    ret = utl_fact(&p,&s,v);
     if (ret) {
       nmatch++;
       if (*p == '+' || *p == '*') { p = *ppat; }   /* let's try again */
@@ -180,16 +265,11 @@ int utl_expr(char **ppat, char **pstr, vec_t v)
   char *p = *ppat;
   char *s = *pstr;
 
-  if (v && v->first < 9) {
-    logdbg("expr in: %d [%s][%s] (%p)",v->first, *ppat,*pstr,*pstr);
-    vecSet(char *,v,v->first*2,*pstr);
-    vecSet(char *,v,v->first*2+1,*pstr);
-    v->first++;
-  }
+  utl_match_open(v,*pstr);
   
   for(;;) { /* to handle alternatives */
     while (!utl_endpat(*p) && (ret = utl_term(&p,&s,v))) ;
-    logdbg("alt: [%s][%s]",p,s);
+    logNdbg("alt: [%s][%s]",p,s);
     if (*p == '|' && !ret) { p++; s=*pstr; } /* try next alternative */
     else break;
   }
@@ -201,12 +281,8 @@ int utl_expr(char **ppat, char **pstr, vec_t v)
   logNdbg("exprend (after): [%s]",p);
   
   if (ret)  *pstr = s;
-  
-  if (v && v->first > 0) {
-    v->first--;
-    vecSet(char *,v,v->first*2+1,*pstr);
-    logdbg("expr out: %d [%s][%s] (%p)",v->first, *ppat,*pstr,*pstr);
-  }
+
+  utl_match_close(v,*pstr);
   
   return ret;
 }
@@ -221,7 +297,8 @@ int utl_match(char *pat, char *str, vec_t v)
     for (ret = 19; ret <=0; ret--) {
       vecSet(char *,v,ret, NULL);
     }
-    v->first = 0;  /* used as a stack pointer */
+    v->first = 0;  
+    v->last = 0;  
   }  
   ret = utl_expr(&p, &s,v);
 
@@ -305,13 +382,38 @@ int main(int argc, char *argv[])
     
     logGTint(lg, "patterns xd* (match)", 0, utlMatch("xd*","xddd",v));
     
-    logEQint(lg, "match a(b(c)(g))d abcgd" , 8 , utlMatch("a(b(c)(g))d","abcgd",v));
+    logEQint(lg, "match a(b(c)(g))d abcgd" , 5 , utlMatch("a(b(c)(g))d","abcgd",v));
     for (m = 0; m < 10; m++) {
       logInfo(lg, "%d [%.*s]", m, utl_match_len(v,m),utl_match_capt(v,m));
     }
     
-    
-    
+    #if 1
+    {
+      vec_t v = vecNew(int);
+      
+      utl_match_push(v,2);
+      logEQint(lg,"push 2",2,v->first);
+      
+      utl_match_push(v,3);
+      logEQint(lg,"push 3",0x32,v->first);
+
+      utl_match_push(v,20);
+      logEQint(lg,"push 20 (4)",0x0432,v->first);
+
+      utl_match_push(v,5);
+      utl_match_push(v,6);
+      utl_match_push(v,7);
+      utl_match_push(v,8);
+
+      logEQint(lg,"push 5,6,7,8",0x8765432,v->first);
+      
+      for (k=8;k>1;k--)
+         logEQint(lg,"pop ",k,utl_match_pop(v));
+
+      v= vecFree(v);
+      
+    }
+    #endif
   }
   
   vecFree(v);

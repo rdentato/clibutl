@@ -180,6 +180,8 @@ typedef int (*utl_del_t)(const void *a);
 #define utlAssert       assert
 
 
+utlAssume(sizeof(uint32_t) == 4);
+
 
 #ifndef UTL_NOTRYCATCH
 
