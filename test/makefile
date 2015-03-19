@@ -18,10 +18,10 @@ _BAT=.sh
 
 UTL_H=../src/utl.h
 
-TESTS = t_buf$(_EXE)     t_que$(_EXE)      t_vec$(_EXE)   \
-        t_log$(_EXE)     t_general$(_EXE)  t_try$(_EXE)  \
-        t_try2$(_EXE)    t_mem$(_EXE)      t_fsm$(_EXE)  \
-	      t_vecperf$(_EXE)  \
+TESTS = t_buf$(_EXE)      t_que$(_EXE)      t_vec$(_EXE)   \
+        t_log$(_EXE)      t_general$(_EXE)  t_try$(_EXE)  \
+        t_try2$(_EXE)     t_mem$(_EXE)      t_fsm$(_EXE)  \
+	      t_vecperf$(_EXE)  t_match$(_EXE)\
 		 
 .SUFFIXES: .c .h $(_OBJ)
 
@@ -81,6 +81,10 @@ t_mem$(_EXE): $(UTL_H)  utl_memory_ut.c
 t_fsm$(_EXE): $(UTL_H)  utl_fsm_ut.c
 	$(CC) $(CFLAGS) -c -o utl_fsm_ut.$(_OBJ) utl_fsm_ut.c
 	$(CC) -o $@ utl_fsm_ut.$(_OBJ)
+
+t_match$(_EXE): $(UTL_H)  utl_match_ut.c
+	$(CC) $(CFLAGS) -c -o utl_match_ut.$(_OBJ) utl_match_ut.c
+	$(CC) -o $@ utl_match_ut.$(_OBJ)
 
 clean:
 	rm -f t_*$(_EXE) *.$(_OBJ) *.tmp *.log

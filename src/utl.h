@@ -26,8 +26,8 @@
 ** =========== 
 ** .v
 **                           ___   __
-**                       ___/  (_ /  )
-**                ___  _(__   ___)  /
+**                        __/  /_ /  )
+**                ___  __(_   ___)  /
 **               /  / /  )/  /  /  /
 **              /  /_/  //  (__/  /
 **             (____,__/(_____(__/
@@ -51,7 +51,11 @@
 **                    that account and report about misuse of memory.
 **
 **   [Dynamic arrays]
-**   [Text buffers}
+**   [Text buffers]
+**   [Queues]
+**   [Stacks]
+**   [Sorted Array]
+**   [String match]
 **  ..
 **
 */
@@ -480,7 +484,7 @@ void utl_log_write(utlLogger lg,int lv, int tstamp, char *format, ...);
 
 #define logIf(lg,lc) utl_log_if(lg,utl_log_chrlevel(lc))
 
-#define utl_log_if(lg,lv) if ((lv) > utl_log_level(lg)) (utlZero<<=1) ; else
+#define utl_log_if(lg,lv) if ((lv) > utl_log_level(lg)) {} else
           
 #define logDebug(lg, ...)      utl_log_write(lg, log_D, 1, __VA_ARGS__)
 #define logInfo(lg, ...)       utl_log_write(lg, log_I, 1, __VA_ARGS__)
@@ -510,10 +514,8 @@ void utl_log_write(utlLogger lg,int lv, int tstamp, char *format, ...);
 
 #define logAssert(lg,e)        utl_log_assert(lg, e, #e, __FILE__, __LINE__)
 
-#define logTest(lg,s,e)        if (lg && !(lg->flags & UTL_LOG_SKIP))\
-                                    utl_log_test(lg, (e), s, 0, __FILE__, __LINE__); \
-                               else utl_log_test(lg, 1, s, 1, __FILE__, __LINE__)
-                               
+#define logTest(lg,e)          utl_log_test(lg, (e), #e, __FILE__, __LINE__); 
+
 #define logTestPlan(lg, s)      for((lg? utl_log_write(lg, log_T, 1, "PLN  %s (%s:%d)",s, __FILE__, __LINE__),\
                                     lg->ok=lg->ko=lg->skp =0, lg->flags |= UTL_LOG_SKP0\
                                   : 1); lg->flags & UTL_LOG_SKP0;lg->flags &= ~UTL_LOG_SKP0,logTestStat(lg)) 
@@ -522,7 +524,7 @@ void utl_log_write(utlLogger lg,int lv, int tstamp, char *format, ...);
 
 #define logTestFailNote(lg, ...)  (lg && !(lg->flags & UTL_LOG_RES)? logTestNote(lg, __VA_ARGS__):0)
 
-#define logTestCode(lg) if (!(lg && !(lg->flags & UTL_LOG_SKIP))) (utlZero<<=1); else 
+#define logTestCode(lg)         if (!(lg && !(lg->flags & UTL_LOG_SKIP))) {} else 
 
 #define logTestStat(lg)        (lg? utl_log_write(lg, log_T, 1, "RES  KO:%3d  OK:%3d  SKIP:%3d  TOT:%3d  (%s:%d)", \
                                     lg->ko, lg->ok, lg->skp, lg->ko + lg->ok + lg->skp,__FILE__, __LINE__) \
@@ -538,10 +540,10 @@ void utl_log_write(utlLogger lg,int lv, int tstamp, char *format, ...);
 #define log_testxxx(t1,t2,lg,s,e,r,o,t)  \
       if (lg && !(lg->flags & UTL_LOG_SKIP)) { \
         t1 utl_exp = (e); t1 utl_ret = (r); \
-        log_testexpect(lg,utl_log_test(lg, t , s, 0, __FILE__, __LINE__), \
+        log_testexpect(lg,utl_log_test(lg, t , s, __FILE__, __LINE__), \
                            "("#t1") "#o" "#t2,utl_exp,#t2,utl_ret); \
       } \
-      else utl_log_test(lg, 1, s, 1, __FILE__, __LINE__)
+      else utl_log_test(lg, 1, s, __FILE__, __LINE__)
 
 #define log_testint(lg,s,e,r,o)   log_testxxx(int   ,%d,lg,s,e,r,o,(utl_ret o utl_exp))
 #define log_testptr(lg,s,e,r,o)   log_testxxx(void *,%p,lg,s,e,r,o,(utl_ret o utl_exp))
@@ -728,12 +730,13 @@ void utl_log_assert(utlLogger lg,int e,char *estr, char *file,int line)
   }
 }
 
-int utl_log_test(utlLogger lg,int e, char *s, int skip, char *file, int line)
+int utl_log_test(utlLogger lg,int e, char *s, char *file, int line)
 { 
-  char *msg;
-    
+  char *msg = utlEmptyString;
+  int skip = 0;
   if (lg) {
     lg->flags &= ~UTL_LOG_RES;
+    skip = lg->flags & UTL_LOG_SKIP;
     if (!skip) {
       if (e) {msg = "OK  "; lg->ok++; }
       else   {msg = "KO  "; lg->ko++; }
@@ -806,13 +809,13 @@ typedef void *utlLogger;
 
 #define logClock(lg,x)         x
 
-#define logTest(lg,s,e)        (utlZero<<=1)
-#define logTestPlan(lg, s)     if (!utlZero) (utlZero<<=1); else
-#define logTestNote(lg, ...)    (utlZero<<=1)
+#define logTest(lg,e)           (utlZero<<=1)
+#define logTestPlan(lg, s)       
+#define logTestNote(lg, ...)     (utlZero<<=1)
 #define logTestFailNote(lg, ...) (utlZero<<=1) 
 #define logTestCode(lg)       
-#define logTestStat(lg)        (utlZero<<=1)
-#define logTestSkip(lg,s,e)    if (!utlZero) (utlZero<<=1); else
+#define logTestStat(lg)          (utlZero<<=1)
+#define logTestSkip(lg,s,e)    
 
 #define log_testint(lg,s,e,r,o) (utlZero<<=1)
 #define log_testptr(lg,s,e,r,o) (utlZero<<=1)
@@ -1695,6 +1698,327 @@ int utl_bufFormat(buf_t bf, char *format, ...)
 #endif /* UTL_LIB */
 
 #endif /* UTL_NOADT */
+
+/****************************************/
+#ifndef UTL_NOREX
+/***
+ 
+ expr -> term+ '|' term+
+ term -> '!'? fact [?*+]? 
+ fact -> '(' expr  ')' | '[' '^'? range+ ']' | '%' any | any
+ range -> any '-' any | '\' any | any
+*/
+
+
+#define UTL_MAX_CAPT 10
+
+int utl_match(char *pat, char *str, vec_t v);
+int utl_match_len(vec_t v, int n);
+char *utl_match_capt(vec_t v, int n);
+
+#define utlMatch     utl_match
+#define utlMatchLen  utl_match_len
+#define utlMatchSub  utl_match_capt
+
+
+#ifdef UTL_LIB 
+
+#define utl_endpat(c) (!(c) || ((c) == '|') || ((c) == ')'))
+static int utl_expr(char **ppat, char **pstr, vec_t v);
+
+utlAssume(sizeof(uint32_t) == 2 * sizeof(uint16_t));
+
+/* us a uin32_t as a stack */
+static int utl_match_push(vec_t v, int n)
+{
+  int sp = -1;
+  uint32_t stk;
+  uint16_t *ndx;
+  
+  if (v) {
+    ndx = (uint16_t *)&(v->last);
+    sp = ndx[0]; stk = v->first;
+    logNdbg("push stk: %08X sp: %d val: %X",v->first,ndx[0],n);
+    n &= 0x0F; /* the numbers in the stack will be in the range 0-15 */
+    if (sp < 8) {
+      stk &= ~(0x0F << (4*sp));  /* clear old value */
+      stk |=  (n    << (4*sp));  /* set new value */
+      sp++;
+      ndx[0] = sp; v->first = stk;
+    }
+  }  
+  return sp;
+}
+
+static int utl_match_pop(vec_t v)
+{
+  int sp;
+  uint32_t stk;
+  uint16_t *ndx;
+  int n = -1;  
+  
+  if (v) {
+    ndx = (uint16_t *)&(v->last);
+    sp = ndx[0]; stk = v->first;
+    if (sp > 0) {
+      sp--;
+      n = (stk >> (4*sp)) & 0x0F;  /* isolate top value */
+      ndx[0] = sp;
+    }
+    logNdbg("pop from stk: %08X sp: %d val: %X",v->first,ndx[0], n);
+  }  
+  return n;
+}
+
+static int utl_match_open(vec_t v,char *s)
+{
+  uint16_t *ndx;
+  int n = -1;
+  if (v) {
+    ndx = (uint16_t *)&(v->last);
+    n = ndx[1];
+    logNdbg("expr( %p %d",v,n);
+    if (n < UTL_MAX_CAPT) {
+      vecSet(char *,v,n*2, s);
+      vecSet(char *,v,n*2+1, s);
+      utl_match_push(v,n);
+      ndx[1] = ++n;
+    }
+  }
+  return n;
+}
+
+static int utl_match_close(vec_t v, char *s)
+{
+  int n = -1;
+
+  if (v) {
+    n = utl_match_pop(v);
+    logNdbg("expr) %p %d",v,n);
+    if (n >= 0) vecSet(char *,v,n*2+1, s);
+  }
+  return n;
+}
+
+
+static int uchr(char **s)
+{ /* one day will do UTF-8 */
+  int c = 0;
+  if (s && *s) {
+    c = **s; if (c) *s += 1;
+  }
+  return c;
+}
+
+static int utl_ccls(char **ppat, int c)
+{
+  int ret = 0;
+  char *p = *ppat;
+  int inv = 0;
+  int cp = 0;
+  int cp2 = 0;
+  
+  
+  if (*p == '^') {inv = 1; p++; }
+
+  while (*p && (*p != ']')) {
+    logdbg("ccls {%s}[%c]",p,c);
+    cp = uchr(&p);
+    if (p[1] && (p[1] != ']')) {
+      if (cp == '%') cp = uchr(&p);
+      if (*p == '-') {
+        p++; cp2 = uchr(&p);
+        if (cp == '%' && p[1] && (p[1] != ']')) cp2 = uchr(&p);
+        logdbg("range: [%d][%d]",cp,cp2);
+      }
+    }
+    if (cp2) {
+      if (cp2 < cp) {ret = cp; cp = cp2; cp2 = ret; ret = 0;}
+      if (cp <= c && c <= cp2) {ret = 1; break; }
+    }
+    else if (c == cp) { ret = 1; break; }
+    cp2 = 0;
+  }
+  
+  while (*p && *p != ']') p++;
+  if (*p) p++;
+  *ppat = p;
+
+  ret = (!ret == inv);
+
+  return ret;
+}
+
+static int utl_fact(char **ppat, char **pstr, vec_t v)
+{
+  int ret = 0;
+  char *p = *ppat;
+  char *s = *pstr;
+  char *q = NULL;
+  int c,cp;
+  int inv = 0;
+  int max = 1;
+  
+  p = *ppat;
+  cp = *p;
+  if (cp == '@') {max = 0x7FFFFFFF; cp = '%';}
+  
+  #define utl_cls(x,y,z) case x : inv = 1; case y : utl_isa(z)
+  #define utl_isa(z)     while (c && (ret < max) && (!(z) == inv)) { \
+                          ret++; q = s; c = uchr(&s); \
+                         } s = q;
+  if (cp == '%') {
+    p++; 
+    c = uchr(&s);
+    q = s;
+    switch (*p) {
+      utl_cls('A','a',isalpha(c));  p++; break;
+      utl_cls('L','l',islower(c));  p++; break;
+      utl_cls('D','d',isdigit(c));  p++; break;
+	    utl_cls('M','m',isalnum(c));  p++; break;   
+	    utl_cls('B','b',isblank(c));  p++; break;
+	    utl_cls('C','c',iscntrl(c));  p++; break;
+	    utl_cls('G','g',isgraph(c));  p++; break;
+	    utl_cls('N','n',isprint(c));  p++; break;
+	    utl_cls('P','p',ispunct(c));  p++; break;
+	    utl_cls('S','s',isspace(c));  p++; break;
+	    utl_cls('U','u',isupper(c));  p++; break;
+ 	    utl_cls('X','x',isxdigit(c)); p++; break;
+	    utl_cls('I','i',isascii(c));  p++; break;
+      default: cp = uchr(&p); utl_isa(cp == c); 
+    }
+  }
+  else if (*p == '[') {
+    p++; c = uchr(&s); ret = utl_ccls(&p,c);
+  }
+  else if (*p == '(') {
+    p++; ret = utl_expr(&p,&s,v); 
+  }
+  else {
+    cp = uchr(&p);  c = uchr(&s);
+    ret = ( cp == c);
+    logNdbg("fact: '%c' == '%c' (%d)",cp,c,ret);
+  }  
+
+  *ppat = p;           /* Pattern is always consumed */
+  if (ret) *pstr = s;  /* input text only if it matches */
+  return ret;
+}
+
+static int utl_term(char **ppat, char **pstr, vec_t v)
+{
+  char *p = *ppat;
+  char *s = *pstr;
+
+  int nmatch = 0;
+  int ret = 0;
+  int inv = 0;
+  
+  if (*p == '!') {inv = 1; p++ ;} 
+  while(!utl_endpat(*p)) {  /* to handle * and + */
+    *ppat = p;
+    logNdbg("term: [%s] [%s]",p,s);
+    ret = utl_fact(&p,&s,v);
+    if (ret) {
+      nmatch++;
+      if (*p == '+' || *p == '*') { p = *ppat; }   /* let's try again */
+      else if (*p == '?') { p++; break; }          /* got it once, ok! */
+    } else {
+      if (*p == '?' || *p == '*') { ret = 1; p++; } /* no match, but it's ok */
+      else  if (*p == '+') { p++; ret = (nmatch > 0); }  /* did it already match once? */
+      break;
+    }
+  }
+  logNdbg("termret: %d",ret);
+  *ppat = p;              /* Pattern is always consumed! */
+  if (inv) return !ret;   /* The ! operator does not consume input */
+  if (ret) *pstr = s;     /* Only on match we consume input */
+  
+  return ret;
+}
+  
+int utl_match_len(vec_t v, int n)
+{
+  int ret = 0;
+  if (n < UTL_MAX_CAPT)
+    ret = vecGet(char *,v,n*2+1,NULL) - vecGet(char *,v,n*2,NULL);
+  return ret;
+}
+
+char *utl_match_capt(vec_t v, int n)
+{
+  char *ret = NULL;
+  if (n < UTL_MAX_CAPT)
+    ret = vecGet(char *,v,n*2,NULL);
+  return ret;
+}
+
+static char *utl_consume(char *p)
+{
+  int k = 0; /* consume untried pattern */
+  while (*p) {
+    if (*p == ')') {
+      if (k == 0) break;
+      k--;
+    }
+    else if (*p == '(') k++;
+    p++;
+  }
+  return p;
+}
+
+static int utl_expr(char **ppat, char **pstr, vec_t v)
+{
+  int ret = 0;
+  char *p = *ppat;
+  char *s = *pstr;
+
+  utl_match_open(v,*pstr);
+  
+  for(;;) { /* to handle alternatives */
+    while (!utl_endpat(*p) && (ret = utl_term(&p,&s,v))) ;
+    logNdbg("alt: [%s][%s]",p,s);
+    if (*p == '|' && !ret) { p++; s=*pstr; } /* try next alternative */
+    else break;
+  }
+  logNdbg("exprend (before): [%s]",p);
+  
+  p = utl_consume(p); /* consume untried pattern */
+  if (*p == ')') p++;
+  *ppat = p;
+  logNdbg("exprend (after): [%s]",p);
+  
+  if (ret)  *pstr = s;
+
+  utl_match_close(v,*pstr);
+  
+  return ret;
+}
+
+int utl_match(char *pat, char *str, vec_t v)
+{
+  char *p = pat;
+  char *s = str;
+  int ret = 0;
+
+  if (v) {
+    for (ret = 2*UTL_MAX_CAPT-1; ret >= 0; ret--) {
+      logNdbg("%d: NULL",ret);
+      vecSet(char *,v,ret, NULL);
+    }
+    v->first = 0;  v->last = 0;  
+  }  
+  
+  ret = utl_expr(&p, &s,v);
+  ret = s - str;
+  logNdbg("consumed: %d",ret);
+  return ret; /* the amount of input consumed */
+}
+
+#endif /* UTL_LIB */
+
+#endif /* UTL_NOREX */
+
 
 #endif /* UTL_H */
 

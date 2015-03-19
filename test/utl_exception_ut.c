@@ -21,7 +21,7 @@ int c=0;
 void functhrow(tryenv env, int err)
 {
     throw(env, err);
-    logTest(lg,"Returned to main",0); /* it's an error to be executed! */
+    logTest(lg,0); /* it's an error to be executed! */
 }
 
 int main (int argc, char *argv[])

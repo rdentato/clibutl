@@ -21,6 +21,9 @@ utlLogger lg = NULL;
 
 #define l logStderr
 
+int ret0() {return 0;}
+  
+
 int main (int argc, char *argv[])
 {
   logTestPlan(l,"utl test: logging") {
@@ -147,6 +150,9 @@ int main (int argc, char *argv[])
       logAlert(l,"Counted!");
     } logClockStop;
     
+    k = 0;
+    logTest(l, k++ == ret0());
+    logTest(l, k == !ret0());
     
   }
   return 0;

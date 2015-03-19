@@ -21,7 +21,8 @@ int c=0;
 void uncatch()
 { 
   if (k==9999) {
-    logTest(lg,"Exit for unhandled exception",1);
+    logInfo(lg,"Handled exception");
+    logTest(lg,1);
     logTestStat(lg);
   }
 }
@@ -48,7 +49,8 @@ int main (int argc, char *argv[])
       case 2: k = 2; break;
       default : rethrow;
     });
-    logTest(lg,"Exit for unhandled exception", 0);
+    logInfo(lg,"Unhandled exception");
+    logTest(lg, 0);
   } 
   return 0;
 }
