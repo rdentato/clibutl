@@ -19,8 +19,6 @@
 
 #define lg logStderr
 
-
-
 int main(int argc, char *argv[])
 {
   int k,m;
@@ -141,6 +139,14 @@ int main(int argc, char *argv[])
     logTest(lg, 0  < utlMatch("x[AZ]p","xZp",v));
     logTest(lg, 0  < utlMatch("x[A-Z]p","xHp",v));
 
+    logTest(lg, 0  < utlMatch("x[AZ]?p","xp",v));
+    logTest(lg, 0  < utlMatch("x[AZ]?p","xp",v));
+    logTest(lg, 0  < utlMatch("x[A-Z]?p","xp",v));
+
+    logTest(lg, 0  < utlMatch("x[A-FH]p","xHp",v));
+    logTest(lg, 0  < utlMatch("x[HA-F]p","xHp",v));
+    logTest(lg, 0  < utlMatch("x[A-FH]p","xp",v));
+    logTest(lg, 0  < utlMatch("x[HA-F]p","xp",v));
   }
   
   vecFree(v);

@@ -140,7 +140,23 @@ int main(int argc, char *argv[])
     logTest(lg, 0  < utlMatch("x[AZ]p","xAp",v));
     logTest(lg, 0  < utlMatch("x[AZ]p","xZp",v));
     logTest(lg, 0  < utlMatch("x[A-Z]p","xHp",v));
+    
+    logTest(lg, 0  < utlMatch("x[AZ]+p","xZZZZZAp",v));
+    logTest(lg, 0  < utlMatch("x[AZ]+p","xAAZZp",v));
+    logTest(lg, 0  < utlMatch("x[A-Z]+p","xBVHp",v));
 
+    logTest(lg, 0  < utlMatch("x[AZ]?p","xp",v));
+    logTest(lg, 0  < utlMatch("x[AZ]?p","xp",v));
+    logTest(lg, 0  < utlMatch("x[A-Z]?p","xp",v));
+
+    logTest(lg, 0  < utlMatch("x[A-FH]p","xHp",v));
+    logTest(lg, 0  < utlMatch("x[HA-F]p","xHp",v));
+    
+    logTest(lg, 0  < utlMatch("x[^A-FH]p","x5p",v));
+    logTest(lg, 0  < utlMatch("x[^HA-F]p","x4p",v));
+    
+    logTest(lg, 0 == utlMatch("x[^A-FH]p","xBp",v));
+    logTest(lg, 0 == utlMatch("x[^HA-F]p","xHp",v));
   }
   
   vecFree(v);

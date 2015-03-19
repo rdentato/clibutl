@@ -1801,7 +1801,7 @@ static int utl_match_close(vec_t v, char *s)
 }
 
 
-static int uchr(char **s)
+static int utl_uchr(char **s)
 { /* one day will do UTF-8 */
   int c = 0;
   if (s && *s) {
@@ -1822,14 +1822,14 @@ static int utl_ccls(char **ppat, int c)
   if (*p == '^') {inv = 1; p++; }
 
   while (*p && (*p != ']')) {
-    logdbg("ccls {%s}[%c]",p,c);
-    cp = uchr(&p);
+    logNdbg("ccls {%s}[%c]",p,c);
+    cp = utl_uchr(&p);
     if (p[1] && (p[1] != ']')) {
-      if (cp == '%') cp = uchr(&p);
+      if (cp == '%') cp = utl_uchr(&p);
       if (*p == '-') {
-        p++; cp2 = uchr(&p);
-        if (cp == '%' && p[1] && (p[1] != ']')) cp2 = uchr(&p);
-        logdbg("range: [%d][%d]",cp,cp2);
+        p++; cp2 = utl_uchr(&p);
+        if (cp == '%' && p[1] && (p[1] != ']')) cp2 = utl_uchr(&p);
+        logNdbg("range: [%d][%d]",cp,cp2);
       }
     }
     if (cp2) {
@@ -1865,11 +1865,11 @@ static int utl_fact(char **ppat, char **pstr, vec_t v)
   
   #define utl_cls(x,y,z) case x : inv = 1; case y : utl_isa(z)
   #define utl_isa(z)     while (c && (ret < max) && (!(z) == inv)) { \
-                          ret++; q = s; c = uchr(&s); \
+                          ret++; q = s; c = utl_uchr(&s); \
                          } s = q;
   if (cp == '%') {
     p++; 
-    c = uchr(&s);
+    c = utl_uchr(&s);
     q = s;
     switch (*p) {
       utl_cls('A','a',isalpha(c));  p++; break;
@@ -1885,17 +1885,17 @@ static int utl_fact(char **ppat, char **pstr, vec_t v)
 	    utl_cls('U','u',isupper(c));  p++; break;
  	    utl_cls('X','x',isxdigit(c)); p++; break;
 	    utl_cls('I','i',isascii(c));  p++; break;
-      default: cp = uchr(&p); utl_isa(cp == c); 
+      default: cp = utl_uchr(&p); utl_isa(cp == c); 
     }
   }
   else if (*p == '[') {
-    p++; c = uchr(&s); ret = utl_ccls(&p,c);
+    p++; c = utl_uchr(&s); ret = utl_ccls(&p,c);
   }
   else if (*p == '(') {
     p++; ret = utl_expr(&p,&s,v); 
   }
   else {
-    cp = uchr(&p);  c = uchr(&s);
+    cp = utl_uchr(&p);  c = utl_uchr(&s);
     ret = ( cp == c);
     logNdbg("fact: '%c' == '%c' (%d)",cp,c,ret);
   }  
