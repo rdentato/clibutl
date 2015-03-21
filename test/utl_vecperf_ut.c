@@ -61,7 +61,8 @@ int main (int argc, char *argv[])
       vecSet(int,vv,k,k);
     } 
     logClockStop;
-    logEQint(lg,"Set numbers forward", c,vecCount(vv));
+    logTestNote(lg,"Set numbers forward");
+    logEQint(lg,c,vecCount(vv));
 #if 0
     logClockStart(lg);
     vecSorted(vv,intcmp);   
@@ -75,7 +76,8 @@ int main (int argc, char *argv[])
       vecSet(int,vv,c-k-1,k);
     } 
     logClockStop;
-    logEQint(lg,"Set numbers forward", c,vecCount(vv));
+    logTestNote(lg,"Set numbers forward");
+    logEQint(lg, c,vecCount(vv));
 #if 0    
     
     logClockStart(lg);

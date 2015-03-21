@@ -70,43 +70,43 @@ int main (int argc, char *argv[])
   
     vv = vecNew(point);
  
-    logNNULL(lg,"Is not NULL", vv );
-    logEQint(lg,"Mem Valid", utlMemValid, utlMemCheck(vv));
-    logEQint(lg,"Len 0", 0, vecCount(vv) );
+    logNNULL(lg, vv );
+    logEQint(lg, utlMemValid, utlMemCheck(vv));
+    logEQint(lg, 0, vecCount(vv) );
 
     vecSetPtr(vv,0,&p1);
-    logNNULL(lg,"Is not NULL", vv->vec );
+    logNNULL(lg, vv->vec );
     
     pt = vecGetPtr(vv,0);
-    logEQint(lg,"Set properly direct access", 1, pt->x );
-    logEQint(lg,"Len 1", 1, vecCount(vv) );
+    logEQint(lg, 1, pt->x );
+    logEQint(lg, 1, vecCount(vv) );
 
     vecSetPtr(vv,1,&p2);
-    logNNULL(lg,"Is not NULL", vv->vec );
+    logNNULL(lg, vv->vec );
     pt = vecGetPtr(vv,1);
-    logEQint(lg,"Set properly direct access", -1, pt->x );
-    logEQint(lg,"Len 1", 2, vecCount(vv) );
+    logEQint(lg, -1, pt->x );
+    logEQint(lg, 2, vecCount(vv) );
 
     pt = vecGetPtr(vv,vecCount(vv)+1);
-    logNULL(lg,"Is Null",pt);
+    logNULL(lg,pt);
 
     pt = vec(point,vv);
-    logNNULL(lg,"Is not Null",pt);
+    logNNULL(lg,pt);
     
     logTestSkip(lg,"Vec array is NULL", pt==NULL) {
-      logEQint(lg,"v[0]",2, pt[0].y);
-      logEQint(lg,"v[1]",-2, pt[1].y);
+      logEQint(lg,2, pt[0].y);
+      logEQint(lg,-2, pt[1].y);
     }
     
     vecResize(vv,30);
-    logGEint(lg,"Grown up", 30, vecMax(vv));
+    logGEint(lg, 30, vecMax(vv));
 
     vecResize(vv,10);
-    logGEint(lg,"Shrink", 10, vecMax(vv));
+    logGEint(lg, 10, vecMax(vv));
     logTestNote(lg,"Cur max: %d", vecMax(vv));
 
     vv = vecFree(vv);
-    logNULL(lg,"Is NULL", vv );
+    logNULL(lg, vv );
     
     vv = vecNew(int);
     vecSet(int,vv,2,4);
@@ -114,13 +114,13 @@ int main (int argc, char *argv[])
     vecSet(int,vv,1,2);
     
     v = vec(int,vv);
-    logEQint(lg,"vecSet",1,v[0]);
-    logEQint(lg,"vecSet",2,v[1]);
-    logEQint(lg,"vecSet",4,v[2]);
+    logEQint(lg,1,v[0]);
+    logEQint(lg,2,v[1]);
+    logEQint(lg,4,v[2]);
 
-    logEQint(lg,"vecGet",1,vecGet(int,vv,0,-1));
-    logEQint(lg,"vecGet",2,vecGet(int,vv,1,-1));
-    logEQint(lg,"vecGet",4,vecGet(int,vv,2,-1));
+    logEQint(lg,1,vecGet(int,vv,0,-1));
+    logEQint(lg,2,vecGet(int,vv,1,-1));
+    logEQint(lg,4,vecGet(int,vv,2,-1));
 
     vv = vecFree(vv);
     
@@ -128,51 +128,51 @@ int main (int argc, char *argv[])
     vecSet(int,vv,25,10);
     vecSet(int,vv,26,20);
     vecSet(int,vv,27,30);
-    logEQint(lg,"vecGet",10,vecGet(int,vv,25,-1));
-    logEQint(lg,"vecGet",20,vecGet(int,vv,26,-1));
-    logEQint(lg,"vecGet",30,vecGet(int,vv,27,-1));
+    logEQint(lg,10,vecGet(int,vv,25,-1));
+    logEQint(lg,20,vecGet(int,vv,26,-1));
+    logEQint(lg,30,vecGet(int,vv,27,-1));
    
     vecIns(int,vv,26,200);
-    logEQint(lg,"vecIns",10,vecGet(int,vv,25,-1));
-    logEQint(lg,"vecIns",200,vecGet(int,vv,26,-1));
-    logEQint(lg,"vecIns",20,vecGet(int,vv,27,-1));
-    logEQint(lg,"vecIns",30,vecGet(int,vv,28,-1));
+    logEQint(lg,10,vecGet(int,vv,25,-1));
+    logEQint(lg,200,vecGet(int,vv,26,-1));
+    logEQint(lg,20,vecGet(int,vv,27,-1));
+    logEQint(lg,30,vecGet(int,vv,28,-1));
     
     { /** White Box test!! **/
       int addme[10] = {201,202,203,204,205,206,207,208,209,210};
     
       utl_vec_ins(vv,27,10,addme);
-      logGTint(lg,"increased by ins",32,vecMax(vv));
-      logEQint(lg,"increased by ins",64,vecMax(vv));
+      logGTint(lg,32,vecMax(vv));
+      logEQint(lg,64,vecMax(vv));
       for (k=0; k<11; k++) {
-        logEQint(lg,"Insert successful",200+k,vecGet(int,vv,26+k,-1));     
+        logEQint(lg,200+k,vecGet(int,vv,26+k,-1));     
       }
     }
     
     vecSet(int,vv,0,300);
     vecSet(int,vv,1,301);
-    logEQint(lg,"[0] is 300", 300, vecGet(int,vv,0,-1));
-    logEQint(lg,"[1] is 301", 301, vecGet(int,vv,1,-1));
+    logEQint(lg, 300, vecGet(int,vv,0,-1));
+    logEQint(lg, 301, vecGet(int,vv,1,-1));
     vecInsGap(vv,0,2);
-    logEQint(lg,"[0] is 0",   0, vecGet(int,vv,0,-1));
-    logEQint(lg,"[1] is 0",   0, vecGet(int,vv,1,-1));
-    logEQint(lg,"[2] is 300", 300, vecGet(int,vv,2,-1));
-    logEQint(lg,"[3] is 301", 301, vecGet(int,vv,3,-1));
+    logEQint(lg,   0, vecGet(int,vv,0,-1));
+    logEQint(lg,   0, vecGet(int,vv,1,-1));
+    logEQint(lg, 300, vecGet(int,vv,2,-1));
+    logEQint(lg, 301, vecGet(int,vv,3,-1));
     
     k = vecCount(vv);
     logInfo(lg,"Count is %d",k);
     vecDel(vv,3);
-    logEQint(lg,"Deleted",k-1,vecCount(vv));
+    logEQint(lg,k-1,vecCount(vv));
         
     vv = vecFree(vv);
     
     vv = vecNew(int);
     vecFill(int,vv,14,20,-37);
-    logEQint(lg,"Filled (count)",21,vecCount(vv));
-    logEQint(lg,"Filled (1st value)",-37,vecGet(int,vv,14,0));
-    logEQint(lg,"Filled (mid value)",-37,vecGet(int,vv,17,0));
-    logEQint(lg,"Filled (last value)",-37,vecGet(int,vv,20,0));
-    logNEint(lg,"Filled (before 1st)",-37,vecGet(int,vv,13,0));
+    logEQint(lg,21,vecCount(vv));
+    logEQint(lg,-37,vecGet(int,vv,14,0));
+    logEQint(lg,-37,vecGet(int,vv,17,0));
+    logEQint(lg,-37,vecGet(int,vv,20,0));
+    logNEint(lg,-37,vecGet(int,vv,13,0));
     
     vv = vecFree(vv);
     
@@ -181,22 +181,22 @@ int main (int argc, char *argv[])
     for (k=0; k< 100; k++) {
       vecSet(int, vv, k, rand());
     }
-    logEQint(lg,"Insert random",100,vecCount(vv));
+    logEQint(lg,100,vecCount(vv));
     
     k = vecGet(int,vv,99,-1);
     c = vecGet(int,vv,98,-1);
     logInfo(lg,"v[99]=%d v[98]=%d",k,c);
     vecDel(vv,99);
     k = vecGet(int,vv,99,-1);
-    logEQint(lg,"Deleted last",-1,k);
-    logEQint(lg,"Deleted last",c,vecGet(int,vv,98,-1));
+    logEQint(lg,-1,k);
+    logEQint(lg,c,vecGet(int,vv,98,-1));
     
     k = vecGet(int,vv,0,-1);
     c = vecGet(int,vv,1,-1);
     logInfo(lg,"v[0]=%d v[1]=%d",k,c);
     vecDel(vv,0);
     k = vecGet(int,vv,0,-1);
-    logEQint(lg,"Deleted first",c,k);
+    logEQint(lg,c,k);
 
     k = vecGet(int,vv,46,-1);
     c = vecGet(int,vv,47,-1);
@@ -205,8 +205,8 @@ int main (int argc, char *argv[])
     logInfo(lg,"v[46]=%d v[47]=%d",k,c);
     vecDel(vv,0);
     k = vecGet(int,vv,46,-1);
-    logEQint(lg,"Deleted middle",c,k);
-    logEQint(lg,"Deleted middle",s, vecGet(int,vv,vecCount(vv)-1,-1));
+    logEQint(lg,c,k);
+    logEQint(lg,s, vecGet(int,vv,vecCount(vv)-1,-1));
 
     vv = vecFree(vv);
     
@@ -214,13 +214,13 @@ int main (int argc, char *argv[])
     stkPush(int,vv,3);
     stkPush(int,vv,2);
     stkPush(int,vv,1);
-    logEQint(lg,"stkTop",1,stkTop(int,vv,-1));
+    logEQint(lg,1,stkTop(int,vv,-1));
     stkPop(vv);
-    logEQint(lg,"stkTop",2,stkTop(int,vv,-1));
+    logEQint(lg,2,stkTop(int,vv,-1));
     stkPop(vv);
-    logEQint(lg,"stkTop",3,stkTop(int,vv,-1));
+    logEQint(lg,3,stkTop(int,vv,-1));
     stkPop(vv);
-    logEQint(lg,"stkEmpty",1,stkEmpty(vv));
+    logEQint(lg,1,stkEmpty(vv));
     vv = stkFree(vv);
   
     vv = vecNew(int);
@@ -230,22 +230,22 @@ int main (int argc, char *argv[])
     
     vecSorted(vv,intcmp);
     
-    logEQint(lg,"Sort 1",  3, vecGet(int, vv, 0, -1));
-    logEQint(lg,"Sort 2", 12, vecGet(int, vv, 1, -1));
-    logEQint(lg,"Sort 3", 15, vecGet(int, vv, 2, -1));
+    logEQint(lg,  3, vecGet(int, vv, 0, -1));
+    logEQint(lg, 12, vecGet(int, vv, 1, -1));
+    logEQint(lg, 15, vecGet(int, vv, 2, -1));
     
     p = vecSearch(int, vv, 3);
-    logNNULL(lg,"Found (int)",p);
+    logNNULL(lg,p);
     p = vecSearch(int, vv, 15);
-    logNNULL(lg,"Found (int)",p);
+    logNNULL(lg,p);
     p = vecSearch(int, vv, 12);
-    logNNULL(lg,"Found (int)",p);
+    logNNULL(lg,p);
     p = vecSearch(int, vv, 14);
-    logNULL(lg,"Not found (int)",p);
+    logNULL(lg,p);
     p = vecSearch(int, vv, 1);
-    logNULL(lg,"Not found (int)",p);
+    logNULL(lg,p);
     p = vecSearch(int, vv, 314);
-    logNULL(lg,"Not found (int)",p);
+    logNULL(lg,p);
     
     vv = vecFree(vv);
  
@@ -254,9 +254,9 @@ int main (int argc, char *argv[])
     vecSet(char *,vv,1,"aaaaaaaaaaaaaa");
     vecSet(char *,vv,2,"llll");
     vecSorted(vv,pstrcmp);
-    logEQstr(lg,"Sort str 1", "aaaaaaaaaaaaaa", vecGet(char *, vv,0,"??"));
-    logEQstr(lg,"Sort str 2", "llll", vecGet(char *, vv,1,"??"));
-    logEQstr(lg,"Sort str 3", "zz", vecGet(char *, vv,2,"??"));
+    logEQstr(lg, "aaaaaaaaaaaaaa", vecGet(char *, vv,0,"??"));
+    logEQstr(lg, "llll", vecGet(char *, vv,1,"??"));
+    logEQstr(lg, "zz", vecGet(char *, vv,2,"??"));
     vv = vecFree(vv);
 
     vv = vecNew(int,intcmp);
@@ -275,13 +275,13 @@ int main (int argc, char *argv[])
       logInfo(lg,"%d %d %d %d %d %d %d", vi[0], vi[1], vi[2], vi[3], vi[4], vi[5], vi[6]);
     }
     
-    logEQint(lg,"unsorted", 0, vecSorted(vv));
+    logEQint(lg, 0, vecSorted(vv));
     
     p=vecSearch(int,vv,3);
     
-    logNEint(lg,"sorted", 0, vecSorted(vv));
+    logNEint(lg, 0, vecSorted(vv));
     
-    logNNULL(lg,"Found 3",p);
+    logNNULL(lg,p);
     
     logInfo(lg,"0 1 2 3 4 5 6 7 8 9");
     { int *vi = vec(int,vv);
@@ -289,16 +289,16 @@ int main (int argc, char *argv[])
     }
     
     vecAdd(int,vv,0);
-    logEQint(lg,"Added (pos)",8,vv->cnt);
-    logEQint(lg,"Added (val)",0,vec(int,vv)[0]);
+    logEQint(lg,8,vv->cnt);
+    logEQint(lg,0,vec(int,vv)[0]);
     logInfo(lg,"0 1 2 3 4 5 6 7 8 9");
     { int *vi = vec(int,vv);
       logInfo(lg,"%d %d %d %d %d %d %d", vi[0], vi[1], vi[2], vi[3], vi[4], vi[5], vi[6]);
     }
     
     vecAdd(int,vv,4);
-    logEQint(lg,"Added (pos)",9,vv->cnt);
-    logEQint(lg,"Added (val)",4,vec(int,vv)[4]);
+    logEQint(lg,9,vv->cnt);
+    logEQint(lg,4,vec(int,vv)[4]);
     
     logInfo(lg,"0 1 2 3 4 5 6 7 8 9");
     { int *vi = vec(int,vv);
@@ -306,8 +306,8 @@ int main (int argc, char *argv[])
     }
     
     vecAdd(int,vv,9);
-    logEQint(lg,"Added (pos)",10,vv->cnt);
-    logEQint(lg,"Added (val)",9,vec(int,vv)[9]);
+    logEQint(lg,10,vv->cnt);
+    logEQint(lg,9,vec(int,vv)[9]);
     logInfo(lg,"0 1 2 3 4 5 6 7 8 9");
     { int *vi = vec(int,vv);
       logInfo(lg,"%d %d %d %d %d %d %d %d %d %d", vi[0], vi[1], vi[2], vi[3], vi[4], vi[5], vi[6], vi[7], vi[8], vi[9]);
@@ -322,39 +322,39 @@ int main (int argc, char *argv[])
     p2.x = 0; p2.y = 1;
     
     vecAdd(point, vv, p1);
-    logEQint(lg,"added p1",1,vecCount(vv));
+    logEQint(lg,1,vecCount(vv));
     
     pp = vecGet(point , vv, 0, p0);
     
-    logEQint(lg,"got back (x)",p1.x,pp.x);
-    logEQint(lg,"got back (y)",p1.y,pp.y);
+    logEQint(lg,p1.x,pp.x);
+    logEQint(lg,p1.y,pp.y);
     
     pp = vecGet(point , vv, 13, p0);
     
-    logEQint(lg,"got default back (x)",p0.x,pp.x);
-    logEQint(lg,"got default back (y)",p0.y,pp.y);
+    logEQint(lg,p0.x,pp.x);
+    logEQint(lg,p0.y,pp.y);
     
     vecAdd(point, vv, p2);
-    logEQint(lg,"added p2",2,vecCount(vv));
+    logEQint(lg,2,vecCount(vv));
     
     pp = vecGet(point , vv, 0, p0);
     
-    logEQint(lg,"got back p2 (x) sorted at 0",p2.x,pp.x);
-    logEQint(lg,"got back p2 (y) sorted at 0",p2.y,pp.y);
+    logEQint(lg,p2.x,pp.x);
+    logEQint(lg,p2.y,pp.y);
     
     pp = vecGet(point , vv, 1, p0);
     
-    logEQint(lg,"got back p1 (x) sorted at 1",p1.x,pp.x);
-    logEQint(lg,"got back p1 (y) sorted at 1",p1.y,pp.y);
+    logEQint(lg,p1.x,pp.x);
+    logEQint(lg,p1.y,pp.y);
     
     pp.y++;
     
     vecAdd(point,vv,pp);
-    logEQint(lg,"Not added a point (changed)",2,vecCount(vv));
+    logEQint(lg,2,vecCount(vv));
     pp.y = -1;
     pp = vecGet(point , vv, 1, p0);
-    logEQint(lg,"got back p1 (x) sorted at 1",p1.x,pp.x);
-    logEQint(lg,"got back p1 (y) changed at 1",p1.y+1,pp.y);
+    logEQint(lg,p1.x,pp.x);
+    logEQint(lg,p1.y+1,pp.y);
     
     
     vv = vecFree(vv);

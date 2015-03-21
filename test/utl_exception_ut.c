@@ -39,8 +39,9 @@ int main (int argc, char *argv[])
       case 2 :  k = 2; break;
       default:  k = 9; 
     }); 
-    logEQint(lg,"Exception 1 caught", 1,k);
-    logEQptr(lg,"Env is null",NULL,env);
+    logTestNote(lg,"Exception 1 caught");
+    logEQint(lg, 1,k);
+    logNULL(lg,env);
     
     k = 0; env = NULL;
     try(env) {
@@ -52,8 +53,9 @@ int main (int argc, char *argv[])
       default:  k = 9;  
     });
     
-    logEQint(lg,"Exception 2 caught", 2,k);
-    logEQptr(lg,"Env is null",NULL,env);
+    logTestNote(lg,"Exception 1 caught");
+    logEQint(lg, 2,k);
+    logNULL(lg,env);
     
     k = 0;
     try(env) { throw(env,3); }
@@ -62,8 +64,9 @@ int main (int argc, char *argv[])
       case 2 :  k = 2; break;
       default:  k = 9;  
     });
-    logEQint(lg,"Exception not caught", 9,k);
-    logEQptr(lg,"Env is null",NULL,env);
+    logTestNote(lg,"Exception not caught");
+    logEQint(lg,9,k);
+    logNULL(lg,env);
     
     k = 0;
     try(env) { functhrow(env,1); }
@@ -72,8 +75,9 @@ int main (int argc, char *argv[])
       case 2 :  k = 2; break;
       default:  k = 9; 
     }); 
-    logEQint(lg,"Exception 1 caught", 1,k);
-    logEQptr(lg,"Env is null",NULL,env);
+    logTestNote(lg,"Exception 1 caught");
+    logEQint(lg, 1,k);
+    logNULL(lg, env);
     
     k = 0; env = NULL;
     try(env)  functhrow(env,2); 
@@ -82,8 +86,9 @@ int main (int argc, char *argv[])
       case 2 :  k = 2; break;
       default:  k = 9;  
     });
-    logEQint(lg,"Exception 2 caught", 2,k);
-    logEQptr(lg,"Env is null",NULL,env);
+    logTestNote(lg,"Exception 2 caught");
+    logEQint(lg, 2,k);
+    logNULL(lg, env);
     
     k = 0;
     try(env) { functhrow(env,3); }
@@ -92,8 +97,9 @@ int main (int argc, char *argv[])
       case 2 :  k = 2; break;
       default:  k = 9;  
     });
-    logEQint(lg,"Exception not caught", 9,k);
-    logEQptr(lg,"Env is null",NULL,env);
+    logTestNote(lg,"Exception not caught");
+    logEQint(lg, 9,k);
+    logNULL(lg, env);
     
     k = 0;
     try(env)      {
@@ -110,8 +116,9 @@ int main (int argc, char *argv[])
       case 1 : k += 1; break;
       case 2 : k += 2; break;
     });
-    logEQint(lg,"Exception 20 caught", 20,k);
-    logEQptr(lg,"Env is null",NULL,env);
+    logTestNote(lg,"Exception 20 caught");
+    logEQint(lg, 20,k);
+    logNULL(lg, env);
     
     k = 0;
     try(env) {
@@ -130,8 +137,9 @@ int main (int argc, char *argv[])
       default : rethrow;
     });
     
-    logEQint(lg,"Exception 2 caught", 2,k);
-    logEQptr(lg,"Env is null",NULL,env);
+    logTestNote(lg,"Exception 2 caught");
+    logEQint(lg, 2,k);
+    logNULL(lg, env);
     
     k = 0;
     env = NULL;
@@ -158,8 +166,9 @@ int main (int argc, char *argv[])
     catch(
      default: k += 300; logTestNote(lg,"6 %d %p %d",k,env,__LINE__);
     );
-    logEQint(lg,"Inner try are invisible", 102,k);
-    logEQptr(lg,"Env is null",NULL,env);
+    logTestNote(lg,"Inner try are invisible");
+    logEQint(lg, 102,k);
+    logNULL(lg, env);
     
     k = 0;
     try(env)  { throw(env,2); }
@@ -168,8 +177,9 @@ int main (int argc, char *argv[])
       case 2 :  k += 2; functhrow(env,1);
       default:  k += 9;  
     });
-    logEQint(lg,"Exception 2 then 1 caught", 3,k);
-    logEQptr(lg,"Env is null",NULL,env);
+    logTestNote(lg,"Exception 2 then 1 caught");
+    logEQint(lg, 3,k);
+    logNULL(lg, env);
     
     k = 0;
     try(env) {
@@ -185,8 +195,9 @@ int main (int argc, char *argv[])
       case 2 : k += 2; break;
     });
     
-    logEQint(lg,"Exception 10,20,2 caught", 32,k);
-    logEQptr(lg,"Env is null",NULL,env);
+    logTestNote(lg,"Exception 10,20,2 caught");
+    logEQint(lg, 32,k);
+    logNULL(lg, env);
     
     k = 0;
     try(env) {
@@ -202,8 +213,9 @@ int main (int argc, char *argv[])
       case 2 : k += 2; functhrow(env,3);
       default: k += 100;  
     });
-    logEQint(lg,"Exception 10,20,2,3 caught", 132,k);
-    logEQptr(lg,"Env is null",NULL,env);
+    logTestNote(lg,"Exception 10,20,2,3 caught");
+    logEQint(lg, 132,k);
+    logNULL(lg, env);
   }
   return 0;
 }

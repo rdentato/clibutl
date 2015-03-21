@@ -358,19 +358,19 @@ typedef struct {
   unsigned char  ok;
   unsigned char  ko;
   unsigned char  skp;
-} utl_log_s, *utlLogger;
+} utl_log_s, *log_t;
 
 #define utl_log_stdout_init {NULL, 0, log_W, log_W, UTL_LOG_OUT,0,0,0}
 utl_extern(utl_log_s utl_log_stdout , = utl_log_stdout_init);
-utl_extern(utlLogger logStdout, = &utl_log_stdout);
+utl_extern(log_t logStdout, = &utl_log_stdout);
 
 #define utl_log_stderr_init {NULL, 0, log_W, log_W, UTL_LOG_ERR,0,0,0}
 utl_extern(utl_log_s utl_log_stderr , = utl_log_stderr_init);
-utl_extern(utlLogger logStderr, = &utl_log_stderr);
+utl_extern(log_t logStderr, = &utl_log_stderr);
 
 #define logNull NULL
 
-utl_extern(utlLogger utl_logger , = logNull);
+utl_extern(log_t utlLog , = &utl_log_stderr);
 
 #include <time.h>
 #include <ctype.h>
@@ -394,10 +394,10 @@ utl_extern(char const utl_log_abbrev[], = "TST FTL ALT CRT ERR WRN MSG INF DBG O
 utlAssume( (log_L +1) == ((sizeof(utl_log_abbrev)-1)>>2));
 #endif
 
-int   utl_log_level(utlLogger lg);
+int   utl_log_level(log_t lg);
 int   utl_log_chrlevel(char *l);
-int   logLevel(utlLogger lg, char *lv); 
-int   logLevelEnv(utlLogger lg, char *var, char *level);
+int   logLevel(log_t lg, char *lv); 
+int   logLevelEnv(log_t lg, char *var, char *level);
 
 /*
 ** The table below shows whether a message of a certain level will be
@@ -454,7 +454,7 @@ int   logLevelEnv(utlLogger lg, char *var, char *level);
 ** using the '{=logOpen()} function.
 ** For example:
 ** .v  
-**   utlLogger lgr = NULL;
+**   log_t lgr = NULL;
 **   lgr=logOpen(lgr,"file1.log","w") // Delete old log file and create a new one
 **   ...
 **   lgr=logClose(lgr);
@@ -474,9 +474,9 @@ int   logLevelEnv(utlLogger lg, char *var, char *level);
 #define logOpen(f,m)   utl_logOpen(f,m)
 #define logClose(l)    utl_log_close(l)
 
-utlLogger utl_logOpen(char *fname, char *mode);
-utlLogger utl_logClose(utlLogger lg);
-void utl_log_write(utlLogger lg,int lv, int tstamp, char *format, ...);
+log_t utl_logOpen(char *fname, char *mode);
+log_t utl_logClose(log_t lg);
+void utl_log_write(log_t lg,int lv, int tstamp, char *format, ...);
 
 #define logFile(l) utl_logFile(l)
 #define logLevel(lg,lv)      utl_logLevel(lg,lv)
@@ -504,7 +504,7 @@ void utl_log_write(utlLogger lg,int lv, int tstamp, char *format, ...);
 
 #define logClockStart(lg)      do { \
                                  clock_t utl_clk = clock(); \
-                                 utlLogger utl_l=lg;
+                                 log_t utl_l=lg;
                                  
 #define logClockStop             logAlert(utl_l,"CLK  %ld (s/%ld) %s:%d",clock()-utl_clk, CLOCKS_PER_SEC,__FILE__,__LINE__);\
                                } while (utlZero)
@@ -514,7 +514,9 @@ void utl_log_write(utlLogger lg,int lv, int tstamp, char *format, ...);
 
 #define logAssert(lg,e)        utl_log_assert(lg, e, #e, __FILE__, __LINE__)
 
-#define logTest(lg,e)          utl_log_test(lg, (e), #e, __FILE__, __LINE__); 
+
+
+#define logTest(lg,e)          utl_log_test(lg, e, #e, __FILE__, __LINE__); 
 
 #define logTestPlan(lg, s)      for((lg? utl_log_write(lg, log_T, 1, "PLN  %s (%s:%d)",s, __FILE__, __LINE__),\
                                     lg->ok=lg->ko=lg->skp =0, lg->flags |= UTL_LOG_SKP0\
@@ -534,53 +536,58 @@ void utl_log_write(utlLogger lg,int lv, int tstamp, char *format, ...);
                                      utl_log_testskip_check(lg) ;\
                                      utl_log_testskip_end(lg,  __LINE__) )
 
-#define log_testexpect(lg,e,f1,v1,f2,v2) \
-                             (e? (utlZero<<=1) : (logTestNote(lg,"Expected "f1" got "f2,v1,v2)))
-
 #define log_testxxx(t1,t2,lg,s,e,r,o,t)  \
       if (lg && !(lg->flags & UTL_LOG_SKIP)) { \
         t1 utl_exp = (e); t1 utl_ret = (r); \
-        log_testexpect(lg,utl_log_test(lg, t , s, __FILE__, __LINE__), \
-                           "("#t1") "#o" "#t2,utl_exp,#t2,utl_ret); \
+        if (!utl_log_test(lg, t , s, __FILE__, __LINE__))  \
+          logTestNote(lg,"Expected (" #t1 ") " #o " "#t2" got "#t2,utl_exp,utl_ret); \
       } \
       else utl_log_test(lg, 1, s, __FILE__, __LINE__)
 
-#define log_testint(lg,s,e,r,o)   log_testxxx(int   ,%d,lg,s,e,r,o,(utl_ret o utl_exp))
-#define log_testptr(lg,s,e,r,o)   log_testxxx(void *,%p,lg,s,e,r,o,(utl_ret o utl_exp))
-#define log_testdbl(lg,s,e,r,o)   log_testxxx(double,%p,lg,s,e,r,o,(utl_ret o utl_exp))
-#define log_teststr(lg,x,e,r,o,n) log_testxxx(char *,%s,lg,x,e,r,o,(1 << (1+strcmp(utl_ret, utl_exp))) & n)
+#define log_testint(lg,s,e,r,o)    log_testxxx(int   ,%d,lg,s,e,r,o,(utl_ret o utl_exp))
+#define log_testptr(lg,s,e,r,o)    log_testxxx(void *,%p,lg,s,e,r,o,(utl_ret o utl_exp))
+#define log_testdbl(lg,s,e,r,o)    log_testxxx(double,%p,lg,s,e,r,o,(utl_ret o utl_exp))
+#define log_teststr(lg,x,e,r,o,m)  log_testxxx(char *,%s,lg,x,e,r,o,(1 << (1+strcmp(utl_ret, utl_exp))) & m)
+#define log_teststrn(lg,x,e,r,o,m,n) log_testxxx(char *,%s,lg,x,e,r,o,(1 << (1+strncmp(utl_ret, utl_exp,n))) & m)
 
-#define logEQint(lg,s,e,r)       log_testint(lg,s,e,r, == )
-#define logNEint(lg,s,e,r)       log_testint(lg,s,e,r, != )
-#define logGTint(lg,s,e,r)       log_testint(lg,s,e,r, >  )
-#define logGEint(lg,s,e,r)       log_testint(lg,s,e,r, >= )
-#define logLTint(lg,s,e,r)       log_testint(lg,s,e,r, <  )
-#define logLEint(lg,s,e,r)       log_testint(lg,s,e,r, <= )
+#define logEQint(lg,e,r)       log_testint(lg,#e" == "#r,e,r, == )
+#define logNEint(lg,e,r)       log_testint(lg,#e" != "#r,e,r, != )
+#define logGTint(lg,e,r)       log_testint(lg,#e" >  "#r,e,r, >  )
+#define logGEint(lg,e,r)       log_testint(lg,#e" >= "#r,e,r, >= )
+#define logLTint(lg,e,r)       log_testint(lg,#e" <  "#r,e,r, <  )
+#define logLEint(lg,e,r)       log_testint(lg,#e" <= "#r,e,r, <= )
 
-#define logEQdbl(lg,s,e,r)       log_testdbl(lg,s,e,r, == )
-#define logNEdbl(lg,s,e,r)       log_testdbl(lg,s,e,r, != )
-#define logGTdbl(lg,s,e,r)       log_testdbl(lg,s,e,r, >  )
-#define logGEdbl(lg,s,e,r)       log_testdbl(lg,s,e,r, >= )
-#define logLTdbl(lg,s,e,r)       log_testdbl(lg,s,e,r, <  )
-#define logLEdbl(lg,s,e,r)       log_testdbl(lg,s,e,r, <= )
-#define logEPSdbl(lg,s,d,e,r)    logLTdbl(lg,s,d,fabs((e)-(r)))
+#define logEQdbl(lg,e,r)       log_testdbl(lg,#e" == "#r,e,r, == )
+#define logNEdbl(lg,e,r)       log_testdbl(lg,#e" != "#r,e,r, != )
+#define logGTdbl(lg,e,r)       log_testdbl(lg,#e" >  "#r,e,r, >  )
+#define logGEdbl(lg,e,r)       log_testdbl(lg,#e" >= "#r,e,r, >= )
+#define logLTdbl(lg,e,r)       log_testdbl(lg,#e" <  "#r,e,r, <  )
+#define logLEdbl(lg,e,r)       log_testdbl(lg,#e" <= "#r,e,r, <= )
+//#define logEPSdbl(lg,s,d,e,r)    logLTdbl(lg,s,d,fabs((e)-(r)))
 
-#define logEQptr(lg,s,e,r)       log_testptr(lg,s,e,r, == )
-#define logNEptr(lg,s,e,r)       log_testptr(lg,s,e,r, != )
-#define logGTptr(lg,s,e,r)       log_testptr(lg,s,e,r, >  )
-#define logGEptr(lg,s,e,r)       log_testptr(lg,s,e,r, >= )
-#define logLTptr(lg,s,e,r)       log_testptr(lg,s,e,r, <  )
-#define logLEptr(lg,s,e,r)       log_testptr(lg,s,e,r, <= )
+#define logEQptr(lg,e,r)       log_testptr(lg,#e" == "#r,e,r, == )
+#define logNEptr(lg,e,r)       log_testptr(lg,#e" != "#r,e,r, != )
+#define logGTptr(lg,e,r)       log_testptr(lg,#e" >  "#r,e,r, >  )
+#define logGEptr(lg,e,r)       log_testptr(lg,#e" >= "#r,e,r, >= )
+#define logLTptr(lg,e,r)       log_testptr(lg,#e" <  "#r,e,r, <  )
+#define logLEptr(lg,e,r)       log_testptr(lg,#e" <= "#r,e,r, <= )
 
-#define logNULL(lg,s,e)          logEQptr(lg,s,e,NULL)                                     
-#define logNNULL(lg,s,e)         logNEptr(lg,s,e,NULL)                                     
+#define logNULL(lg,r)          log_testptr(lg, #r" is NULL",NULL,r, == )
+#define logNNULL(lg,r)         log_testptr(lg, #r" is not NULL",NULL,r, != )
 
-#define logEQstr(lg,s,e,r)       log_teststr(lg,s,e,r, ==, 2 )
-#define logNEstr(lg,s,e,r)       log_teststr(lg,s,e,r, !=, 5 )
-#define logGTstr(lg,s,e,r)       log_teststr(lg,s,e,r, > , 4 )
-#define logGEstr(lg,s,e,r)       log_teststr(lg,s,e,r, >=, 6 )
-#define logLTstr(lg,s,e,r)       log_teststr(lg,s,e,r, < , 1 )
-#define logLEstr(lg,s,e,r)       log_teststr(lg,s,e,r, <=, 3 )
+#define logEQstr(lg,e,r)       log_teststr(lg,#e" == "#r,e,r, ==, 2 )
+#define logNEstr(lg,e,r)       log_teststr(lg,#e" != "#r,e,r, !=, 5 )
+#define logGTstr(lg,e,r)       log_teststr(lg,#e" >  "#r,e,r, > , 4 )
+#define logGEstr(lg,e,r)       log_teststr(lg,#e" >= "#r,e,r, >=, 6 )
+#define logLTstr(lg,e,r)       log_teststr(lg,#e" <  "#r,e,r, < , 1 )
+#define logLEstr(lg,e,r)       log_teststr(lg,#e" <= "#r,e,r, <=, 3 )
+
+#define logEQstrn(lg,e,r,n)    log_teststrn(lg,#e" == "#r,e,r, ==, 2 ,n)
+#define logNEstrn(lg,e,r,n)    log_teststrn(lg,#e" != "#r,e,r, !=, 5 ,n)
+#define logGTstrn(lg,e,r,n)    log_teststrn(lg,#e" >  "#r,e,r, > , 4 ,n)
+#define logGEstrn(lg,e,r,n)    log_teststrn(lg,#e" >= "#r,e,r, >=, 6 ,n)
+#define logLTstrn(lg,e,r,n)    log_teststrn(lg,#e" <  "#r,e,r, < , 1 ,n)
+#define logLEstrn(lg,e,r,n)    log_teststrn(lg,#e" <= "#r,e,r, <=, 3 ,n)
 
 
 /*
@@ -596,9 +603,9 @@ void utl_log_write(utlLogger lg,int lv, int tstamp, char *format, ...);
 */
 
 #ifdef UTL_LIB
-int   utl_log_level(utlLogger lg) { return (int)(lg ? lg->level : log_X) ; }
+int   utl_log_level(log_t lg) { return (int)(lg ? lg->level : log_X) ; }
 
-FILE *utl_logFile(utlLogger lg)
+FILE *utl_logFile(log_t lg)
 {
   if (!lg) return NULL;
   if (lg->flags & UTL_LOG_ERR) return stderr;
@@ -616,7 +623,7 @@ int   utl_log_chrlevel(char *l) {
 }
 
 
-int utl_logLevel(utlLogger lg, char *lv) 
+int utl_logLevel(log_t lg, char *lv) 
 {
   if (!lg) return log_X;
   
@@ -625,7 +632,7 @@ int utl_logLevel(utlLogger lg, char *lv)
   return utl_log_level(lg);  
 }
 
-int utl_logLevelEnv(utlLogger lg, char *var, char *level)
+int utl_logLevelEnv(log_t lg, char *var, char *level)
 {
   char *lvl_str;
   
@@ -634,10 +641,10 @@ int utl_logLevelEnv(utlLogger lg, char *var, char *level)
   return utl_logLevel(lg,lvl_str);
 }
 
-utlLogger utl_logOpen(char *fname, char *mode)
+log_t utl_logOpen(char *fname, char *mode)
 {
   char md[4];
-  utlLogger lg = logStderr;
+  log_t lg = logStderr;
   FILE *f = NULL;
   
   if (fname) {
@@ -649,12 +656,9 @@ utlLogger utl_logOpen(char *fname, char *mode)
   if (f) {
     lg = malloc(sizeof(utl_log_s));
     if (lg) { 
-      lg->flags = 0;
-      lg->rot = 0;
-      lg->file = f;
-      lg->level = log_L;
+      lg->flags = 0;   lg->rot = 0;
+      lg->file = f;    lg->level = log_L;
       utl_log_write(lg,log_L, 1, "%s \"%s\"", (md[0] == 'a') ? "ADDEDTO" : "CREATED",fname); 
-      
       lg->level = log_W;
     }
   }
@@ -662,7 +666,7 @@ utlLogger utl_logOpen(char *fname, char *mode)
   return lg;
 }
 
-utlLogger utl_log_close(utlLogger lg)
+log_t utl_log_close(log_t lg)
 {
   if (lg && lg != logStdout && lg != logStderr) {
     if (lg->file) fclose(lg->file);
@@ -680,13 +684,13 @@ utlLogger utl_log_close(utlLogger lg)
 **      mylog_002.log
 **       etc...
 */
-static void utl_log_rotate(utlLogger lg)
+static void utl_log_rotate(log_t lg)
 {
    /* TODO:
     */ 
 }
 
-void utl_log_write(utlLogger lg, int lv, int tstamp, char *format, ...)
+void utl_log_write(log_t lg, int lv, int tstamp, char *format, ...)
 {
   va_list args;
   char tstr[32];
@@ -720,7 +724,7 @@ void utl_log_write(utlLogger lg, int lv, int tstamp, char *format, ...)
   }    
 }
 
-void utl_log_assert(utlLogger lg,int e,char *estr, char *file,int line)
+void utl_log_assert(log_t lg,int e,char *estr, char *file,int line)
 { 
   if (!e) {
     logFatal(lg,"Assertion failed:  %s, file %s, line %d", estr, file, line);
@@ -730,7 +734,7 @@ void utl_log_assert(utlLogger lg,int e,char *estr, char *file,int line)
   }
 }
 
-int utl_log_test(utlLogger lg,int e, char *s, char *file, int line)
+int utl_log_test(log_t lg,int e, char *s, char *file, int line)
 { 
   char *msg = utlEmptyString;
   int skip = 0;
@@ -750,7 +754,7 @@ int utl_log_test(utlLogger lg,int e, char *s, char *file, int line)
   return e;
 }
 
-void utl_log_testskip_init(utlLogger lg, int e, char *estr,int line)
+void utl_log_testskip_init(log_t lg, int e, char *estr,int line)
 {
   if (lg) {
     if (e) {
@@ -761,12 +765,12 @@ void utl_log_testskip_init(utlLogger lg, int e, char *estr,int line)
   }
 }
 
-int utl_log_testskip_check(utlLogger lg)
+int utl_log_testskip_check(log_t lg)
 {
   return lg && (lg->flags & UTL_LOG_SKP0);
 }
 
-void utl_log_testskip_end(utlLogger lg, int line)
+void utl_log_testskip_end(log_t lg, int line)
 {
   if (lg) {
     if (lg->flags & UTL_LOG_SKIP)
@@ -801,7 +805,7 @@ void utl_log_testskip_end(utlLogger lg, int line)
 #define logOpen(f,m)    NULL
 #define logClose(lg)    NULL
 
-typedef void *utlLogger;
+typedef void *log_t;
 
 #define logFile(x) NULL
 #define logStdout  NULL
@@ -869,8 +873,6 @@ void *utl_strdup  (void *ptr, char *file, int line);
 
 int utl_check(void *ptr,char *file, int line);
 
-utl_extern(utlLogger utlMemLog , = &utl_log_stderr);
-
 #ifdef UTL_LIB
 /*************************************/
 
@@ -895,16 +897,16 @@ int utl_check(void *ptr,char *file, int line)
   if (ptr == NULL) return utlMemNull;
   p = utl_mem(ptr);
   if (memcmp(p->chk,BEG_CHK,4)) { 
-    logError(utlMemLog,"Invalid or double freed %p (%u %s:%d)",p->data, \
+    logError(utlLog,"Invalid or double freed %p (%u %s:%d)",p->data, \
                                                utl_mem_allocated, file, line);     
     return utlMemInvalid; 
   }
   if (memcmp(p->data+p->size,END_CHK,4)) {
-    logError(utlMemLog,"Boundary overflow detected %p [%d] (%u %s:%d)", \
+    logError(utlLog,"Boundary overflow detected %p [%d] (%u %s:%d)", \
                               p->data, p->size, utl_mem_allocated, file, line); 
     return utlMemOverflow;
   }
-  logInfo(utlMemLog,"Valid pointer %p (%u %s:%d)",ptr, utl_mem_allocated, file, line); 
+  logInfo(utlLog,"Valid pointer %p (%u %s:%d)",ptr, utl_mem_allocated, file, line); 
   return utlMemValid; 
 }
 
@@ -912,18 +914,18 @@ void *utl_malloc(size_t size, char *file, int line )
 {
   utl_mem_t *p;
   
-  if (size == 0) logWarn(utlMemLog,"Shouldn't allocate 0 bytes (%u %s:%d)", \
+  if (size == 0) logWarn(utlLog,"Shouldn't allocate 0 bytes (%u %s:%d)", \
                                                 utl_mem_allocated, file, line);
   p = malloc(sizeof(utl_mem_t) +size);
   if (p == NULL) {
-    logCritical(utlMemLog,"Out of Memory (%u %s:%d)",utl_mem_allocated, file, line);
+    logCritical(utlLog,"Out of Memory (%u %s:%d)",utl_mem_allocated, file, line);
     return NULL;
   }
   p->size = size;
   memcpy(p->chk,BEG_CHK,4);
   memcpy(p->data+p->size,END_CHK,4);
   utl_mem_allocated += size;
-  logInfo(utlMemLog,"alloc %p [%d] (%u %s:%d)",p->data,size,utl_mem_allocated,file,line);
+  logInfo(utlLog,"alloc %p [%d] (%u %s:%d)",p->data,size,utl_mem_allocated,file,line);
   return p->data;
 };
 
@@ -942,25 +944,25 @@ void utl_free(void *ptr, char *file, int line)
   utl_mem_t *p=NULL;
   
   switch (utl_check(ptr,file,line)) {
-    case utlMemNull  :    logWarn(utlMemLog,"free NULL (%u %s:%d)", 
+    case utlMemNull  :    logWarn(utlLog,"free NULL (%u %s:%d)", 
                                                 utl_mem_allocated, file, line);
                           break;
                           
-    case utlMemOverflow : logWarn(utlMemLog, "Freeing an overflown block  (%u %s:%d)", 
+    case utlMemOverflow : logWarn(utlLog, "Freeing an overflown block  (%u %s:%d)", 
                                                            utl_mem_allocated, file, line);
     case utlMemValid :    p = utl_mem(ptr); 
                           memcpy(p->chk,CLR_CHK,4);
                           utl_mem_allocated -= p->size;
                           if (p->size == 0)
-                            logWarn(utlMemLog,"Freeing a block of 0 bytes (%u %s:%d)", 
+                            logWarn(utlLog,"Freeing a block of 0 bytes (%u %s:%d)", 
                                                 utl_mem_allocated, file, line);
 
-                          logInfo(utlMemLog,"free %p [%d] (%u %s %d)", ptr, 
+                          logInfo(utlLog,"free %p [%d] (%u %s %d)", ptr, 
                                     p?p->size:0,utl_mem_allocated, file, line);
                           free(p);
                           break;
                           
-    case utlMemInvalid :  logError(utlMemLog,"free an invalid pointer! (%u %s:%d)", \
+    case utlMemInvalid :  logError(utlLog,"free an invalid pointer! (%u %s:%d)", \
                                                 utl_mem_allocated, file, line);
                           break;
   }
@@ -971,25 +973,25 @@ void *utl_realloc(void *ptr, size_t size, char *file, int line)
   utl_mem_t *p;
   
   if (size == 0) {
-    logWarn(utlMemLog,"realloc() used as free() %p -> [0] (%u %s:%d)",ptr,utl_mem_allocated, file, line);
+    logWarn(utlLog,"realloc() used as free() %p -> [0] (%u %s:%d)",ptr,utl_mem_allocated, file, line);
     utl_free(ptr,file,line); 
   } 
   else {
     switch (utl_check(ptr,file,line)) {
-      case utlMemNull   : logWarn(utlMemLog,"realloc() used as malloc() (%u %s:%d)", \
+      case utlMemNull   : logWarn(utlLog,"realloc() used as malloc() (%u %s:%d)", \
                                              utl_mem_allocated, file, line);
                           return utl_malloc(size,file,line);
                         
       case utlMemValid  : p = utl_mem(ptr); 
                           p = realloc(p,sizeof(utl_mem_t) + size); 
                           if (p == NULL) {
-                            logCritical(utlMemLog,"Out of Memory (%u %s:%d)", \
+                            logCritical(utlLog,"Out of Memory (%u %s:%d)", \
                                              utl_mem_allocated, file, line);
                             return NULL;
                           }
                           utl_mem_allocated -= p->size;
                           utl_mem_allocated += size; 
-                          logInfo(utlMemLog,"realloc %p [%d] -> %p [%d] (%u %s:%d)", \
+                          logInfo(utlLog,"realloc %p [%d] -> %p [%d] (%u %s:%d)", \
                                           ptr, p->size, p->data, size, \
                                           utl_mem_allocated, file, line);
                           p->size = size;
@@ -1008,14 +1010,14 @@ void *utl_strdup(void *ptr, char *file, int line)
   size_t size;
   
   if (ptr == NULL) {
-    logWarn(utlMemLog,"strdup NULL (%u %s:%d)", utl_mem_allocated, file, line);
+    logWarn(utlLog,"strdup NULL (%u %s:%d)", utl_mem_allocated, file, line);
     return NULL;
   }
   size = strlen(ptr)+1;
 
   dest = utl_malloc(size,file,line);
   if (dest) memcpy(dest,ptr,size);
-  logInfo(utlMemLog,"strdup %p [%d] -> %p (%u %s:%d)", ptr, size, dest, \
+  logInfo(utlLog,"strdup %p [%d] -> %p (%u %s:%d)", ptr, size, dest, \
                                                 utl_mem_allocated, file, line);
   return dest;
 }
@@ -1046,8 +1048,8 @@ void *utl_strdup(void *ptr, char *file, int line)
 
 #else /* UTL_MEMCHECK */
 
-#define utlMemCheck(p) utlMemValid
-#define utlMemAllocated 0
+#define utlMemCheck(p)     utlMemValid
+#define utlMemAllocated    0
 #define utlMemValidate(p) (p)
 
 #endif /* UTL_MEMCHECK */
@@ -1715,10 +1717,13 @@ int utl_bufFormat(buf_t bf, char *format, ...)
 int utl_match(char *pat, char *str, vec_t v);
 int utl_match_len(vec_t v, int n);
 char *utl_match_capt(vec_t v, int n);
+int utl_match_tok(vec_t v);
+
 
 #define utlMatch     utl_match
 #define utlMatchLen  utl_match_len
 #define utlMatchSub  utl_match_capt
+#define utlMatchTok  utl_match_tok
 
 
 #ifdef UTL_LIB 
@@ -1885,6 +1890,9 @@ static int utl_fact(char **ppat, char **pstr, vec_t v)
 	    utl_cls('U','u',isupper(c));  p++; break;
  	    utl_cls('X','x',isxdigit(c)); p++; break;
 	    utl_cls('I','i',isascii(c));  p++; break;
+      
+      case '.' : ret = 1; break;
+      
       default: cp = utl_uchr(&p); utl_isa(cp == c); 
     }
   }
@@ -1918,6 +1926,13 @@ static int utl_term(char **ppat, char **pstr, vec_t v)
   while(!utl_endpat(*p)) {  /* to handle * and + */
     *ppat = p;
     logNdbg("term: [%s] [%s]",p,s);
+    if (p[0] == '$' && p[1]) {
+      logdbg("End set to [%s]",s);
+      vecSet(char *,v,2 * UTL_MAX_CAPT,s);
+      vecSet(char *,v,2 * UTL_MAX_CAPT+1,p+1);
+      p += 2;
+      continue;
+    }
     ret = utl_fact(&p,&s,v);
     if (ret) {
       nmatch++;
@@ -1937,10 +1952,19 @@ static int utl_term(char **ppat, char **pstr, vec_t v)
   return ret;
 }
   
+int utl_match_tok(vec_t v)
+{
+  int ret = 0;
+  char *p;
+  p = vecGet(char *,v,2 * UTL_MAX_CAPT+1,NULL);
+  if (p) ret = *p;
+  return ret;
+}
+
 int utl_match_len(vec_t v, int n)
 {
   int ret = 0;
-  if (n < UTL_MAX_CAPT)
+  if (n < UTL_MAX_CAPT+1)
     ret = vecGet(char *,v,n*2+1,NULL) - vecGet(char *,v,n*2,NULL);
   return ret;
 }
@@ -1957,11 +1981,16 @@ static char *utl_consume(char *p)
 {
   int k = 0; /* consume untried pattern */
   while (*p) {
-    if (*p == ')') {
-      if (k == 0) break;
-      k--;
+    logNdbg("consuming: '%c'",*p);
+    switch (*p) {
+      case '(' : k++; break;
+
+      case ')' : if (k == 0) return p;
+                 k--;
+                 break;
+
+      case '|' : if (k == 0) return p;
     }
-    else if (*p == '(') k++;
     p++;
   }
   return p;
@@ -1972,23 +2001,36 @@ static int utl_expr(char **ppat, char **pstr, vec_t v)
   int ret = 0;
   char *p = *ppat;
   char *s = *pstr;
+  char *q = NULL;
 
   utl_match_open(v,*pstr);
   
   for(;;) { /* to handle alternatives */
     while (!utl_endpat(*p) && (ret = utl_term(&p,&s,v))) ;
-    logNdbg("alt: [%s][%s]",p,s);
-    if (*p == '|' && !ret) { p++; s=*pstr; } /* try next alternative */
-    else break;
+    logNdbg("alt: [%s][%s] ret: %d",p,s,ret);
+    if (ret) break;    
+    p = utl_consume(p);
+    if (*p != '|') break;
+    p++; s=*pstr;  /* try next alternative */
   }
   logNdbg("exprend (before): [%s]",p);
   
-  p = utl_consume(p); /* consume untried pattern */
-  if (*p == ')') p++;
-  *ppat = p;
-  logNdbg("exprend (after): [%s]",p);
+  for (;;) {
+    p = utl_consume(p); /* consume untried pattern */
+    if (*p != '|') break;
+    p++;
+  } 
   
-  if (ret)  *pstr = s;
+  logNdbg("exprend (pre-after): [%s] ret:%d",p, ret);
+  if (*p) p++;
+  
+  *ppat = p;
+  logNdbg("exprend (after): [%s] ret:%d",p, ret);
+  
+  if (ret) {
+    if  ((q=vecGet(char *,v, 2* UTL_MAX_CAPT,NULL))) s = q;
+    *pstr = s;
+  }
 
   utl_match_close(v,*pstr);
   
@@ -2002,13 +2044,13 @@ int utl_match(char *pat, char *str, vec_t v)
   int ret = 0;
 
   if (v) {
-    for (ret = 2*UTL_MAX_CAPT-1; ret >= 0; ret--) {
+    for (ret = 2*UTL_MAX_CAPT+1; ret >= 0; ret--) {
       logNdbg("%d: NULL",ret);
       vecSet(char *,v,ret, NULL);
     }
     v->first = 0;  v->last = 0;  
   }  
-  
+  logNdbg("match ret: %d",ret);
   ret = utl_expr(&p, &s,v);
   ret = s - str;
   logNdbg("consumed: %d",ret);

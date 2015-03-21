@@ -30,58 +30,58 @@ int main (int argc, char *argv[])
   logTestPlan(lg,"utl unit test: buf") {
   
     s = bufNew();
-    logNEptr(lg,"Is not NULL", NULL, s );
-    logEQint(lg,"Mem Valid", utlMemValid, utlMemCheck(s));
-    logEQint(lg,"Len 0", 0, bufLen(s) );
-    logEQint(lg,"Max 0", 0, bufMax(s) );
-    logEQptr(lg,"NULL str", NULL, bufStr(s) );
-    logEQint(lg,"Get out out bound", '\0', bufGet(s,31));
+    logNEptr(lg, NULL, s );
+    logEQint(lg, utlMemValid, utlMemCheck(s));
+    logEQint(lg, 0, bufLen(s) );
+    logEQint(lg, 0, bufMax(s) );
+    logEQptr(lg, NULL, bufStr(s) );
+    logEQint(lg, '\0', bufGet(s,31));
 
     bufSet(s,0,'a');
-    logEQint(lg,"Mem Valid", utlMemValid, utlMemCheck(bufStr(s)));
-    logEQint(lg,"Direct access", 'a', bufStr(s)[0] );
-    logEQint(lg,"Get (chrAt)", 'a', bufGet(s,0) );
-    logEQint(lg,"Len 1", 1, bufLen(s) );
+    logEQint(lg, utlMemValid, utlMemCheck(bufStr(s)));
+    logEQint(lg, 'a', bufStr(s)[0] );
+    logEQint(lg, 'a', bufGet(s,0) );
+    logEQint(lg, 1, bufLen(s) );
 
     bufSet(s,1,'b');
-    logEQint(lg,"Len 2", 2, bufLen(s));
-    logEQint(lg,"Len 2", strlen(bufStr(s)), bufLen(s));
-    logEQint(lg,"Direct access", 0, strcmp("ab",bufStr(s)) );
+    logEQint(lg, 2, bufLen(s));
+    logEQint(lg, strlen(bufStr(s)), bufLen(s));
+    logEQint(lg, 0, strcmp("ab",bufStr(s)) );
     logTestFailNote(lg,"str: [%s]\n",bufStr(s));
 
     bufAdd(s,'c');
-    logEQint(lg,"Len 3", 3, bufLen(s));
-    logEQint(lg,"Len 3", strlen(bufStr(s)), bufLen(s));
-    logEQint(lg,"Set properly direct access", 0, strcmp("abc",bufStr(s)) );
+    logEQint(lg, 3, bufLen(s));
+    logEQint(lg, strlen(bufStr(s)), bufLen(s));
+    logEQint(lg, 0, strcmp("abc",bufStr(s)) );
     logTestFailNote(lg,"str: [%s]\n",bufStr(s));
 
     bufAddStr(s,"xyz");
-    logEQint(lg,"Len 6", 6, bufLen(s));
-    logEQint(lg,"Len 6", strlen(bufStr(s)), bufLen(s));
-    logEQint(lg,"Set properly direct access", 0, strcmp("abcxyz",bufStr(s)) );
+    logEQint(lg, 6, bufLen(s));
+    logEQint(lg, strlen(bufStr(s)), bufLen(s));
+    logEQint(lg, 0, strcmp("abcxyz",bufStr(s)) );
     logTestFailNote(lg,"str: [%s]\n",bufStr(s));
 
     bufFormat(s,"|%d|",123);
-    logEQint(lg,"Len 5", 5, bufLen(s));
-    logEQint(lg,"Len 5", strlen(bufStr(s)), bufLen(s));
-    logEQint(lg,"Set properly direct access", 0, strcmp("|123|",bufStr(s)) );
+    logEQint(lg, 5, bufLen(s));
+    logEQint(lg, strlen(bufStr(s)), bufLen(s));
+    logEQint(lg, 0, strcmp("|123|",bufStr(s)) );
 
     bufFormat(s,"[%d-%d]",2,3);
-    logEQint(lg,"Format 1",0,strcmp("[2-3]",bufStr(s)));
+    logEQint(lg,0,strcmp("[2-3]",bufStr(s)));
     logTestCode(lg) {
       unsigned long x = 0xFFFFFFFF;
       size_t oldmax = s->max;
       bufFormat(s,"[%X-%X-%X]",x,x,x);
-      logEQint(lg,"expanded string",0,strcmp("[FFFFFFFF-FFFFFFFF-FFFFFFFF]",bufStr(s)));
+      logEQint(lg,0,strcmp("[FFFFFFFF-FFFFFFFF-FFFFFFFF]",bufStr(s)));
       logTestFailNote(lg,"str: [%s]\n",bufStr(s));
-      logGTint(lg,"expanded len",oldmax,s->max);
+      logGTint(lg,oldmax,s->max);
     }
     logTestCode(lg) {
       int l = bufMax(s);
       bufClr(s);
-      logEQint(lg,"Len 0", 0, bufLen(s));
-      logEQint(lg,"Empty", 0, bufStr(s)[0]);
-      logEQint(lg,"Not shrunk", l, bufMax(s));
+      logEQint(lg, 0, bufLen(s));
+      logEQint(lg, 0, bufStr(s)[0]);
+      logEQint(lg, l, bufMax(s));
     }
     {
       FILE *f = fopen(__FILE__,"r");
@@ -91,11 +91,11 @@ int main (int argc, char *argv[])
         logTestCode(lg) {
           bufAddLine(s,f);
         }
-        logEQint(lg,"First line", 0, strcmp("/* TEST LINE 1\n",bufStr(s)));
+        logEQint(lg, 0, strcmp("/* TEST LINE 1\n",bufStr(s)));
         logTestCode(lg) {
           bufAddLine(s,f);
         }
-        logEQint(lg,"Second line", '2', bufGet(s,bufLen(s)-2));
+        logEQint(lg, '2', bufGet(s,bufLen(s)-2));
         logTestCode(lg) {
           bufAddFile(s,f);
           k = bufLen(s);
@@ -103,60 +103,51 @@ int main (int argc, char *argv[])
         while (k>0 && isspace(bufGet(s,--k)) ) ; 
         while (k>0 && (bufGet(s,k-1) != '\n') ) {k--;n++;}; 
         
-        logEQint(lg,"Last line 2", 0, strncmp("/* TEST LINE LAST */",bufStr(s)+k,n));
+        logEQstrn(lg, "/* TEST LINE LAST */",bufStr(s)+k,n);
       }
       if (f) fclose(f);
     }
     
-    logNEptr(lg,"Is Not Null", NULL, s);
+    logNNULL(lg, s);
     s = bufFree(s);
-    logEQptr(lg,"Is Null", NULL, s);
+    logNULL(lg, s);
     
     logTestCode(lg) {
       s = bufNew();
       logTestSkip(lg,"Unable to create buffer!",!s) {
         bufAddStr(s,"AC");
-        logTestNote(lg,"Buf: \"%s\"",bufStr(s));
-        logEQint(lg,"Created \"AC\"",2,bufLen(s));
+        logEQint(lg,2,bufLen(s));
         bufIns(s,1,'B');
-        logTestNote(lg,"Buf: \"%s\"",bufStr(s));
-        logEQint(lg,"Inserted 'B'",3,bufLen(s));
-        logEQint(lg,"Inserted 'B'",0,strcmp(bufStr(s),"ABC"));
+        logEQint(lg,3,bufLen(s));
+        logEQstr(lg,"ABC",bufStr(s));
         
         bufIns(s,0,'@');
-        logTestNote(lg,"Buf: \"%s\"",bufStr(s));
-        logEQint(lg,"Inserted '@'",4,bufLen(s));
-        logEQint(lg,"Inserted '@'",0,strcmp(bufStr(s),"@ABC"));
+        logEQint(lg,4,bufLen(s));
+        logEQstr(lg,"@ABC",bufStr(s));
 
         bufIns(s,4,'D');
-        logTestNote(lg,"Buf: \"%s\"",bufStr(s));
-        logEQint(lg,"Inserted 'D'",5,bufLen(s));
-        logEQint(lg,"Inserted 'D'",0,strcmp(bufStr(s),"@ABCD"));
+        logEQint(lg,5,bufLen(s));
+        logEQstr(lg,"@ABCD",bufStr(s));
 
         bufIns(s,100,'E');
-        logTestNote(lg,"Buf: \"%s\"",bufStr(s));
-        logEQint(lg,"Inserted 'E'",6,bufLen(s));
-        logEQint(lg,"Inserted 'E'",0,strcmp(bufStr(s),"@ABCDE"));
+        logEQint(lg,6,bufLen(s));
+        logEQstr(lg,"@ABCDE",bufStr(s));
 
         bufInsStr(s,0,"  ");
-        logTestNote(lg,"Buf: \"%s\"",bufStr(s));
-        logEQint(lg,"Inserted string \"  \"",8,bufLen(s));
-        logEQint(lg,"Inserted string \"  \"",0,strcmp(bufStr(s),"  @ABCDE"));
+        logEQint(lg,8,bufLen(s));
+        logEQstr(lg,"  @ABCDE",bufStr(s));
 
         bufInsStr(s,3,"++");
-        logTestNote(lg,"Buf: \"%s\"",bufStr(s));
-        logEQint(lg,"Inserted string \"++\"",10,bufLen(s));
-        logEQint(lg,"Inserted string \"++\"",0,strcmp(bufStr(s),"  @++ABCDE"));
+        logEQint(lg,10,bufLen(s));
+        logEQstr(lg,"  @++ABCDE",bufStr(s));
 
         bufInsStr(s,10,"__");
-        logTestNote(lg,"Buf: \"%s\"",bufStr(s));
-        logEQint(lg,"Inserted string \"__\"",12,bufLen(s));
-        logEQint(lg,"Inserted string \"__\"",0,strcmp(bufStr(s),"  @++ABCDE__"));
+        logEQint(lg,12,bufLen(s));
+        logEQstr(lg,"  @++ABCDE__",bufStr(s));
         
         bufInsStr(s,120,"||");
-        logTestNote(lg,"Buf: \"%s\"",bufStr(s));
-        logEQint(lg,"Inserted string \"||\"",14,bufLen(s));
-        logEQint(lg,"Inserted string \"||\"",0,strcmp(bufStr(s),"  @++ABCDE__||"));
+        logEQint(lg,14,bufLen(s));
+        logEQstr(lg,"  @++ABCDE__||",bufStr(s));
      }
       s = bufFree(s);
     }

@@ -12,7 +12,7 @@
 
 #include "utl.h"
 
-#define lg logStderr
+#define lg utlLog
 
 int main (int argc, char *argv[])
 {
@@ -21,41 +21,39 @@ int main (int argc, char *argv[])
   int valid;
   int k;
   
-  utlMemLog = lg;
-  
   logTestPlan(lg,"utl unit test: memory check") {
   
-    logLevel(utlMemLog,"Info");
+    logLevel(lg,"Info");
     
     ptr_a = malloc(32); 
-    logEQint(lg,"Check Valid after malloc()",utlMemValid,utlMemCheck(ptr_a) );
-    logEQint(lg,"Allocated memory is 32",32, utlMemAllocated);
+    logEQint(lg,utlMemValid,utlMemCheck(ptr_a) );
+    logEQint(lg,32, utlMemAllocated);
     
     free(ptr_a);
-    logNEint(lg,"Check invalid after free", utlMemValid, utlMemCheck(ptr_a));
-    logEQint(lg,"Allocated memory is 0",0,utlMemAllocated);
+    logNEint(lg, utlMemValid, utlMemCheck(ptr_a));
+    logEQint(lg,0,utlMemAllocated);
     
     free(ptr_a);
-    logNEint(lg,"Check invalid again",utlMemValid,utlMemCheck(ptr_a));
+    logNEint(lg,utlMemValid,utlMemCheck(ptr_a));
     
     ptr_a = malloc(0);
-    logEQint(lg,"Check Valid after malloc(0)",utlMemValid,utlMemCheck(ptr_a) );
+    logEQint(lg,utlMemValid,utlMemCheck(ptr_a) );
     
     free(ptr_a); 
     ptr_a = calloc(8,4);
-    logEQint(lg,"Allocated 8x4 ", utlMemValid,utlMemCheck(ptr_a) );
+    logEQint(lg, utlMemValid,utlMemCheck(ptr_a) );
     
     for (k=0,valid=0; k<32; k++) valid += ptr_a[k];
-    logEQint(lg,"Memory is clear",0, valid);
+    logEQint(lg,0, valid);
     free(ptr_a); 
     
     
     ptr_a = malloc(16);  
-    logEQint(lg,"Check Valid after malloc()",utlMemValid,utlMemCheck(ptr_a));
-    logEQint(lg,"Allocated memory is 16",16,utlMemAllocated);
+    logEQint(lg,utlMemValid,utlMemCheck(ptr_a));
+    logEQint(lg,16,utlMemAllocated);
     
     ptr_a[16] = '\0'; 
-    logEQint(lg,"Check invalid after overrun",utlMemOverflow ,utlMemCheck(ptr_a) );
+    logEQint(lg,utlMemOverflow ,utlMemCheck(ptr_a) );
     free(ptr_a);   
   }
   return 0;

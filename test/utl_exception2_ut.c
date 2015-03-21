@@ -40,7 +40,7 @@ int main (int argc, char *argv[])
       case 1 : k = 1; break;
       case 2 : k = 2; break;
     });
-    logEQint(lg,"Exception caught", 2,k);
+    logEQint(lg, 2,k);
 
     k = 9999;
     try(env) { throw(env,4); }

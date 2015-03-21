@@ -19,84 +19,80 @@
 
 #define lg logStderr
 
+void prtmatch(vec_t v)
+{
+  int m;
+  for (m = 0; m < UTL_MAX_CAPT; m++) {
+   logInfo(lg, "%d [%.*s]", m, utlMatchLen(v,m),utlMatchSub(v,m));
+  }    
+}
 
 
 int main(int argc, char *argv[])
 {
-  int k,m;
+  int k;
   vec_t v;
   v = vecNew(char *);
 
   logLevel(lg,"DBG");  
   logTestPlan(lg,"pattern match") {
   
-#if 1
-    logTest(lg, 0  < utlMatch("pi","pippoX",v));
-    logTest(lg, 0 == utlMatch("xi","pippoX",v));
-
-    logTest(lg, 0  < utlMatch("%ai","pippoX",v));
-    logTest(lg, 0 == utlMatch("%Ai","pippoX",v));
-    logTest(lg, 0  < utlMatch("%Di","pippoX",v));
-
-    logTest(lg, 0  < utlMatch("%d*x","123x",v));
-    logTest(lg, 0  < utlMatch("%d*x","x",v));
-    logTest(lg, 0 == utlMatch("%d*x","123y",v));
-
-    logTest(lg, 0  < utlMatch("a|b","a",v));
-    logTest(lg, 0  < utlMatch("a|b","b",v));
-    logTest(lg, 0 == utlMatch("a|b","c",v));
-
-    logTest(lg, 0  < utlMatch("%d+|b","123xy",v));
-    logTest(lg, 0  < utlMatch("%d+|b","b",v));
-    logTest(lg, 0 == utlMatch("%d+|b","xy",v));
-    
-    logTest(lg, 0  < utlMatch("a(bc)d","abcd",v));
-    logTest(lg, 0  < utlMatch("a(bc)?d","abcd",v));
-    logTest(lg, 0  < utlMatch("a(bc)?d","ad",v));
-    logTest(lg, 0  < utlMatch("a(b|c)d","abd",v));
-    logTest(lg, 0  < utlMatch("a(b|c)d","acd",v));
-    logTest(lg, 0  < utlMatch("a(b|c)?d","abd",v));
-#endif
-    
-    logTest(lg, 0 < utlMatch("a(b|c)?d","acd",v));
-    logInfo(lg, "Match [0] len: %d", utlMatchLen(v,0));
-    logInfo(lg, "Match [1] len: %d", utlMatchLen(v,1));
-
-    for (m = 0; m < UTL_MAX_CAPT; m++) {
-      logInfo(lg, "%d %p %p", m, vecGet(char *,v,m*2,NULL),vecGet(char *,v,m*2+1,NULL));
-    }
-    
-    logGTint(lg, "subexpr a(b|c)?d" , 0 , utlMatch("a(b|c)?d","ad",v));
-    logInfo(lg, "Match [0] len: %d", utlMatchLen(v,0));
-    logInfo(lg, "Match [1] len: %d", utlMatchLen(v,1));
-    
-    logEQint(lg, "match a(b|(c*e|fg*))?d ad" , 2 , utlMatch("a(b|(c*e|fg*))?d","ad",v));
-    for (m = 0; m < UTL_MAX_CAPT; m++) {
-      logInfo(lg, "%d [%.*s]", m, utlMatchLen(v,m),utlMatchSub(v,m));
-    }
-    logEQint(lg, "match a(b|(c*e|fg*))?d abd" , 3 , utlMatch("a(b|(c*e|fg*))?d","abd",v));
-    for (m = 0; m < UTL_MAX_CAPT; m++) {
-      logInfo(lg, "%d [%.*s]", m, utlMatchLen(v,m),utlMatchSub(v,m));
-    }
-    
-    logEQint(lg, "match a(b|(c*e)|(fg*))?d accccced" , 8 , utlMatch("a(b|(c*e)|(fg*))?d","accccced",v));
-    for (m = 0; m < UTL_MAX_CAPT; m++) {
-      logInfo(lg, "%d [%.*s]", m, utlMatchLen(v,m),utlMatchSub(v,m));
-    }
-    
-    logEQint(lg, "match a(b|(c*e)|(fg*))?d afgggggd" , 8 , utlMatch("a(b|(c*e)|(fg*))?d","afgggggd",v));
-    for (m = 0; m < UTL_MAX_CAPT; m++) {
-      logInfo(lg, "%d [%.*s]", m, utlMatchLen(v,m),utlMatchSub(v,m));
-    }
-    
-    logGTint(lg, "patterns xd* (match)", 0, utlMatch("xd*","xddd",v));
-    
-    logEQint(lg, "match a(b(c)(g))d abcgd" , 5 , utlMatch("a(b(c)(g))d","abcgd",v));
-    for (m = 0; m < UTL_MAX_CAPT; m++) {
-      logInfo(lg, "%d [%.*s]", m, utlMatchLen(v,m),utlMatchSub(v,m));
-    }
-    
     #if 1
+    logGTint(lg, 0, utlMatch("pi","pippoX",v));
+    logEQint(lg, 0, utlMatch("xi","pippoX",v));
+
+    logGTint(lg, 0, utlMatch("%ai","pippoX",v));
+    logEQint(lg, 0, utlMatch("%Ai","pippoX",v));
+    logGTint(lg, 0, utlMatch("%Di","pippoX",v));
+
+    logGTint(lg, 0, utlMatch("%d*x","123x",v));
+    logGTint(lg, 0, utlMatch("%d*x","x",v));
+    logEQint(lg, 0, utlMatch("%d*x","123y",v));
+
+    logGTint(lg, 0, utlMatch("a|b","a",v));
+    logGTint(lg, 0, utlMatch("a|b","b",v));
+    logEQint(lg, 0, utlMatch("a|b","c",v));
+
+    logGTint(lg, 0, utlMatch("%d+|b","123xy",v));
+    logGTint(lg, 0, utlMatch("%d+|b","b",v));
+    logEQint(lg, 0, utlMatch("%d+|b","xy",v));
+    
+    logGTint(lg, 0, utlMatch("a(bc)d","abcd",v));
+    logGTint(lg, 0, utlMatch("a(bc)?d","abcd",v));
+    logGTint(lg, 0, utlMatch("a(bc)?d","ad",v));
+    logGTint(lg, 0, utlMatch("a(b|c)d","abd",v));
+    logGTint(lg, 0, utlMatch("a(b|c)d","acd",v));
+    logGTint(lg, 0, utlMatch("a(b|c)?d","abd",v));
+    
+    logGTint(lg, 0,utlMatch("a(b|c)?d","acd",v));
+    logInfo(lg, "Match [0] len: %d", utlMatchLen(v,0));
+    logInfo(lg, "Match [1] len: %d", utlMatchLen(v,1));
+
+    prtmatch(v);
+    
+    #endif
+    logGTint(lg, 0 , utlMatch("a(b|c)?d","ad",v));
+    #if 1
+    logInfo(lg, "Match [0] len: %d", utlMatchLen(v,0));
+    logInfo(lg, "Match [1] len: %d", utlMatchLen(v,1));
+    
+    logEQint(lg, 2, utlMatch("a(b|(c*e|fg*))?d","ad",v));
+    prtmatch(v);
+    
+    logEQint(lg, 3, utlMatch("a(b|(c*e|fg*))?d","abd",v));
+    prtmatch(v);
+    
+    logEQint(lg, 8, utlMatch("a(b|(c*e)|(fg*))?d","accccced",v));
+    prtmatch(v);
+    
+    logEQint(lg, 8, utlMatch("a(b|(c*e)|(fg*))?d","afgggggd",v));
+    prtmatch(v);
+    
+    logGTint(lg, 0, utlMatch("xd*","xddd",v));
+    
+    logEQint(lg, 5, utlMatch("a(b(c)(g))d","abcgd",v));
+    prtmatch(v);
+    
     {
       vec_t v = vecNew(int);
       
@@ -124,10 +120,9 @@ int main(int argc, char *argv[])
     }
     #endif
     
+    #if 1
     logTest(lg, 5 == utlMatch("a(@d)c","a123c",v));
-    for (m = 0; m < UTL_MAX_CAPT; m++) {
-      logInfo(lg, "%d [%.*s]", m, utlMatchLen(v,m),utlMatchSub(v,m));
-    }
+    prtmatch(v);
     
     logTest(lg, 0  < utlMatch("a@d","a123c",v));
     logTest(lg, 0  < utlMatch("a@d","a123",v));
@@ -157,6 +152,36 @@ int main(int argc, char *argv[])
     
     logTest(lg, 0 == utlMatch("x[^A-FH]p","xBp",v));
     logTest(lg, 0 == utlMatch("x[^HA-F]p","xHp",v));
+    
+    logEQint(lg, 1, utlMatch("(a$Ab)","abc",v));
+    logEQint(lg, 'A', utlMatchTok(v));
+    prtmatch(v);
+    
+    logEQint(lg, 1, utlMatch("(a$Ab|x$By)","ab",v));
+    logEQint(lg, 'A', utlMatchTok(v));
+    prtmatch(v);
+
+    logEQint(lg, 1, utlMatch("(a$Ab|x$By)","xy",v));
+    logEQint(lg, 'B', utlMatchTok(v));
+    prtmatch(v);
+    
+    logEQint(lg, 0, utlMatch("(a$Ab|x$By)","ac",v));
+    prtmatch(v);
+
+    logEQint(lg, 0, utlMatch("(a$Ab|x$By)","xz",v));
+    prtmatch(v);
+    
+    #endif
+    logTest(lg, 1 == utlMatch("a|x","ab",v));
+// prtmatch(v);
+    
+    logTest(lg, 1 == utlMatch("a|x","xy",v));
+//  prtmatch(v);
+    
+    logTest(lg, 2 == utlMatch("ab|xy","ab",v));
+    logTest(lg, 2 == utlMatch("ab|xy","xy",v));
+    
+    
   }
   
   vecFree(v);
