@@ -795,7 +795,7 @@ void utl_log_testskip_end(log_t lg, int line)
 #define logAlarm(lg, ...)     (utlZero<<=1)
 #define logFatal(lg, ...)     (utlZero<<=1)
 
-#define logdbg(...)           (utlZero<<=1)
+#define logNdbg(...)           (utlZero<<=1)
 #define logContinue(lg, ...)  (utlZero<<=1)
 
 #define logAssert(lg,e)       (utlZero<<=1)
@@ -1699,18 +1699,14 @@ int utl_bufFormat(buf_t bf, char *format, ...)
 }
 #endif /* UTL_LIB */
 
-#endif /* UTL_NOADT */
-
 /****************************************/
 #ifndef UTL_NOREX
 /***
- 
- expr -> term+ '|' term+
+  expr -> term+ '|' term+
  term -> '!'? fact [?*+]? 
  fact -> '(' expr  ')' | '[' '^'? range+ ']' | '%' any | any
  range -> any '-' any | '\' any | any
 */
-
 
 #define UTL_MAX_CAPT 10
 
@@ -1719,16 +1715,16 @@ int utl_match_len(vec_t v, int n);
 char *utl_match_capt(vec_t v, int n);
 int utl_match_tok(vec_t v);
 
-
 #define utlMatch     utl_match
 #define utlMatchLen  utl_match_len
 #define utlMatchSub  utl_match_capt
 #define utlMatchTok  utl_match_tok
 
-
 #ifdef UTL_LIB 
 
-#define utl_endpat(c) (!(c) || ((c) == '|') || ((c) == ')'))
+
+#define utl_eox(c) ((c) <2)
+#define utl_endpat(c) (utl_eox(c) || ((c) == '|') || ((c) == ')'))
 static int utl_expr(char **ppat, char **pstr, vec_t v);
 
 utlAssume(sizeof(uint32_t) == 2 * sizeof(uint16_t));
@@ -1826,7 +1822,7 @@ static int utl_ccls(char **ppat, int c)
   
   if (*p == '^') {inv = 1; p++; }
 
-  while (*p && (*p != ']')) {
+  while (!utl_eox(*p) && (*p != ']')) {
     logNdbg("ccls {%s}[%c]",p,c);
     cp = utl_uchr(&p);
     if (p[1] && (p[1] != ']')) {
@@ -1845,10 +1841,10 @@ static int utl_ccls(char **ppat, int c)
     cp2 = 0;
   }
   
-  while (*p && *p != ']') p++;
-  if (*p) p++;
+  while (!utl_eox(*p) && *p != ']') p++;
+  if (*p == ']') p++;
+  
   *ppat = p;
-
   ret = (!ret == inv);
 
   return ret;
@@ -1866,13 +1862,16 @@ static int utl_fact(char **ppat, char **pstr, vec_t v)
   
   p = *ppat;
   cp = *p;
+  
+  logNdbg("fact: [%s] [%s]",p,s);
+
   if (cp == '@') {max = 0x7FFFFFFF; cp = '%';}
   
   #define utl_cls(x,y,z) case x : inv = 1; case y : utl_isa(z)
   #define utl_isa(z)     while (c && (ret < max) && (!(z) == inv)) { \
                           ret++; q = s; c = utl_uchr(&s); \
                          } s = q;
-  if (cp == '%') {
+  if (cp == '%' && !utl_eox(p[1])) {
     p++; 
     c = utl_uchr(&s);
     q = s;
@@ -1904,13 +1903,25 @@ static int utl_fact(char **ppat, char **pstr, vec_t v)
   }
   else {
     cp = utl_uchr(&p);  c = utl_uchr(&s);
-    ret = ( cp == c);
+    if (c) ret = ( cp == c);
     logNdbg("fact: '%c' == '%c' (%d)",cp,c,ret);
   }  
 
   *ppat = p;           /* Pattern is always consumed */
   if (ret) *pstr = s;  /* input text only if it matches */
   return ret;
+}
+
+static void utl_resetv(vec_t v)
+{
+  int k;
+  if (v) {
+    for (k = 2*UTL_MAX_CAPT+1; k >= 0; k--) {
+      logNdbg("%d: NULL",ret);
+      vecSet(char *,v,k, NULL);
+    }
+    v->first = 0;  v->last = 0;  
+  } 
 }
 
 static int utl_term(char **ppat, char **pstr, vec_t v)
@@ -1926,8 +1937,8 @@ static int utl_term(char **ppat, char **pstr, vec_t v)
   while(!utl_endpat(*p)) {  /* to handle * and + */
     *ppat = p;
     logNdbg("term: [%s] [%s]",p,s);
-    if (p[0] == '$' && p[1]) {
-      logdbg("End set to [%s]",s);
+    if (p[0] == '$' && !(p[1] < 2)) {
+      logNdbg("End set to [%s]",s);
       vecSet(char *,v,2 * UTL_MAX_CAPT,s);
       vecSet(char *,v,2 * UTL_MAX_CAPT+1,p+1);
       p += 2;
@@ -1936,7 +1947,9 @@ static int utl_term(char **ppat, char **pstr, vec_t v)
     ret = utl_fact(&p,&s,v);
     if (ret) {
       nmatch++;
-      if (*p == '+' || *p == '*') { p = *ppat; }   /* let's try again */
+      if (*p == '+' || *p == '*') { /* let's try again (if there's any text left) */
+        p = *s? *ppat : p+1; 
+      }   
       else if (*p == '?') { p++; break; }          /* got it once, ok! */
     } else {
       if (*p == '?' || *p == '*') { ret = 1; p++; } /* no match, but it's ok */
@@ -1990,6 +2003,10 @@ static char *utl_consume(char *p)
                  break;
 
       case '|' : if (k == 0) return p;
+                 break;
+
+      case '\1': return p;
+
     }
     p++;
   }
@@ -2003,6 +2020,7 @@ static int utl_expr(char **ppat, char **pstr, vec_t v)
   char *s = *pstr;
   char *q = NULL;
 
+  logNdbg("expr: [%s][%s]",p,s);
   utl_match_open(v,*pstr);
   
   for(;;) { /* to handle alternatives */
@@ -2021,8 +2039,7 @@ static int utl_expr(char **ppat, char **pstr, vec_t v)
     p++;
   } 
   
-  logNdbg("exprend (pre-after): [%s] ret:%d",p, ret);
-  if (*p) p++;
+  if (!utl_eox(*p)) p++;
   
   *ppat = p;
   logNdbg("exprend (after): [%s] ret:%d",p, ret);
@@ -2042,18 +2059,19 @@ int utl_match(char *pat, char *str, vec_t v)
   char *p = pat;
   char *s = str;
   int ret = 0;
-
-  if (v) {
-    for (ret = 2*UTL_MAX_CAPT+1; ret >= 0; ret--) {
-      logNdbg("%d: NULL",ret);
-      vecSet(char *,v,ret, NULL);
-    }
-    v->first = 0;  v->last = 0;  
-  }  
-  logNdbg("match ret: %d",ret);
-  ret = utl_expr(&p, &s,v);
-  ret = s - str;
-  logNdbg("consumed: %d",ret);
+  
+  if (p && *p) {
+    for (; ret==0 ; p++) { /* handle multiple expressions */
+      s=str;
+      utl_resetv(v);
+      logNdbg("match ret: %d",ret);
+      ret = utl_expr(&p, &s,v);
+      ret = s - str;
+      logNdbg("consumed: %d",ret);
+      logNdbg("pattern ends on %d", *p);
+      if (*p == 0) break;
+    } 
+  }
   return ret; /* the amount of input consumed */
 }
 
@@ -2061,6 +2079,7 @@ int utl_match(char *pat, char *str, vec_t v)
 
 #endif /* UTL_NOREX */
 
+#endif /* UTL_NOADT */
 
 #endif /* UTL_H */
 
