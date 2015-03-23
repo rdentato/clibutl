@@ -14,6 +14,7 @@
 FILE *f = NULL;
 char buf[512];
 char *p;
+char *q;
 int k=0;
 int c=0;
 int enabled = 1;
@@ -126,7 +127,7 @@ int main (int argc, char *argv[])
     
     logTestCode(l) {
       buf[0] = '\0';
-      if(f) fgets(buf,120,f);
+      if(f) q=fgets(buf,120,f);
       p=buf;
       while (*p && *p != '\n') p++; *p='\0';
     }
@@ -135,7 +136,7 @@ int main (int argc, char *argv[])
     
     logTestCode(l) {
       buf[0] = '\0';
-      if(f) fgets(buf,120,f);
+      if(f) q=fgets(buf,120,f);
       p=buf;
       while (*p && *p != '\n') p++;
       *p='\0';

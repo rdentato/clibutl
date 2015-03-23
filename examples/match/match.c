@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
   logLevel(lg,"DBG");  
   logTestPlan(lg,"pattern match") {
   
-#if 1
+#if 0
     logTest(lg, 0  < utlMatch("pi","pippoX",v));
     logTest(lg, 0 == utlMatch("xi","pippoX",v));
 
@@ -120,8 +120,6 @@ int main(int argc, char *argv[])
       v= vecFree(v);
       
     }
-    #endif
-    
     logTest(lg, 5 == utlMatch("a(@d)c","a123c",v));
     for (m = 0; m < UTL_MAX_CAPT; m++) {
       logInfo(lg, "%d [%.*s]", m, utlMatchLen(v,m),utlMatchSub(v,m));
@@ -147,6 +145,8 @@ int main(int argc, char *argv[])
     logTest(lg, 0  < utlMatch("x[HA-F]p","xHp",v));
     logTest(lg, 0  < utlMatch("x[A-FH]p","xp",v));
     logTest(lg, 0  < utlMatch("x[HA-F]p","xp",v));
+    #endif
+    
   }
   
   vecFree(v);

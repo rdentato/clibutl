@@ -148,8 +148,9 @@ utl_extern(unsigned short utlVersion, = UTL_VERSION);
 */
 
 int utlEmptyFun(void); 
+
 #ifdef UTL_LIB
-int   utlEmptyFun(void) {return 0;}
+int utlEmptyFun(void) {return 0;}
 #endif
 
 /*  .[utlEmptyString]  A pointer to the empty string "" that provides unique
@@ -1067,35 +1068,36 @@ typedef struct vec_s {
   utl_cmp_t cmp;
   utl_del_t del;
   void     *vec;
-  char      val[0];
+  void     *val; /* will point to the elm field */
+  uint32_t  elm; /* just to get the pointer */
 } *vec_t;
 
 #define UTL_VEC_SORTED  1UL
 
-vec_t utl_vecNew(int esz, utl_cmp_t , utl_del_t);
-#define vecNew(...) utl_vecNew(utl_vecNew_ARGS(__VA_ARGS__))
+vec_t utl_vec_new(int esz, utl_cmp_t , utl_del_t);
+#define vecNew(...) utl_vec_new(utl_vec_new_ARGS(__VA_ARGS__))
 
-#define utl_vecNew_ARGS(...)    sizeof(utl_ARGS0(__VA_ARGS__, NULL, NULL, NULL)),\
+#define utl_vec_new_ARGS(...)    sizeof(utl_ARGS0(__VA_ARGS__, NULL, NULL, NULL)),\
                                 utl_ARGS1(__VA_ARGS__, NULL, NULL, NULL), \
                                 utl_ARGS2(__VA_ARGS__, NULL, NULL, NULL)
 #define utl_ARGS0(x, ...) x
 #define utl_ARGS1(x, y, ...) y
 #define utl_ARGS2(x, y, z, ...) z
 
-vec_t utl_vecFree(vec_t v);
-#define vecFree utl_vecFree
+vec_t utl_vec_free(vec_t v);
+#define vecFree utl_vec_free
 
-void *utl_vecSet(vec_t v, uint32_t i, void *e);
-#define vecSetPtr utl_vecSet
-#define vecSet(ty,v,i,e)   (*((ty *)(v)->val) = (e), utl_vecSet(v,i,(v)->val))
+void *utl_vec_set(vec_t v, uint32_t i, void *e);
+#define vecSetPtr utl_vec_set
+#define vecSet(ty,v,i,e)   (*((ty *)(v)->val) = (e), utl_vec_set(v,i,(v)->val))
 
-void *utl_vecFill(vec_t v, uint32_t j, uint32_t i, void *e);
-#define vecFillPtr utl_vecFill
-#define vecFill(ty,v,j,i,e)  (*((ty *)(v)->val) = (e), utl_vecFill(v,j,i,(v)->val))
+void *utl_vec_fill(vec_t v, uint32_t j, uint32_t i, void *e);
+#define vecFillPtr utl_vec_fill
+#define vecFill(ty,v,j,i,e)  (*((ty *)(v)->val) = (e), utl_vec_fill(v,j,i,(v)->val))
 
-void *utl_vecAdd(vec_t v, void *e); 
-#define vecAddPtr  utl_vecAdd
-#define vecAdd(ty,v,e)  (*((ty *)(v)->val) = (e), utl_vecAdd(v,(v)->val))
+void *utl_vec_add(vec_t v, void *e); 
+#define vecAddPtr  utl_vec_add
+#define vecAdd(ty,v,e)  (*((ty *)(v)->val) = (e), utl_vec_add(v,(v)->val))
 
 void *utl_vec_ins(vec_t v, uint32_t n, uint32_t l,void *e);
 #define vecInsPtr(v,i,e) utl_vec_ins(v,i,1,e);
@@ -1106,7 +1108,7 @@ int utl_vec_del(vec_t v, uint32_t i, uint32_t l);
 #define vecDel(v,i) utl_vec_del(v,i,1)
 
 #define utl_vec_valid_ndx(v, i)  ((v) && (v)->vec && ((i) < v->cnt))
-#define utl_vec_expand(v, i) ((utl_vec_valid_ndx(v,i)) || (utl_vecResize(v,i) >= 0))
+#define utl_vec_expand(v, i) ((utl_vec_valid_ndx(v,i)) || (utl_vec_resize(v,i) >= 0))
 #define utl_vec_getptr(v,i)  (((char *)((v)->vec)) + ((i)*((v)->esz)))
 #define utl_vec_cpy(v,i,e)   memcpy(utl_vec_getptr(v,i), e, (v)->esz)
 
@@ -1114,20 +1116,20 @@ void *utl_vec_get(vec_t v, uint32_t  i);
 #define vecGetPtr utl_vec_get
 #define vecGet(ty,v,i,d) (utl_vec_valid_ndx(v,i) ? *((ty *)(utl_vec_getptr(v,i))) : d)
 
-int utl_vecResize(vec_t v, uint32_t n);
-#define vecResize utl_vecResize
+int utl_vec_resize(vec_t v, uint32_t n);
+#define vecResize utl_vec_resize
 
-uint32_t utl_vecCount(vec_t v);
-#define vecCount     utl_vecCount
+uint32_t utl_vec_count(vec_t v);
+#define vecCount     utl_vec_count
 
-uint32_t utl_vecMax(vec_t v);
-#define vecMax     utl_vecMax
+uint32_t utl_vec_max(vec_t v);
+#define vecMax     utl_vec_max
 
-uint32_t utl_vecEsz(vec_t v);
-#define vecEsz     utl_vecEsz
+uint32_t utl_vec_esz(vec_t v);
+#define vecEsz     utl_vec_esz
 
-void  *utl_vecVec(vec_t v);
-#define vec(ty, v) ((ty *)utl_vecVec(v))
+void  *utl_vec_vec(vec_t v);
+#define vec(ty, v) ((ty *)utl_vec_vec(v))
 
 int utl_vec_sort(vec_t v, utl_cmp_t c) ;
 #define vecSorted(...) utl_vec_sort(utl_vecSorted_ARGS(__VA_ARGS__)) 
@@ -1135,9 +1137,9 @@ int utl_vec_sort(vec_t v, utl_cmp_t c) ;
 
 #define vecUnsorted(v) if (!v) {} else {v->cmp = NULL; v->flg &= ~UTL_VEC_SORTED;}
 
-void *utl_vecsearch(vec_t v, void *e);
-#define vecSearchPtr(v,e) utl_vecsearch(v,e)
-#define vecSearch(ty,v,e)   (*((ty *)(v)->val) = (e), utl_vecsearch(v,(v)->val))
+void *utl_vec_search(vec_t v, void *e);
+#define vecSearchPtr(v,e) utl_vec_search(v,e)
+#define vecSearch(ty,v,e)   (*((ty *)(v)->val) = (e), utl_vec_search(v,(v)->val))
 
 #ifdef UTL_LIB
 
@@ -1163,20 +1165,21 @@ static short utl_llog2(uint32_t n)
 }
 #endif
 
-vec_t utl_vecNew(int esz, utl_cmp_t cmp, utl_del_t del)
+vec_t utl_vec_new(int esz, utl_cmp_t cmp, utl_del_t del)
 {
   vec_t v;
-  v = malloc(sizeof(struct vec_s)+esz);
+  v = malloc(sizeof(struct vec_s)+(esz-sizeof(uint32_t)));
   if (v) {
     v->max = 0;    v->cnt = 0;
     v->first = 0;  v->last = 0;
     v->esz = esz;  v->vec = NULL; v->flg = 0;
     v->cmp = cmp;  v->del = del;
+    v->val = &(v->elm);
   }
   return v;
 }
 
-vec_t utl_vecFree(vec_t v)
+vec_t utl_vec_free(vec_t v)
 {
   if (v) {
     if (v->vec) free(v->vec);
@@ -1188,12 +1191,12 @@ vec_t utl_vecFree(vec_t v)
   return NULL;
 }
 
-uint32_t utl_vecCount(vec_t v) { return v? v->cnt : 0; }
-uint32_t utl_vecMax(vec_t v)   { return v? v->max : 0; }
-uint32_t utl_vecEsz(vec_t v)   { return v? v->esz : 0; }
-void    *utl_vecVec(vec_t v)   { return v? v->vec : NULL; } 
+uint32_t utl_vec_count(vec_t v) { return v? v->cnt : 0; }
+uint32_t utl_vec_max(vec_t v)   { return v? v->max : 0; }
+uint32_t utl_vec_esz(vec_t v)   { return v? v->esz : 0; }
+void    *utl_vec_vec(vec_t v)   { return v? v->vec : NULL; } 
 
-int utl_vecResize(vec_t v, uint32_t n)
+int utl_vec_resize(vec_t v, uint32_t n)
 {
   uint32_t new_max = 1;
   char *new_vec = NULL;
@@ -1211,7 +1214,7 @@ int utl_vecResize(vec_t v, uint32_t n)
   return v->cnt;
 }
 
-void *utl_vecSet(vec_t v, uint32_t  i, void *e)
+void *utl_vec_set(vec_t v, uint32_t  i, void *e)
 {
   void *p = NULL; 
   if (utl_vec_expand(v,i)) {
@@ -1223,7 +1226,7 @@ void *utl_vecSet(vec_t v, uint32_t  i, void *e)
   return p;
 }
 
-void *utl_vecFill(vec_t v, uint32_t j, uint32_t i, void *e)
+void *utl_vec_fill(vec_t v, uint32_t j, uint32_t i, void *e)
 {
   char *p = NULL;
   void *pos = NULL;
@@ -1248,15 +1251,15 @@ void *utl_vec_get(vec_t v, uint32_t i)
   return utl_vec_getptr(v,i);
 }
 
-void *utl_vecTop(vec_t v)
+void *utl_vec_top(vec_t v)
 {
   if (!v || !v->cnt) return NULL;
   return ((char *)(v->vec)) + ((v->cnt-1)*v->esz);
 }
 
-void utl_vecPop(vec_t v) { if (v && v->cnt) v->cnt -= 1; }
+void utl_vec_pop(vec_t v) { if (v && v->cnt) v->cnt -= 1; }
 
-void *utl_vecAdd(vec_t v, void *e) 
+void *utl_vec_add(vec_t v, void *e) 
 {
   void *pos = NULL;
   
@@ -1275,7 +1278,7 @@ void *utl_vecAdd(vec_t v, void *e)
   }
   else  {
     pos = utl_vec_getptr(v,v->cnt);
-    utl_vecSet(v,v->cnt,e);
+    utl_vec_set(v,v->cnt,e);
   }
   return pos;
 }
@@ -1334,7 +1337,7 @@ int utl_vec_sort(vec_t v, utl_cmp_t c)
   return v->flg & UTL_VEC_SORTED;
 }
 
-void *utl_vecsearch(vec_t v, void *e)
+void *utl_vec_search(vec_t v, void *e)
 {
   uint32_t ndx =0;
   int res = 1;
@@ -1371,9 +1374,9 @@ void *utl_vecsearch(vec_t v, void *e)
 #define stkEmpty(s)     (!vecCount(s))
 #define stkPushPtr(s,e)   vecAddPtr(s,e)
 #define stkPush(ty,s,e)   vecAdd(ty,s,e)
-#define stkTopPtr(s)      utl_vecTop(s)
-#define stkTop(ty,s,d)   (vecCount(s)? *((ty *)utl_vecTop(s)) : d)
-#define stkPop(s)         utl_vecPop(s)
+#define stkTopPtr(s)      utl_vec_top(s)
+#define stkTop(ty,s,d)   (vecCount(s)? *((ty *)utl_vec_top(s)) : d)
+#define stkPop(s)         utl_vec_pop(s)
 
 /**  QUEUE **/
 #define que_t vec_t
@@ -1401,11 +1404,11 @@ void *utl_que_add_back(que_t qu, void *e);
 #define queAddLast(ty,q,e)   (*((ty *)(q)->val) = (e), utl_que_add_back(q,(q)->val))
 #define queAdd queAddLast
 
-#define queNew(ty) utl_queNew(sizeof(ty))
-que_t utl_queNew(uint32_t esz);
+#define queNew(ty) utl_que_new(sizeof(ty))
+que_t utl_que_new(uint32_t esz);
 
-#define queEmpty utl_queEmpty
-int utl_queEmpty(que_t qu); 
+#define queEmpty utl_que_empty
+int utl_que_empty(que_t qu); 
 
 #define queMax   vecMax
 #define queCount vecCount
@@ -1417,14 +1420,14 @@ int utl_queEmpty(que_t qu);
 
 #ifdef UTL_LIB
 
-que_t utl_queNew(uint32_t esz)
+que_t utl_que_new(uint32_t esz)
 {
   que_t qu = vecNew(esz);
   utlZero *= utl_vec_expand(qu,7); // to avoid warnings
   return qu;
 }
 
-int utl_queEmpty(que_t qu) { return (qu == NULL || queCount(qu) == 0); }
+int utl_que_empty(que_t qu) { return (qu == NULL || queCount(qu) == 0); }
 
 int utl_que_expand(que_t qu)
 {
@@ -1507,47 +1510,46 @@ void *utl_que_get(que_t qu, char where)
 
 /**  BUFFERS **/
 #define buf_t vec_t
-int utl_bufSet(buf_t bf, uint32_t i, char c);
 
-#define bufNew() utl_vecNew(1,NULL,NULL)
-#define bufFree  utl_vecFree
+#define bufNew() utl_vec_new(1,NULL,NULL)
+#define bufFree  utl_vec_free
 
-char utl_bufGet(buf_t bf, uint32_t i);
-#define bufGet   utl_bufGet
+char utl_buf_get(buf_t bf, uint32_t i);
+#define bufGet   utl_buf_get
 
-int utl_bufSet(buf_t bf, uint32_t i, char c);
-#define bufSet   utl_bufSet
+int utl_buf_set(buf_t bf, uint32_t i, char c);
+#define bufSet   utl_buf_set
 
-int utl_bufAdd(buf_t bf, char c);
-#define bufAdd   utl_bufAdd
+int utl_buf_add(buf_t bf, char c);
+#define bufAdd   utl_buf_add
 
-int utl_bufAddStr(buf_t bf, char *s);
-#define bufAddStr  utl_bufAddStr
+int utl_buf_addstr(buf_t bf, char *s);
+#define bufAddStr  utl_buf_addstr
 
-int utl_bufIns(buf_t bf, uint32_t i, char c);
-#define bufIns(b,i,c) utl_bufIns(b,i,c)
+int utl_buf_ins(buf_t bf, uint32_t i, char c);
+#define bufIns(b,i,c) utl_buf_ins(b,i,c)
 
-int utl_bufInsStr(buf_t bf, uint32_t i, char *s);
-#define bufInsStr(b,i,s) utl_bufInsStr(b,i,s)
+int utl_buf_insstr(buf_t bf, uint32_t i, char *s);
+#define bufInsStr(b,i,s) utl_buf_insstr(b,i,s)
 
-#define bufResize utl_vecResize
+#define bufResize utl_vec_resize
 
-#define bufClr(bf) utl_bufSet(bf,0,'\0');
+#define bufClr(bf) utl_buf_set(bf,0,'\0');
 
-int utl_bufFormat(buf_t bf, char *format, ...);
-#define bufFormat utl_bufFormat
+int utl_buf_fmt(buf_t bf, char *format, ...);
+#define bufFormat utl_buf_fmt
 
 #define bufLen vecCount
 #define bufMax vecMax
 #define bufStr(b) vec(char,b)
 
-int utl_bufAddLine(buf_t bf, FILE *f);
-#define bufAddLine   utl_bufAddLine
-#define bufReadLine  utl_bufAddLine
+int utl_buf_addline(buf_t bf, FILE *f);
+#define bufAddLine   utl_buf_addline
+#define bufReadLine  utl_buf_addline
 
-int utl_bufAddFile(buf_t bf, FILE *f);
-#define bufAddFile   utl_bufAddFile
-#define bufReadFile  utl_bufAddFile
+int utl_buf_addfile(buf_t bf, FILE *f);
+#define bufAddFile   utl_buf_addfile
+#define bufReadFile  utl_buf_addfile
 
 #if !defined(UTL_HAS_SNPRINTF) && defined(_MSC_VER) && (_MSC_VER < 1800)
 #define UTL_ADD_SNPRINTF
@@ -1556,7 +1558,7 @@ int utl_bufAddFile(buf_t bf, FILE *f);
 #endif
 
 #ifdef UTL_LIB
-int utl_bufSet(buf_t bf, uint32_t i, char c)
+int utl_buf_set(buf_t bf, uint32_t i, char c)
 {
   char *s;
 
@@ -1573,31 +1575,31 @@ int utl_bufSet(buf_t bf, uint32_t i, char c)
   return 1;
 }
 
-char utl_bufGet(buf_t bf, uint32_t i)
+char utl_buf_get(buf_t bf, uint32_t i)
 {
   if (!bf) return '\0';
   if (i >= bf->cnt) return '\0';
   return ((char*)(bf->vec))[i];
 }
 
-int utl_bufAdd(buf_t bf, char c)
-{  return utl_bufSet(bf,bf->cnt,c); }
+int utl_buf_add(buf_t bf, char c)
+{  return utl_buf_set(bf,bf->cnt,c); }
 
-int utl_bufAddStr(buf_t bf, char *s)
+int utl_buf_addstr(buf_t bf, char *s)
 {
   if (!bf) return 0;
   if (!s || !*s) return 1;
   
-  while (*s) if (!utl_bufSet(bf,bf->cnt,*s++)) return 0;
+  while (*s) if (!utl_buf_set(bf,bf->cnt,*s++)) return 0;
   
-  return utl_bufAdd(bf,'\0');
+  return utl_buf_add(bf,'\0');
 }
 
 /* A line in the file can be ended by '\r\n', '\n' or '\r'.
 ** The NEWLINE characters are discarded.
 ** The string in the buffer is terminated with '\n\0'. 
 */
-int utl_bufAddLine(buf_t bf, FILE *f)
+int utl_buf_addline(buf_t bf, FILE *f)
 {
   int c = 0;
   int n = 0;
@@ -1605,21 +1607,21 @@ int utl_bufAddLine(buf_t bf, FILE *f)
     switch ((c = fgetc(f))) {
       case '\r' : if ((c = fgetc(f)) != '\n') ungetc(c,f);
       case '\n' :
-      case EOF  : c = EOF; utl_bufAdd(bf,'\n'); break;
-      default   : utl_bufAdd(bf,(char)c); n++; break;
+      case EOF  : c = EOF; utl_buf_add(bf,'\n'); break;
+      default   : utl_buf_add(bf,(char)c); n++; break;
     }
   } while (c != EOF);
   return n;
 }
 
-int utl_bufAddFile(buf_t bf, FILE *f)
+int utl_buf_addfile(buf_t bf, FILE *f)
 {
   int c = 0;
   int n = 0;
   do {
     switch ((c = fgetc(f))) {
       case EOF  : c = EOF; break;
-      default   : utl_bufAdd(bf,(char)c); n++; break;
+      default   : utl_buf_add(bf,(char)c); n++; break;
     }
   } while (c != EOF);
   return n;
@@ -1643,14 +1645,14 @@ static int utl_buf_insert(buf_t bf, uint32_t i, uint32_t l, char *s)
   k = bf->cnt;
   memmove(b+l, b, k-i);
   memcpy(b,s,l);
-  utl_bufSet(bf, k+l, '\0');
+  utl_buf_set(bf, k+l, '\0');
   return n;
 }
 
-int utl_bufInsStr(buf_t bf, uint32_t i, char *s)
+int utl_buf_insstr(buf_t bf, uint32_t i, char *s)
 { return utl_buf_insert(bf,i,0,s); }
 
-int utl_bufIns(buf_t bf, uint32_t i, char c)
+int utl_buf_ins(buf_t bf, uint32_t i, char c)
 { return utl_buf_insert(bf,i,1,&c); }
 
 
@@ -1677,7 +1679,7 @@ inline int c99_vsnprintf(char* str, uint32_t size, const char* format, va_list a
 #endif /* UTL_ADD_SNPRINTF */
 /* }} */
 
-int utl_bufFormat(buf_t bf, char *format, ...)
+int utl_buf_fmt(buf_t bf, char *format, ...)
 {
   int count;
   int count2;
@@ -1688,7 +1690,7 @@ int utl_bufFormat(buf_t bf, char *format, ...)
   va_start(ap, format);
   count = vsnprintf(NULL,0,format, ap);
   va_end(ap);
-  utl_bufSet(bf,count,'\0'); /* ensure there's enough room */
+  utl_buf_set(bf,count,'\0'); /* ensure there's enough room */
   va_start(ap, format);
   count2 = vsnprintf(bufStr(bf),count+1,format, ap);
   va_end(ap);
@@ -2045,7 +2047,7 @@ static int utl_expr(char **ppat, char **pstr, vec_t v)
   logNdbg("exprend (after): [%s] ret:%d",p, ret);
   
   if (ret) {
-    if  ((q=vecGet(char *,v, 2* UTL_MAX_CAPT,NULL))) s = q;
+    if ((q=vecGet(char *,v, 2* UTL_MAX_CAPT,NULL))) s = q;
     *pstr = s;
   }
 
@@ -2074,6 +2076,7 @@ int utl_match(char *pat, char *str, vec_t v)
   }
   return ret; /* the amount of input consumed */
 }
+
 
 #endif /* UTL_LIB */
 
