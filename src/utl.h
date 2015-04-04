@@ -169,8 +169,9 @@ utl_extern(char *utlEmptyString, = "");
   
 utl_extern(int utlZero, = 0);
 
-typedef int (*utl_cmp_t)(const void *a, const void *b);
-typedef int (*utl_del_t)(const void *a);
+typedef int (*utlCmp_f)(const void *a, const void *b);
+typedef int (*utlDel_f)(const void *a);
+
 
 
 /* .% Assumptions (static assertions)
@@ -186,6 +187,11 @@ typedef int (*utl_del_t)(const void *a);
 
 
 utlAssume(sizeof(uint32_t) == 4);
+
+#define utl_ARGS0(x, ...) x
+#define utl_ARGS1(x, y, ...) y
+#define utl_ARGS2(x, y, w, ...) w
+#define utl_ARGS3(x, y, w, z, ...) z
 
 
 #ifndef UTL_NOTRYCATCH
@@ -1065,8 +1071,8 @@ typedef struct vec_s {
   uint32_t  first;
   uint32_t  last; 
   uint32_t  flg; 
-  utl_cmp_t cmp;
-  utl_del_t del;
+  utlCmp_f cmp;
+  utlDel_f del;
   void     *vec;
   void     *val; /* will point to the elm field */
   uint32_t  elm; /* just to get the pointer */
@@ -1074,16 +1080,12 @@ typedef struct vec_s {
 
 #define UTL_VEC_SORTED  1UL
 
-vec_t utl_vec_new(int esz, utl_cmp_t , utl_del_t);
+vec_t utl_vec_new(int esz, utlCmp_f , utlDel_f);
 #define vecNew(...) utl_vec_new(utl_vec_new_ARGS(__VA_ARGS__))
 
 #define utl_vec_new_ARGS(...)    sizeof(utl_ARGS0(__VA_ARGS__, NULL, NULL, NULL)),\
-                                utl_ARGS1(__VA_ARGS__, NULL, NULL, NULL), \
-                                utl_ARGS2(__VA_ARGS__, NULL, NULL, NULL)
-#define utl_ARGS0(x, ...) x
-#define utl_ARGS1(x, y, ...) y
-#define utl_ARGS2(x, y, z, ...) z
-
+                                        utl_ARGS1(__VA_ARGS__, NULL, NULL, NULL), \
+                                        utl_ARGS2(__VA_ARGS__, NULL, NULL, NULL)
 vec_t utl_vec_free(vec_t v);
 #define vecFree utl_vec_free
 
@@ -1131,7 +1133,7 @@ uint32_t utl_vec_esz(vec_t v);
 void  *utl_vec_vec(vec_t v);
 #define vec(ty, v) ((ty *)utl_vec_vec(v))
 
-int utl_vec_sort(vec_t v, utl_cmp_t c) ;
+int utl_vec_sort(vec_t v, utlCmp_f c) ;
 #define vecSorted(...) utl_vec_sort(utl_vecSorted_ARGS(__VA_ARGS__)) 
 #define utl_vecSorted_ARGS(...) utl_ARGS0(__VA_ARGS__, NULL), utl_ARGS1(__VA_ARGS__, NULL)
 
@@ -1165,7 +1167,7 @@ static short utl_llog2(uint32_t n)
 }
 #endif
 
-vec_t utl_vec_new(int esz, utl_cmp_t cmp, utl_del_t del)
+vec_t utl_vec_new(int esz, utlCmp_f cmp, utlDel_f del)
 {
   vec_t v;
   v = malloc(sizeof(struct vec_s)+(esz-sizeof(uint32_t)));
@@ -1327,7 +1329,7 @@ int utl_vec_del(vec_t v, uint32_t i,uint32_t l)
   return v->cnt;
 }
 
-int utl_vec_sort(vec_t v, utl_cmp_t c) 
+int utl_vec_sort(vec_t v, utlCmp_f c) 
 {
   if (c) {
     v->cmp = c;
@@ -1701,6 +1703,7 @@ int utl_buf_fmt(buf_t bf, char *format, ...)
 }
 #endif /* UTL_LIB */
 
+
 /****************************************/
 #ifndef UTL_NOREX
 /***
@@ -1708,84 +1711,113 @@ int utl_buf_fmt(buf_t bf, char *format, ...)
  term -> '!'? fact [?*+]? 
  fact -> '(' expr  ')' | '[' '^'? range+ ']' | '%' any | any
  range -> any '-' any | '\' any | any
+ 
+ 
 */
 
 #define UTL_MAX_CAPT 10
+
+typedef int (*utlScan_f)(vec_t a, void *d);
 
 int utl_match(char *pat, char *str, vec_t v);
 int utl_match_len(vec_t v, int n);
 char *utl_match_capt(vec_t v, int n);
 int utl_match_tok(vec_t v);
+int utl_scan(char *txt, char *mtc, utlScan_f cb, void *aux);
+
 
 #define utlMatch     utl_match
 #define utlMatchLen  utl_match_len
 #define utlMatchSub  utl_match_capt
 #define utlMatchTok  utl_match_tok
 
+#define utlScan(s,m,...) utl_scan(s,m, utl_ARGS0(__VA_ARGS__, NULL), utl_ARGS1(__VA_ARGS__, NULL))
+  
+
+typedef struct { char *rx; int(*cb)(vec_t,void *); } utlMatcher_t;
+
 #ifdef UTL_LIB 
 
 
-#define utl_eox(c) ((c) <2)
-#define utl_endpat(c) (utl_eox(c) || ((c) == '|') || ((c) == ')'))
+#define utl_eox(c) ((c) < 2)
+#define utl_endpat(c,v) (utl_eox(c) || ((c) == '|') || ((c) == ')' )) 
+
+#define utl_match_sp(v)  ((char *)&((v)->last))[0]
+#define utl_match_cnt(v) ((char *)&((v)->last))[1]
+#define utl_match_par(v) ((char *)&((v)->last))[2]
+#define utl_match_stack(v) (v)->first
+
+
 static int utl_expr(char **ppat, char **pstr, vec_t v);
 
 utlAssume(sizeof(uint32_t) == 2 * sizeof(uint16_t));
+utlAssume(sizeof(uint32_t) == 4 * sizeof(char));
 
 /* us a uin32_t as a stack */
 static int utl_match_push(vec_t v, int n)
 {
   int sp = -1;
   uint32_t stk;
-  uint16_t *ndx;
   
   if (v) {
-    ndx = (uint16_t *)&(v->last);
-    sp = ndx[0]; stk = v->first;
-    logNdbg("push stk: %08X sp: %d val: %X",v->first,ndx[0],n);
-    n &= 0x0F; /* the numbers in the stack will be in the range 0-15 */
+    sp = utl_match_sp(v);
+    stk = utl_match_stack(v) ;
+    logNdbg("push stk: %08X sp: %d val: %X",stk,sp,n);
     if (sp < 8) {
-      stk &= ~(0x0F << (4*sp));  /* clear old value */
-      stk |=  (n    << (4*sp));  /* set new value */
+      stk &= ~(     0x0F  << (4*sp));  /* clear old value */
+      stk |=  ((n & 0x0F) << (4*sp));  /* set new value */
       sp++;
-      ndx[0] = sp; v->first = stk;
+      utl_match_sp(v) = sp;
+      utl_match_stack(v) = stk;
+      utl_match_par(v) +=1;
     }
   }  
   return sp;
 }
 
+#if 0
+static int utl_match_isempty(vec_t v)
+{
+  char *ndx;
+  if (v) {
+    ndx = (char *)&(v->last);
+    return !(ndx[0]); 
+  }  
+  return 1;
+}
+#endif 
+
 static int utl_match_pop(vec_t v)
 {
   int sp;
   uint32_t stk;
-  uint16_t *ndx;
   int n = -1;  
   
   if (v) {
-    ndx = (uint16_t *)&(v->last);
-    sp = ndx[0]; stk = v->first;
+    sp = utl_match_sp(v);
+    stk = utl_match_stack(v) ;
     if (sp > 0) {
       sp--;
       n = (stk >> (4*sp)) & 0x0F;  /* isolate top value */
-      ndx[0] = sp;
+      utl_match_sp(v) = sp;
+      utl_match_par(v) -=1;
     }
-    logNdbg("pop from stk: %08X sp: %d val: %X",v->first,ndx[0], n);
+    logNdbg("pop from stk: %08X sp: %d val: %X", stk, utl_match_sp(v), n);
   }  
   return n;
 }
 
 static int utl_match_open(vec_t v,char *s)
 {
-  uint16_t *ndx;
   int n = -1;
   if (v) {
-    ndx = (uint16_t *)&(v->last);
-    n = ndx[1];
+    n = utl_match_cnt(v);
     logNdbg("expr( %p %d",v,n);
     if (n < UTL_MAX_CAPT) {
       vecSet(char *,v,n*2, s);
       vecSet(char *,v,n*2+1, s);
       utl_match_push(v,n);
-      ndx[1] = ++n;
+      utl_match_cnt(v) = ++n;
     }
   }
   return n;
@@ -1860,12 +1892,17 @@ static int utl_fact(char **ppat, char **pstr, vec_t v)
   char *q = NULL;
   int c,cp;
   int inv = 0;
+  int not = 0;
   int max = 1;
   
   p = *ppat;
   cp = *p;
   
-  logNdbg("fact: [%s] [%s]",p,s);
+  logdbg("fact: [%s] [%s]",p,s);
+
+  logAssert(utlLog,cp != ')');
+  
+  if (cp == '!') {not = 1; cp = *++p;} 
 
   if (cp == '@') {max = 0x7FFFFFFF; cp = '%';}
   
@@ -1892,7 +1929,7 @@ static int utl_fact(char **ppat, char **pstr, vec_t v)
  	    utl_cls('X','x',isxdigit(c)); p++; break;
 	    utl_cls('I','i',isascii(c));  p++; break;
       
-      case '.' : ret = 1; break;
+      case '.' : utl_isa(1); p++; break;
       
       default: cp = utl_uchr(&p); utl_isa(cp == c); 
     }
@@ -1901,7 +1938,12 @@ static int utl_fact(char **ppat, char **pstr, vec_t v)
     p++; c = utl_uchr(&s); ret = utl_ccls(&p,c);
   }
   else if (*p == '(') {
-    p++; ret = utl_expr(&p,&s,v); 
+    p++; 
+    ret = utl_expr(&p,&s,v); 
+  }
+  else if (*p == ')' || *p == '?'  || *p == '+'  || *p == '*' || *p == '|' || *p == '!') {
+    logdbg("Unexpected '%c'",*p);
+    ret = -1;
   }
   else {
     cp = utl_uchr(&p);  c = utl_uchr(&s);
@@ -1910,7 +1952,10 @@ static int utl_fact(char **ppat, char **pstr, vec_t v)
   }  
 
   *ppat = p;           /* Pattern is always consumed */
-  if (ret) *pstr = s;  /* input text only if it matches */
+  
+  if (not && ret >= 0) ret = !ret;
+  else if (ret > 0) *pstr = s;  /* input text only if it matches */
+  logdbg("factret: %d",ret);
   return ret;
 }
 
@@ -1933,36 +1978,37 @@ static int utl_term(char **ppat, char **pstr, vec_t v)
 
   int nmatch = 0;
   int ret = 0;
-  int inv = 0;
-  
-  if (*p == '!') {inv = 1; p++ ;} 
-  while(!utl_endpat(*p)) {  /* to handle * and + */
+
+  while(!utl_endpat(*p,v) && ret >= 0) {  /* to handle * and + */
     *ppat = p;
     logNdbg("term: [%s] [%s]",p,s);
-    if (p[0] == '$' && !(p[1] < 2)) {
+    if (p[0] == '$' && !utl_eox(p[1])) {
       logNdbg("End set to [%s]",s);
       vecSet(char *,v,2 * UTL_MAX_CAPT,s);
       vecSet(char *,v,2 * UTL_MAX_CAPT+1,p+1);
       p += 2;
-      continue;
+      ret = 1;
     }
-    ret = utl_fact(&p,&s,v);
-    if (ret) {
-      nmatch++;
-      if (*p == '+' || *p == '*') { /* let's try again (if there's any text left) */
-        p = *s? *ppat : p+1; 
-      }   
-      else if (*p == '?') { p++; break; }          /* got it once, ok! */
-    } else {
-      if (*p == '?' || *p == '*') { ret = 1; p++; } /* no match, but it's ok */
-      else  if (*p == '+') { p++; ret = (nmatch > 0); }  /* did it already match once? */
-      break;
+    else {
+      ret = utl_fact(&p,&s,v);
+      if (ret > 0) {
+        nmatch++;
+        if (*p == '+' || *p == '*') { /* let's try again (if there's any text left) */
+          p = *s? *ppat : p+1; 
+        }   
+        else if (*p == '?') { p++; break; }                /* got it once, ok! */
+      } else if (ret == 0) {
+        if (*p == '?' || *p == '*') { ret = 1; p++; }      /* no match, but it's ok */
+        else  if (*p == '+') { p++; ret = (nmatch > 0); }  /* did it already match once? */
+        break;
+      }
     }
-  }
+  }  
   logNdbg("termret: %d",ret);
   *ppat = p;              /* Pattern is always consumed! */
-  if (inv) return !ret;   /* The ! operator does not consume input */
-  if (ret) *pstr = s;     /* Only on match we consume input */
+  if (ret > 0) {
+     *pstr = s;     /* Only on match we consume input */
+  }
   
   return ret;
 }
@@ -2000,7 +2046,7 @@ static char *utl_consume(char *p)
     switch (*p) {
       case '(' : k++; break;
 
-      case ')' : if (k == 0) return p;
+      case ')' : if (k == 0) { return p; }
                  k--;
                  break;
 
@@ -2022,61 +2068,84 @@ static int utl_expr(char **ppat, char **pstr, vec_t v)
   char *s = *pstr;
   char *q = NULL;
 
-  logNdbg("expr: [%s][%s]",p,s);
   utl_match_open(v,*pstr);
   
-  for(;;) { /* to handle alternatives */
-    while (!utl_endpat(*p) && (ret = utl_term(&p,&s,v))) ;
+  while(ret >= 0) { /* to handle alternatives */
+    logNdbg("expr: [%s][%s]",p,s);
+    while (!utl_endpat(*p,v) && (0 < (ret = utl_term(&p,&s,v)))) ;
     logNdbg("alt: [%s][%s] ret: %d",p,s,ret);
-    if (ret) break;    
-    p = utl_consume(p);
-    if (*p != '|') break;
-    p++; s=*pstr;  /* try next alternative */
+    if (ret > 0) {
+      while (*p == '|') p=utl_consume(p+1);
+      break;    
+    }
+    else if (ret == 0) {
+      p=utl_consume(p);
+      if (*p != '|') break;
+      p++; s=*pstr;  /* try next alternative */
+    }
+    //else return ret;
   }
-  logNdbg("exprend (before): [%s]",p);
+  logNdbg("exprend: [%s] sp:%d ret:%d",p, utl_match_sp(v),ret);
+
+  if (ret >=0) {
+    if ((utl_match_sp(v) > 1) == utl_eox(*p)) ret = -1; /* unmatched parenthesis */
+    
+    if (ret > 0) {
+      if ((q=vecGet(char *,v, 2* UTL_MAX_CAPT,NULL))) s = q;
+      *pstr = s;
+    }
+  }
   
-  for (;;) {
-    p = utl_consume(p); /* consume untried pattern */
-    if (*p != '|') break;
-    p++;
-  } 
-  
+  utl_match_close(v,*pstr);
+
   if (!utl_eox(*p)) p++;
   
   *ppat = p;
-  logNdbg("exprend (after): [%s] ret:%d",p, ret);
-  
-  if (ret) {
-    if ((q=vecGet(char *,v, 2* UTL_MAX_CAPT,NULL))) s = q;
-    *pstr = s;
-  }
-
-  utl_match_close(v,*pstr);
   
   return ret;
 }
 
-int utl_match(char *pat, char *str, vec_t v)
+int utl_match(char *str, char *pat, vec_t v)
 {
   char *p = pat;
   char *s = str;
   int ret = 0;
   
-  if (p && *p) {
-    for (; ret==0 ; p++) { /* handle multiple expressions */
+  if (p && *p && s ) {
+    for (; ret==0 && *s; p++) { /* handle multiple expressions */
+      logNdbg("about to match [%s] against [%s]",str,pat);
       s=str;
       utl_resetv(v);
-      logNdbg("match ret: %d",ret);
       ret = utl_expr(&p, &s,v);
-      ret = s - str;
+      if (ret > 0) ret = s - str;
+      else if (ret < 0) { if ((ret=pat-p) == 0) ret = -1; }
       logNdbg("consumed: %d",ret);
-      logNdbg("pattern ends on %d", *p);
       if (*p == 0) break;
     } 
+    logNdbg("stack %08X sp:%2d ():%2d *pat: [%c]",v->first,utl_match_sp(v),utl_match_par(v),*p);
   }
-  return ret; /* the amount of input consumed */
+  return ret; /* the amount of input consumed (>=0) or an error (<0)*/
 }
 
+int utl_scan(char *txt, char *mtc, utlScan_f cb, void *aux)
+{
+  int ret = 0;
+  char *s = txt;
+  vec_t v = NULL;
+  logNdbg("about to scan [%s] against [%s]",txt,mtc);
+  if (mtc && *mtc && txt && *txt && cb) {
+    v = vecNew(char *);
+    ret = 1;
+    while (*s && ret > 0) {
+      ret = utl_match(s, mtc, v);
+      if (ret > 0) { s += ret; ret = !cb(v,aux); }
+    }
+    v = vecFree(v);
+  } else logdbg("cannot scan [%s][%s]",txt,mtc);
+  
+  if (ret > 0) ret = s-txt;
+  return ret;
+}
 
 #endif /* UTL_LIB */
 
