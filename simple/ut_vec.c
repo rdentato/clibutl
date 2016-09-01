@@ -15,7 +15,6 @@ int main(int argc, char *argv[])
 {
   
   vec_t v;
-  int k;
   int *pk;
   uint64_t *pu;
   point_t p,q;
@@ -140,6 +139,8 @@ int main(int argc, char *argv[])
 
 #if 0  
   #define MAXMAX 100000000
+  int k;
+  
   logopen("ut_vec.log","a");
   v = vecnew(uint64_t);
   logprintf("inserting elements");
