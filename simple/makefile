@@ -18,7 +18,7 @@ _BAT=.sh
 
 UTL_H=utl.h
 
-TESTS = t_vec$(_EXE) t_mem$(_EXE)
+TESTS = t_vec$(_EXE) t_buf$(_EXE) t_mem$(_EXE)
 
 		 
 .SUFFIXES: .c .h $(_OBJ)
@@ -41,6 +41,10 @@ prof:
 t_vec$(_EXE): $(UTL_H)  ut_vec.c
 	$(CC) $(CFLAGS) -c -o ut_vec.$(_OBJ) ut_vec.c
 	$(CC) $(PRFFLAGS) -o $@ ut_vec.$(_OBJ)
+
+t_buf$(_EXE): $(UTL_H)  ut_buf.c
+	$(CC) $(CFLAGS) -c -o ut_buf.$(_OBJ) ut_buf.c
+	$(CC) $(PRFFLAGS) -o $@ ut_buf.$(_OBJ)
 
 t_mem$(_EXE): $(UTL_H)  ut_mem.c
 	$(CC) $(CFLAGS) -c -o ut_mem.$(_OBJ) ut_mem.c

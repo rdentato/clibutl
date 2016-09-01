@@ -77,9 +77,6 @@ utl_extern(uint16_t log_res,0);
 #define logprintf(...) (logprintfH, logprintfE(__VA_ARGS__))
                            
                                                    
-/* To disable a message (without deleting the line). Useful for debugging  */                   
-#define _logprintf(...) utl_NULLSTATEMENT
-
 #define logcloseH()     (log_file = ((log_file && (log_file != stderr) && (log_file != stdout))? (fclose(log_file),NULL) : NULL))
 #define logclose()      (logprintf("LOG STOP"),logcloseH())
 #define logopen(f,m)    ((logcloseH(),(log_file = ((f && m && ((*m == 'w') || (*m == 'a')))? fopen(f,m) : NULL))),logprintf("LOG START"))
@@ -96,15 +93,24 @@ utl_extern(uint16_t log_res,0);
 #define logdebug(...)  utl_NULLSTATEMENT
 #endif
 
+/* To disable a message (without deleting the line). Useful for debugging  */                   
+#define _logprintf(...) utl_NULLSTATEMENT
+#define _logdebug(...)  utl_NULLSTATEMENT
+#define _logcheck(...)  0
+#define _logassert(...) utl_NULLSTATEMENT
+
+
 #endif
 
+#ifndef UTL_NOFSM
 /* ---------------------------- */
-/* Yous should have only one FSM per function to avoid clash in 
+/* You should have only one FSM per function to avoid clash in 
 ** state names. It's a limitation but can help keeping things tidy.
 */
 #define fsm           
 #define fsmGOTO(x)    goto fsm_state_##x
 #define fsmSTATE(x)   fsm_state_##x :
+#endif
 
 /* ---------------------------- */
 
@@ -375,8 +381,66 @@ void *utl_vec_search(vec_t v);
 
 #define que_t                 vec_t
 
+#define buf_t                 vec_t
+#define bufnew()              vecnew(char)
+#define bufadd(b,c)           vecadd(char,b,c)
+#define bufsetc(b,i,c)        vecset(char,b,i,c)
+#define bufinsc(b,i,c)        vecins(char,b,i,c)
+#define bufaddc(b,i,c)        vecadd(char,b,i,c)
+#define bufgetc(b,i)          utl_buf_get(b,i)
+#define bufdel(b,i,j,c)       utl_vec_delrange(b,i,c)
+#define bufread(b,i,n,f)      utl_buf_read(b,i,n,f)
+#define bufreadln(b,i,f)      utl_buf_readln(b,i,f)
+#define bufreadall(b,i,f)     utl_buf_readall(b,i,f)
+#define bufwrite(b,i,n,f)     vecwrite(b,i,n,f)
+#define buf(b)                vec(char, b)
+#define buflen(b)             veccount(b)
+
+char utl_buf_get(buf_t b, uint32_t n);
+size_t utl_buf_readall(buf_t b, uint32_t i, FILE *f);
+size_t utl_buf_read(buf_t b, uint32_t i, uint32_t n, FILE *f) ;
+char *utl_buf_readln(buf_t b, uint32_t i, FILE *f);
 
 #ifdef UTL_MAIN
+
+char utl_buf_get(buf_t b, uint32_t n) {char *s = vecget(char,b,n); return s?*s:'\0';}
+size_t utl_buf_read(buf_t b, uint32_t i, uint32_t n, FILE *f) { size_t r = vecread(b,i,n,f); buf(b)[b->cnt] = '\0'; return r;}
+
+size_t utl_buf_readall(buf_t b, uint32_t i, FILE *f)
+{
+  uint32_t n,pos;
+  size_t ret;
+  pos = ftell(f);
+  fseek(f,0,SEEK_END);
+  n = ftell(f);
+  fseek(f,pos,SEEK_SET);
+  ret = bufread(b,i,n-pos,f);
+  buf(b)[i+(n-pos)]= '\0';
+  return ret;
+}
+
+char *utl_buf_readln(buf_t b, uint32_t i, FILE *f)
+{
+  int c;
+  uint32_t n = i;
+  
+  if (!b || !f || feof(f)) return NULL;
+  while ((c=fgetc(f)) != EOF) {
+    if (c == '\r') {
+      c = fgetc(f);
+      if (c != '\n') ungetc(c,f);
+      c = '\n';
+    }
+    bufsetc(b,i++,c);
+    if (c=='\n') break;
+  }
+  if (i==n) return NULL;
+  if (bufgetc(b,i-1) != '\n') bufsetc(b,i++,'\n');
+  bufsetc(b,i,'\0');
+ 
+  return buf(b)+i;
+}
+
 
 static int16_t utl_vec_makeroom(vec_t v,uint32_t n)
 {
