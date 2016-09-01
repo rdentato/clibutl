@@ -37,11 +37,17 @@
 #undef DEBUG
 #endif
 
-/* Give disable memory logging */
+/* Disable memory logging if NDEBUG is defined */
 #ifdef UTL_MEMCHECK
 #undef UTL_MEMCHECK
 #endif
+#endif
 
+
+#ifdef UTL_MEMCHECK
+#ifdef ULT_NOLOG
+#undef UTL_NOLOG
+#endif
 #endif
 
 #ifdef UTL_MAIN
@@ -50,16 +56,17 @@
 #define utl_extern(n,v) extern n
 #endif
 
-utl_extern(FILE    *log_file, NULL);
-utl_extern(char     log_tstr[32], {0});
-utl_extern(time_t   log_time, {0});
-utl_extern(uint16_t log_res,0);
-
 #define utl_NULLSTATEMENT do {} while (0)
   
 #define utl_ARGS0(x, ...)    x
 #define utl_ARGS1(x, y, ...) y
 
+
+#ifndef UTL_NOLOG
+utl_extern(FILE    *log_file, NULL);
+utl_extern(char     log_tstr[32], {0});
+utl_extern(time_t   log_time, {0});
+utl_extern(uint16_t log_res,0);
 
 #define logprintfH   (((log_file)? 0 : ((log_file=stderr) == NULL)), \
                         time(&log_time), strftime(log_tstr,32,"%Y-%m-%d %X",localtime(&log_time)),\
@@ -89,8 +96,12 @@ utl_extern(uint16_t log_res,0);
 #define logdebug(...)  utl_NULLSTATEMENT
 #endif
 
+#endif
+
 /* ---------------------------- */
-/* Note that you can have only one FSM per function. It's a limitation but can help keeping things tidy. */
+/* Yous should have only one FSM per function to avoid clash in 
+** state names. It's a limitation but can help keeping things tidy.
+*/
 #define fsm           
 #define fsmGOTO(x)    goto fsm_state_##x
 #define fsmSTATE(x)   fsm_state_##x :
