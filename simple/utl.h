@@ -88,7 +88,7 @@ utl_extern(uint16_t log_res,0);
 #define logassert(e)   do { if (!logcheck(e)) {logprintf("CHK EXITING ON FAIL");logclose();exit(1);} } while (0);
 #define logdebug       logprintf
 #else
-#define logcheck(e)    0
+#define logcheck(e)    1
 #define logassert(e)   utl_NULLSTATEMENT
 #define logdebug(...)  utl_NULLSTATEMENT
 #endif
@@ -96,7 +96,7 @@ utl_extern(uint16_t log_res,0);
 /* To disable a message (without deleting the line). Useful for debugging  */                   
 #define _logprintf(...) utl_NULLSTATEMENT
 #define _logdebug(...)  utl_NULLSTATEMENT
-#define _logcheck(...)  0
+#define _logcheck(...)  1
 #define _logassert(...) utl_NULLSTATEMENT
 
 
@@ -383,12 +383,14 @@ void *utl_vec_search(vec_t v);
 
 #define buf_t                 vec_t
 #define bufnew()              vecnew(char)
-#define bufadd(b,c)           vecadd(char,b,c)
+#define bufaddc(b,c)           vecadd(char,b,c)
 #define bufsetc(b,i,c)        vecset(char,b,i,c)
-#define bufinsc(b,i,c)        vecins(char,b,i,c)
-#define bufaddc(b,i,c)        vecadd(char,b,i,c)
+#define bufinsc(b,i,c)        utl_buf_insc(b,i,c)
+#define bufinss(b,i,s)        utl_buf_inss(b,i,s)
+#define bufsets(b,i,s)        utl_buf_sets(b,i,s)
+
 #define bufgetc(b,i)          utl_buf_get(b,i)
-#define bufdel(b,i,j,c)       utl_vec_delrange(b,i,c)
+#define bufdel(b,i,j)         utl_buf_del(b,i,j)
 #define bufread(b,i,n,f)      utl_buf_read(b,i,n,f)
 #define bufreadln(b,i,f)      utl_buf_readln(b,i,f)
 #define bufreadall(b,i,f)     utl_buf_readall(b,i,f)
@@ -400,47 +402,13 @@ char utl_buf_get(buf_t b, uint32_t n);
 size_t utl_buf_readall(buf_t b, uint32_t i, FILE *f);
 size_t utl_buf_read(buf_t b, uint32_t i, uint32_t n, FILE *f) ;
 char *utl_buf_readln(buf_t b, uint32_t i, FILE *f);
+char *utl_buf_sets(buf_t b, uint32_t i, char *s);
+char *utl_buf_inss(buf_t b, uint32_t i, char *s);
+char *utl_buf_insc(buf_t b, uint32_t i, char c);
+int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j);
+
 
 #ifdef UTL_MAIN
-
-char utl_buf_get(buf_t b, uint32_t n) {char *s = vecget(char,b,n); return s?*s:'\0';}
-size_t utl_buf_read(buf_t b, uint32_t i, uint32_t n, FILE *f) { size_t r = vecread(b,i,n,f); buf(b)[b->cnt] = '\0'; return r;}
-
-size_t utl_buf_readall(buf_t b, uint32_t i, FILE *f)
-{
-  uint32_t n,pos;
-  size_t ret;
-  pos = ftell(f);
-  fseek(f,0,SEEK_END);
-  n = ftell(f);
-  fseek(f,pos,SEEK_SET);
-  ret = bufread(b,i,n-pos,f);
-  buf(b)[i+(n-pos)]= '\0';
-  return ret;
-}
-
-char *utl_buf_readln(buf_t b, uint32_t i, FILE *f)
-{
-  int c;
-  uint32_t n = i;
-  
-  if (!b || !f || feof(f)) return NULL;
-  while ((c=fgetc(f)) != EOF) {
-    if (c == '\r') {
-      c = fgetc(f);
-      if (c != '\n') ungetc(c,f);
-      c = '\n';
-    }
-    bufsetc(b,i++,c);
-    if (c=='\n') break;
-  }
-  if (i==n) return NULL;
-  if (bufgetc(b,i-1) != '\n') bufsetc(b,i++,'\n');
-  bufsetc(b,i,'\0');
- 
-  return buf(b)+i;
-}
-
 
 static int16_t utl_vec_makeroom(vec_t v,uint32_t n)
 {
@@ -485,7 +453,7 @@ static int16_t utl_vec_delgap(vec_t v, uint32_t i, uint32_t l)
   **    |  |    |    |             |  |    |    
   **    0  i   i+l   cnt           0  i    cnt-l  
   */
-
+  _logdebug("DELGAP: %d %d",i,l);
   if (i < v->cnt) {
     if (i+l >= v->cnt) v->cnt = i; /* Just drop last elements */
     else {
@@ -532,7 +500,6 @@ void *utl_vec_get(vec_t v, uint32_t i)
     elm = v->vec + (i*v->esz);
     memcpy(&(v->elm),elm,v->esz);
   }
-
   return elm;
 }
 
@@ -566,7 +533,7 @@ int16_t utl_vec_del(vec_t v, uint32_t i)
 int16_t utl_vec_delrange(vec_t v, uint32_t i,  uint32_t j)
 {
   if (j<i) return 0;
-  return utl_vec_delgap(v,i,i+j+1);  
+  return utl_vec_delgap(v,i,j-i+1);  
 }
 
 size_t utl_vec_read(vec_t v,uint32_t i, size_t n,FILE *f)
@@ -576,7 +543,6 @@ size_t utl_vec_read(vec_t v,uint32_t i, size_t n,FILE *f)
     if (v->cnt < i+n) v->cnt = i+n;
     vecunsorted(v);
   }
-
   return 0;
 }
 
@@ -604,6 +570,104 @@ void *utl_vec_search(vec_t v)
   }
   return NULL;
 }
+
+char utl_buf_get(buf_t b, uint32_t n)
+{
+  char *s = vecget(char,b,n);
+  return s?*s:'\0';
+}
+
+size_t utl_buf_read(buf_t b, uint32_t i, uint32_t n, FILE *f)
+{
+  size_t r = vecread(b,i,n,f);
+  bufsetc(b,i+n,'\0');
+  b->cnt = i+n;
+  return r;
+}
+
+size_t utl_buf_readall(buf_t b, uint32_t i, FILE *f)
+{
+  uint32_t n,pos;
+  size_t ret;
+  pos = ftell(f);
+  fseek(f,0,SEEK_END);
+  n = ftell(f);
+  fseek(f,pos,SEEK_SET);
+  ret = bufread(b,i,n-pos,f);
+  bufsetc(b,i+(n-pos),'\0');
+  b->cnt = i+(n-pos);
+  return ret;
+}
+
+char *utl_buf_readln(buf_t b, uint32_t i, FILE *f)
+{
+  int c;
+  uint32_t n = i;
+  
+  if (!b || !f || feof(f)) return NULL;
+  while ((c=fgetc(f)) != EOF) {
+    if (c == '\r') {
+      c = fgetc(f);
+      if (c != '\n') ungetc(c,f);
+      c = '\n';
+    }
+    bufsetc(b,i++,c);
+    if (c=='\n') break;
+  }
+  if (i==n) return NULL;
+  if (bufgetc(b,i-1) != '\n') bufsetc(b,i++,'\n');
+  bufsetc(b,i,'\0');
+  b->cnt = i;
+  return buf(b)+n;
+}
+
+char *utl_buf_sets(buf_t b, uint32_t i, char *s)
+{
+  char *r = buf(b)+i;
+  while (*s) bufsetc(b,i++,*s++);
+  bufsetc(b,i,'\0');
+  b->cnt=i;
+  return r;
+}
+
+char *utl_buf_inss(buf_t b, uint32_t i, char *s)
+{
+  uint32_t n;
+  char *p;
+  if (!s || !b) return NULL;
+  n = strlen(s);
+  
+  if (n == 0 || !utl_vec_makegap(b, i, n)) return NULL;
+    
+  p = buf(b)+i;
+  while (*s) *p++ = *s++;
+
+  bufsetc(b,b->cnt,'\0');  b->cnt--;
+  return buf(b)+i;
+}
+
+char *utl_buf_insc(buf_t b, uint32_t i, char c)
+{
+  if (!utl_vec_makegap(b, i, 1)) return NULL;
+    
+  buf(b)[i] = c;
+  bufsetc(b,b->cnt,'\0');  b->cnt--;
+  return buf(b)+i;
+}
+
+int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j)
+{
+  int16_t r;
+  _logdebug("len:%d",b->cnt);
+  r = utl_vec_delgap(b, i, j-i+1);
+  _logdebug("len:%d",b->cnt);
+  if (r) {
+    bufsetc(b,b->cnt,'\0');
+    b->cnt--;
+  }
+  return r;
+}
+
 
 #endif /* UTL_MAIN */
 
