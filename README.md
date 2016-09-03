@@ -203,7 +203,7 @@ the worst that could happen is that they clash with some other library.
 By the way, this is a risk that still must be taken into consideration for
 any other identifier, so I'm not feeling particularly pressed on changing it.
   
-  ## Finite State Machines
+## Finite State Machines
 
 Many piece of software are better understood (and desigend) as
 [Finite State Machines](https://en.wikipedia.org/wiki/Finite-state_machine).
