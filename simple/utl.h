@@ -10,9 +10,24 @@
 **         /  / /  )/  /  /  /  Minimalist
 **        /  /_/  //  (__/  /  C utility 
 **       (____,__/(_____(__/  Library
-**     
+** 
+
+## How to use utl
+
+Include the `utl.h` header in your source files.
+Compile and link `utl.c` with the other files.
+
+Alternatively, you can do without `utl.c` simply by
+compiling one of your source files with the 
+symbol *`UTL_MAIN`* defined (either by definining it 
+before including the header, or via a compiler switch
+like "`-DUTL_MAIN`"). A good candidate is the
+file where your `main()` function is.
+
 */
 
+    
+*/
 
 #ifndef UTL_H
 #define UTL_H
@@ -20,13 +35,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-
 #include <string.h>
 #include <stdarg.h>
 #include <stddef.h>
-
-#include <setjmp.h>
-#include <assert.h>
 #include <time.h>
 #include <ctype.h>
 
@@ -41,11 +52,11 @@
 #ifdef UTL_MEMCHECK
 #undef UTL_MEMCHECK
 #endif
-#endif
 
+#endif /* NDEBUG */
 
 #ifdef UTL_MEMCHECK
-#ifdef ULT_NOLOG
+#ifdef UTL_NOLOG
 #undef UTL_NOLOG
 #endif
 #endif
@@ -57,40 +68,26 @@
 #endif
 
 #define utl_NULLSTATEMENT do {} while (0)
-  
-#define utl_ARGS0(x, ...)    x
-#define utl_ARGS1(x, y, ...) y
-
 
 #ifndef UTL_NOLOG
-utl_extern(FILE    *log_file, NULL);
-utl_extern(char     log_tstr[32], {0});
-utl_extern(time_t   log_time, {0});
-utl_extern(uint16_t log_res,0);
-
-#define logprintfH   (((log_file)? 0 : ((log_file=stderr) == NULL)), \
-                        time(&log_time), strftime(log_tstr,32,"%Y-%m-%d %X",localtime(&log_time)),\
-                        fprintf(log_file,"%s ",log_tstr))
-#define logprintfE(...)  (fprintf(log_file,__VA_ARGS__), fputc('\n',log_file), fflush(log_file))
 
 /* Use as if it was a printf */
-#define logprintf(...) (logprintfH, logprintfE(__VA_ARGS__))
-                           
+#define logprintf(...)  (utl_log_time(),               \
+                        fprintf(log_file,__VA_ARGS__), \
+                        fputc('\n',log_file),          \
+                        fflush(log_file))
                                                    
-#define logcloseH()     (log_file = ((log_file && (log_file != stderr) && (log_file != stdout))? (fclose(log_file),NULL) : NULL))
-#define logclose()      (logprintf("LOG STOP"),logcloseH())
-#define logopen(f,m)    ((logcloseH(),(log_file = ((f && m && ((*m == 'w') || (*m == 'a')))? fopen(f,m) : NULL))),logprintf("LOG START"))
-
-
+#define logclose()      utl_log_close("LOG STOP")
+#define logopen(f,m)    utl_log_open(f,m)
 
 #ifndef NDEBUG
-#define logcheck(e)    (log_res=!!(e), logprintf("CHK %s ("#e") %s:%d",(log_res?"PASS":"FAIL"),__FILE__,__LINE__ ), (log_res = log_res))
-#define logassert(e)   do { if (!logcheck(e)) {logprintf("CHK EXITING ON FAIL");logclose();exit(1);} } while (0);
-#define logdebug       logprintf
+#define logcheck(e)     utl_log_check(!!(e),#e,__FILE__,__LINE__)
+#define logassert(e)    utl_log_assert(!!(e),#e,__FILE__,__LINE__)
+#define logdebug        logprintf
 #else
-#define logcheck(e)    1
-#define logassert(e)   utl_NULLSTATEMENT
-#define logdebug(...)  utl_NULLSTATEMENT
+#define logcheck(e)     1
+#define logassert(e)    utl_NULLSTATEMENT
+#define logdebug(...)   utl_NULLSTATEMENT
 #endif
 
 /* To disable a message (without deleting the line). Useful for debugging  */                   
@@ -99,8 +96,59 @@ utl_extern(uint16_t log_res,0);
 #define _logcheck(...)  1
 #define _logassert(...) utl_NULLSTATEMENT
 
+int  utl_log_time(void);
+void utl_log_close(char *msg);
+void utl_log_open(char *fname, char *mode);
+int  utl_log_check(int res, char *test, char *file, int line);
+void utl_log_assert(int res, char *test, char *file, int line);
 
+#ifdef UTL_MAIN
+
+static FILE *log_file = NULL;
+
+int utl_log_time()
+{
+  char     log_tstr[32];
+  time_t   log_time;
+  
+  if (!log_file) log_file = stderr;
+  time(&log_time);
+  strftime(log_tstr,32,"%Y-%m-%d %X",localtime(&log_time));
+  return fprintf(log_file,"%s ",log_tstr);
+}
+
+void utl_log_close(char *msg)
+{
+  if (msg) logprintf(msg);
+  if (log_file && log_file != stderr) fclose(log_file);
+  log_file = NULL;
+}
+
+void utl_log_open(char *fname, char *mode)
+{
+  char md[2];
+  md[0] = (mode && *mode == 'w')? 'w' : 'a'; md[1] = '\0';
+  log_file = fopen(fname,md);
+  logprintf("LOG START");
+}
+
+int utl_log_check(int res, char *test, char *file, int line)
+{
+  logprintf("CHK %s (%s) %s:%d", (res?"PASS":"FAIL"), test, file, line);
+  return res;
+}
+
+void utl_log_assert(int res, char *test, char *file, int line)
+{
+  if (!utl_log_check(res,test,file,line)) {
+    logprintf("CHK EXITING ON FAIL");
+    logclose();
+    exit(1);
+  }
+}
 #endif
+
+#endif /* UTL_NOLOG */
 
 #ifndef UTL_NOFSM
 /* ---------------------------- */
@@ -117,37 +165,39 @@ utl_extern(uint16_t log_res,0);
 /*  .% Traced memory
 **  ================
 */
+
 #define memINVALID    -2
 #define memOVERFLOW   -1
 #define memVALID       0
 #define memNULL        1
 
 #ifdef UTL_MEMCHECK
-void *utl_malloc  (size_t size, char *file, int line );
-void *utl_calloc  (size_t num, size_t size, char *file, int line);
-void *utl_realloc (void *ptr, size_t size, char *file, int line);
-void  utl_free    (void *ptr, char *file, int line );
-void *utl_strdup  (void *ptr, char *file, int line);
 
-int utl_check(void *ptr,char *file, int line);
-
-utl_extern(size_t utl_mem_allocated, 0);
+void  *utl_malloc   (size_t size, char *file, int line );
+void  *utl_calloc   (size_t num, size_t size, char *file, int line);
+void  *utl_realloc  (void *ptr, size_t size, char *file, int line);
+void   utl_free     (void *ptr, char *file, int line );
+void  *utl_strdup   (void *ptr, char *file, int line);
+                    
+int    utl_check    (void *ptr,char *file, int line);
+size_t utl_mem_used (void);
 
 
 #ifdef UTL_MAIN
 /*************************************/
 
-static char *utl_BEG_CHK = "\xBE\xEF\xF0\x0D";
-static char *utl_END_CHK = "\xDE\xAD\xC0\xDA";
-static char *utl_CLR_CHK = "\xDE\xFA\xCE\xD0";
+static char  *utl_BEG_CHK = "\xBE\xEF\xF0\x0D";
+static char  *utl_END_CHK = "\xDE\xAD\xC0\xDA";
+static char  *utl_CLR_CHK = "\xDE\xFA\xCE\xD0";
+static size_t utl_mem_allocated;
 
 typedef struct {
    size_t size;
    char   chk[4];
-   char   data[4];
+   char   blk[4];
 } utl_mem_t;
 
-#define utl_mem(x) ((utl_mem_t *)((char *)(x) -  offsetof(utl_mem_t, data)))
+#define utl_mem(x) ((utl_mem_t *)((char *)(x) -  offsetof(utl_mem_t, blk)))
 
 int utl_check(void *ptr,char *file, int line)
 {
@@ -156,13 +206,13 @@ int utl_check(void *ptr,char *file, int line)
   if (ptr == NULL) return memNULL;
   p = utl_mem(ptr);
   if (memcmp(p->chk,utl_BEG_CHK,4)) { 
-    logprintf("MEM Invalid or double freed %p (%lu %s:%d)",p->data, \
+    logprintf("MEM Invalid or double freed %p (%lu %s:%d)",p->blk, \
                                                utl_mem_allocated, file, line);     
     return memINVALID; 
   }
-  if (memcmp(p->data+p->size,utl_END_CHK,4)) {
+  if (memcmp(p->blk+p->size,utl_END_CHK,4)) {
     logprintf("MEM Boundary overflow detected %p [%lu] (%lu %s:%d)", \
-                              p->data, p->size, utl_mem_allocated, file, line); 
+                              p->blk, p->size, utl_mem_allocated, file, line); 
     return memOVERFLOW;
   }
   logprintf("MEM Valid pointer %p (%lu %s:%d)",ptr, utl_mem_allocated, file, line); 
@@ -182,10 +232,10 @@ void *utl_malloc(size_t size, char *file, int line )
   }
   p->size = size;
   memcpy(p->chk,utl_BEG_CHK,4);
-  memcpy(p->data+p->size,utl_END_CHK,4);
+  memcpy(p->blk+p->size,utl_END_CHK,4);
   utl_mem_allocated += size;
-  logprintf("MEM alloc %p [%lu] (%lu %s:%d)",p->data,size,utl_mem_allocated,file,line);
-  return p->data;
+  logprintf("MEM alloc %p [%lu] (%lu %s:%d)",p->blk,size,utl_mem_allocated,file,line);
+  return p->blk;
 };
 
 void *utl_calloc(size_t num, size_t size, char *file, int line)
@@ -251,12 +301,12 @@ void *utl_realloc(void *ptr, size_t size, char *file, int line)
                           utl_mem_allocated -= p->size;
                           utl_mem_allocated += size; 
                           logprintf("MEM realloc %p [%lu] -> %p [%lu] (%lu %s:%d)", \
-                                          ptr, p->size, p->data, size, \
+                                          ptr, p->size, p->blk, size, \
                                           utl_mem_allocated, file, line);
                           p->size = size;
                           memcpy(p->chk,utl_BEG_CHK,4);
-                          memcpy(p->data+p->size,utl_END_CHK,4);
-                          ptr = p->data;
+                          memcpy(p->blk+p->size,utl_END_CHK,4);
+                          ptr = p->blk;
                           break;
     }
   }
@@ -282,7 +332,10 @@ void *utl_strdup(void *ptr, char *file, int line)
 }
 #undef utl_mem
 
+size_t utl_mem_used() {return utl_mem_allocated;}
+
 #endif
+
 /*************************************/
 
 #define malloc(n)     utl_malloc(n,__FILE__,__LINE__)
@@ -296,7 +349,7 @@ void *utl_strdup(void *ptr, char *file, int line)
 #define strdup(p)     utl_strdup(p,__FILE__,__LINE__)
 
 #define memcheck(p)   utl_check(p,__FILE__, __LINE__)
-#define memused()     utl_mem_allocated
+#define memused()     utl_mem_used()
 
 #else /* UTL_MEMCHECK */
 
@@ -668,10 +721,197 @@ int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j)
   return r;
 }
 
-
 #endif /* UTL_MAIN */
 
 #endif  /* UTL_NOVEC */
+
+#ifndef UTL_NOPMX
+
+utl_extern(int(*utl_pmx_ext)(char *r, char *t) , NULL);
+
+utl_extern(char     *utl_pmx_capt[20]   , {0} );
+utl_extern(uint8_t   utl_pmx_capnum     ,  0  );
+utl_extern(uint8_t   utl_pmx_capstk_num ,  0  );
+utl_extern(uint8_t   utl_pmx_capstk[10] , {0} );
+
+#define pmxstart(n) utl_pmx_capt[2*(n)]
+#define pmxend(n)   utl_pmx_capt[2*(n)+1]
+#define pmxlen(n)   ((int)(pmxend(n)-pmxstart(n)))
+#define pmxcount()  utl_pmx_capnum
+
+char *utl_pmx_search(char *r, char *t);
+#define pmxsearch(r,t) utl_pmx_search(r,t)
+
+#ifdef UTL_MAIN
+
+static char *utl_pmx_alt(char *r)
+{
+  int paren=0;
+  
+  while (*r) {
+    switch (*r++) {
+      case '%' : if (*r)  r++; break;
+      case '(' : paren++; break;
+      case ')' : if (paren == 0) return NULL;
+                 paren--; break;
+      case '<' : while (*r && *r != '>') r++; while (*r == '>') r++;
+                 break;
+      case '|' : if (paren == 0) return r;
+    }
+  }
+  return NULL;
+}
+
+static char *utl_pmx_skip(char *r)
+{
+  int paren=0;
+  
+  while (*r) {
+    switch (*r++) {
+      case '%' : if (*r)  r++; break;
+      case '(' : paren++; break;
+      case ')' : if (paren == 0) return (r-1);
+                 paren--; break;
+      case '<' : while (*r && *r != '>') r++; while (*r == '>') r++;
+                 break;
+    }
+  }
+  return r;
+}
+
+static int utl_pmx_is_in(char *r, char c)
+{
+  char *s=r;
+  while (*s && *s != '>') s++;
+  if (*s && s[1] == '>') s++; /* allow '>' as last element of the set */
+  
+  if (c == *r)   return 1; /* just in case of a - */
+  while (r<s) {
+    if (r[1] == '-' && (s-r) >= 3 ) { /* its a range */
+      if (r[0] <= c && c <= r[2]) return 1;
+      r+=3;
+    }
+    else if (c == *r) return 1;
+    r++;
+  }
+  return 0;
+}
+
+static int utl_pmx_class(char *r, char *t)
+{
+  int inv = 0;
+  int rc = *r;
+  int c = *t;
+  if (isupper(rc)) {inv = 1; rc = tolower(rc); }
+  switch (rc) {
+    case 'a' : return inv ^ !!isalpha(c) ;
+    case 's' : return inv ^ !!isspace(c) ;
+    case 'u' : return inv ^ !!isupper(c) ;
+    case 'l' : return inv ^ !!islower(c) ;
+    case 'd' : return inv ^ !!isdigit(c) ;
+    case 'x' : return inv ^ !!isxdigit(c);
+    case 'w' : return inv ^ !!isalnum(c) ;
+  
+    case 'g' : return inv ^ (c == '+'  || c == '-');
+    case 'n' : return inv ^ (c == '\r' || c == '\n');
+    case '!' : inv = 1;
+    case '=' : return inv ^ utl_pmx_is_in(r+1,c);
+    
+    case '$' : return c == '\0';
+    case '.' : return 1;
+    
+    default  : if (utl_pmx_ext) return utl_pmx_ext(r,t);
+  }
+  return 0;
+}
+
+#define utl_pmx_cappush(n) (utl_pmx_capstk[utl_pmx_capstk_num++] = n)
+#define utl_pmx_cappop()   (utl_pmx_capstk[--utl_pmx_capstk_num])
+#define utl_pmx_captop()   (utl_pmx_capstk[utl_pmx_capstk_num-1])
+#define utl_pmx_fail()      goto fail
+
+static char *utl_pmx_match(char *r, char *t)
+{
+  uint32_t n;
+  uint32_t min_n;
+  uint32_t max_n;
+  uint32_t l;
+  char c;
+    
+  for (l=0;l<20;l++) utl_pmx_capt[l] = NULL;
+  
+  utl_pmx_capt[0] = t; utl_pmx_capt[1] = t;
+  utl_pmx_capnum=0;
+  utl_pmx_capstk_num = 0;   
+  utl_pmx_cappush(utl_pmx_capnum++);
+  
+  while (*r) {
+    logdebug("match %d [%s] [%s]",pmxcount(),r,t);
+    c ='\0'; 
+    switch (*r) {
+      case '<' : r++; n = 0; min_n = 1; max_n = 1;
+                 switch (*r) {
+                   case '?' : min_n = 0; max_n = 1; r++; break;
+                   case '*' : min_n = 0; max_n = 0xFFFFFFFF; r++; break;
+                   case '+' : min_n = 1; max_n = 0xFFFFFFFF; r++; break;
+                 }
+                 while ((l=utl_pmx_class(r,t)) && (n < max_n)) {
+                   n++;
+                   while (*t && l>0) {t++; l--;}
+                 }
+                 if ( n < min_n ) utl_pmx_fail();
+                 while (*r && *r != '>') r++;
+                 while (*r == '>') r++; 
+                 break;
+
+      case '(' : if (utl_pmx_capnum<10) {
+                   pmxstart(utl_pmx_capnum) = pmxend(utl_pmx_capnum) = t;
+                   utl_pmx_cappush(utl_pmx_capnum++);
+                 }
+                 r++;
+                 break;
+                 
+      case '|' : /* matched! skip the rest */
+                 r = utl_pmx_skip(r);
+                 break;
+      
+      case ')' : if (utl_pmx_capstk_num > 0) {
+                   pmxend(utl_pmx_cappop()) = t;
+                 }
+                 r++;
+                 break;
+      
+      case '%' : if (r[1]) {c = r[1]; r++; }
+      default  : if (c == '\0') c = *r;
+                 if (*t != c) utl_pmx_fail();
+                 t++; r++;
+                 break;
+    }
+    continue;
+    
+    fail: t=pmxstart(utl_pmx_captop()); /* reset text */
+          /* search for an alternative pattern to match */
+          r=utl_pmx_alt(r);
+          /*pmxcount() = 0;*/
+          if (!r) return NULL;
+  }
+  utl_pmx_capt[1] = t;
+  return utl_pmx_capt[0];
+}
+
+char *utl_pmx_search(char *r, char *t)
+{
+  char *ret=NULL;
+  
+  if (*r == '^') ret = utl_pmx_match(r+1,t);
+  else while (!(ret = utl_pmx_match(r,t)) && *t) t++;
+  
+  return ret;
+}
+
+#endif
+#endif /* UTL_NOPMX */
+
 
 #endif /* UTL_H */
 

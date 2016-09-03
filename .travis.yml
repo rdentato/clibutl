@@ -1,4 +1,0 @@
-sudo: false
-language: c
-script: make && make test
-install: true

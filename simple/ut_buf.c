@@ -2,7 +2,7 @@
 #include "utl.h"
 #include <math.h>
 
-#define TESTFILE "buf.tst"
+#define TESTFILE "t_buf.tmp"
 FILE *createtestfile()
 {
   FILE *f;
@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
   char c;
   FILE *f;
   
-  logopen("ut_buf.log","w");
+  logopen("t_buf.log","w");
  
   
   b = bufnew();

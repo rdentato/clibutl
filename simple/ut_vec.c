@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
   point_t p,q;
   point_t *pq;
   
-  logopen("ut_vec.log","w");
+  logopen("t_vec.log","w");
   
   v=vecnew(int);
   logassert(v);
@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
   logclose();
 
  
-  logopen("ut_vec.log","a");
+  logopen("t_vec.log","a");
   v=vecnew(point_t);
   logassert(v);
   
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
   v = vecfree(v);
   logclose();  
   
-  logopen("ut_vec.log","a");
+  logopen("t_vec.log","a");
   v = vecnew(uint64_t);
   logassert(v);
   
@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
   v = vecfree(v);
   logclose();  
   
-  logopen("ut_vec.log","a");
+  logopen("t_vec.log","a");
   v=vecnew(point_t);
   p.x = 1.; p.y = 1.;
   q.x = 2.; q.y = 2.;
@@ -113,11 +113,11 @@ int main(int argc, char *argv[])
   logcheck(veccount(v)==2);
   {
     FILE *f;
-    f = fopen("test.pnt","wb");
+    f = fopen("t_point.tmp","wb");
     logassert(f);
     vecwrite(v,0,veccount(v),f);
     fclose(f);
-    f = fopen("test.pnt","rb");
+    f = fopen("t_point.tmp","rb");
     logassert(f);
     vecread(v,2,2,f);
     fclose(f);
@@ -141,14 +141,14 @@ int main(int argc, char *argv[])
   #define MAXMAX 100000000
   int k;
   
-  logopen("ut_vec.log","a");
+  logopen("t_vec.log","a");
   v = vecnew(uint64_t);
   logprintf("inserting elements");
   for (k=0; k<MAXMAX;k++) 
     vecset(uint64_t,v,k,k);
   logclose();
   
-  logopen("ut_vec.log","a");
+  logopen("t_vec.log","a");
   v = vecnew(uint64_t);
   logprintf("inserting elements");
   vecset(uint64_t,v,MAXMAX-1,0);
@@ -159,7 +159,7 @@ int main(int argc, char *argv[])
   logclose();
 #endif  
 
-  logopen("ut_vec.log","a");
+  logopen("t_vec.log","a");
   v = vecnew(int);
   vecset(int,v,0,12);
   vecset(int,v,1,3);
