@@ -7,7 +7,7 @@ The functions are related to:
 
  - *Logging*. Mainly to be used for *testing* and *debugging* purpose 
  - *Memory check*
- - *Finite State Machines*
+ - [*Finite State Machines*](#FSM)
  - *Containers*. 
  - *Pattern matching* over string
 
@@ -203,6 +203,7 @@ the worst that could happen is that they clash with some other library.
 By the way, this is a risk that still must be taken into consideration for
 any other identifier, so I'm not feeling particularly pressed on changing it.
   
+<a name="FSM">
 ## Finite State Machines
 
 Many piece of software are better understood (and desigend) as
