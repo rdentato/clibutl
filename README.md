@@ -60,7 +60,6 @@ pollute your namespace (and could possibly stop you using
    even if `UTL_NOLOG` is defined.
 
 
-
 ## Logging
 
 Logging functions are just wrappers around the `fprintf()` function.
@@ -85,7 +84,7 @@ at the time.
        2016-09-03 11:33:01 Warp speed to 4.
        2016-09-03 11:33:01 Moving on now. 
      ```
-  - `void logopen(char *fname, char *mode)`
+  - `void logopen(char *fname, char *mode);`
     sets the logging file (i.e. the 
     file the messages will be printed to). The `mode` parameters can be `"w"`,
     to start a new file, or `"a"` to append to an existing file. If anything
@@ -94,7 +93,7 @@ at the time.
     To signal that the log file has been opened, the message `"LOG START"` is
     printed.
     
-  - `void logclose(void)`
+  - `void logclose(void);`
     Closes the current log files and revert back to `stderr`. Before closing it,
     the message `"LOG STOP"` is printed. Together with the `"LOG START"` message
     printed on opening the file, this is an easy way to determine how much time
@@ -164,7 +163,7 @@ information in case of a failure:
 ### Debugging
 
 While using a symbolic debugger like `gdb` is the *"right thing to do"*, there
-are time when you need some more traces of the execution of your program to really
+are times when you need some more traces of the execution of your program to really
 get what is going on (and catch that damned bug!). Insted of using `printf()` or
 `logprintf()` (which you can always do, of course) you can use the 
 
@@ -191,6 +190,8 @@ For cases like this, the following functions are defined:
    - `int  _logdebug(char *format, ...);`
    - `int  _logcheck(int test);`
    - `void _logassert(int test);`
+   - `void _logopen(char *fname, char *mode);`
+   - `void _logclose(void);`
 
 that do nothing (`_logcheck()` will always return 1 as if the test passed).
 
@@ -202,3 +203,74 @@ the worst that could happen is that they clash with some other library.
 By the way, this is a risk that still must be taken into consideration for
 any other identifier, so I'm not feeling particularly pressed on changing it.
   
+  ## Finite State Machines
+
+Many piece of software are better understood (and desigend) as
+[Finite State Machines](https://en.wikipedia.org/wiki/Finite-state_machine).
+
+There are many way to represent a FSM in C. Most common methods are:
+  - Using a `state` variable and a `switch{...}` within a loop. 
+  - Using a table of pointers to functions that will be invoked to
+    perform the actions and move from a state to another.
+    
+These methods, however, hide the structure of the FSM itself which is better
+understood as a graph with nodes representing states and arcs representing 
+transitions. 
+
+The following macros implement a technique explained by Tim Cooper in the
+the article [*Goto? Yes Goto!*](http://ftp.math.utah.edu/pub/tex/bib/complang.html#Cooper:1991:GYG)
+published on the May 1991 issue of the *Computer Language* magazine.
+
+The main advantage is to directly implement the FSM transition diagram
+to the point that is extremely easy to draw the diagram from the code (which 
+is not an easy task with the other methods).
+
+The code for each state (which performs the actions for that state,
+read the next input, etc. ) is enclosed in a `fsmSTATE(statename)` macro;
+to move from a state to another the `fsmGOTO(statename)` is used.
+
+The following is an example to show how easy is to relate the code to 
+the transition diagram.
+
+   ```C
+     fsm {
+       fsmSTATE(start_of_the_day) {
+         num_cust = 0;
+         fsmGOTO(gate_closed);
+       }
+       
+       fsmSTATE(gate_closed) {
+         if (ticket valid(getticket())) fsmGOTO(gate_opened);
+         if (time_to_close() fsmGOTO(closed_for_the_day);
+         fsmGOTO(gate_closed);          
+       }
+       
+       fsmSTATE(gate_opened) {
+         if (customer_passed()) {
+           num_cust++;
+           if (num_cust == 100) fsmGOTO(closed_for_the day);
+           if (time_to_close()) fsmGOTO(closed_for_the day);
+           fsmGOTO(gate_closed);
+         }
+         fsmGOTO(gate_opened);
+       }
+       
+       fsmSTATE(closed_for_the_day) {
+         printf("%d customer served", num_cust);
+       }
+     }
+   ```
+   
+   ``` 
+                                    ,--------------.
+                                   v                \    
+          start_of_the_day --->  gate_closed  ---> gate_opened --.
+                                    \   \            ^           /
+                                     \   `-----------'          /
+                                      \                        V
+                                       '------> closed_for_the_day
+   ```
+
+The original article had many suggestions on how to extended this
+basic idea. However, after so many years, I still think that this
+is the best way to represent FSM in C code.
