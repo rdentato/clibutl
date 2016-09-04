@@ -17,12 +17,12 @@ _BAT=.sh
 
 UTL_H=../src/utl.h
 
-TESTS = t_vec$(_EXE) t_buf$(_EXE) t_mem$(_EXE) t_pmx$(_EXE)
+TESTS = t_vec$(_EXE) t_buf$(_EXE) t_mem$(_EXE) t_pmx$(_EXE) t_logassert$(_EXE)
 		 
 .SUFFIXES: .c .h .o
 
 DBGFLAGS =
-WRNFLAGS = -Wall
+WRNFLAGS = -Wall -pedantic
 PRFFLAGS =
 CCFLAGS  = 
 
@@ -48,6 +48,10 @@ t_pmx$(_EXE): $(UTL_H)  ut_pmx.c
 t_mem$(_EXE): $(UTL_H)  ut_mem.c
 	$(CC) $(CFLAGS) -c ut_mem.c
 	$(CC) $(PRFFLAGS) -o $@ ut_mem.o
+
+t_logassert$(_EXE): $(UTL_H) ut_logassert.c
+	$(CC) $(CFLAGS) -c ut_logassert.c
+	$(CC) $(PRFFLAGS) -o $@ ut_logassert.o
 
 clean:
 	rm -f t_* *.o *.tmp *.log gmon.out
