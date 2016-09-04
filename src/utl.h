@@ -11,11 +11,36 @@
 **        /  /_/  //  (__/  /  C utility 
 **       (____,__/(_____(__/  Library
 ** 
+** [[[
 
+# utl
+
+This library provides functions that are, hopefully, useful during
+the developemnt phase. 
+
+The functions are related to:
+
+ - *Logging*. Mainly to be used for *testing* and *debugging* purpose 
+ - *Memory check*
+ - *Finite State Machines*
+ - *Containers*. 
+ - *Pattern matching* over string
+
+The objective is to provide simple and reasonably
+easy to use solutions to recurring problems that could be replaced
+by more complex solutions if needed. For instance, the logging
+functions are limited to write on files, for production environment
+they can be replaced by some other logging (e.g. something with
+multiple level of logging or using syslogd, ...).
+
+The point is to avoid having to think about trivial things (again, like
+logging) and directly jump into your problem. 
+ 
+ 
 ## How to use utl
 
-Include the `utl.h` header in your source files.
-Compile and link `utl.c` with the other files.
+ - Include the `utl.h` header in your source files.
+ - Compile and link `utl.c` with the other files.
 
 Alternatively, you can do without `utl.c` simply by
 compiling one of your source files with the 
@@ -24,6 +49,32 @@ before including the header, or via a compiler switch
 like "`-DUTL_MAIN`"). A good candidate is the
 file where your `main()` function is.
 
+## The *selector* symbols
+
+You may want to exclude entirely a portion of the library because
+it is of no interest for your project. Leaving it would only 
+pollute your namespace (and could possibly stop you using
+`utl.h` altogether).
+
+ - `NDEBUG` will cause:
+   - `logdebug()` and `logassert()` to perform no action;
+   - `logcheck()` to perform no action and always return `1`;
+   - Memory checking functions will be disabled (even if `UTL_MEMCHECK`
+     is defined).
+
+ - `UTL_NOLOG` will make the logging functions `logxxx` unavailble.
+ 
+ - `UTL_NOFSM` will make the finite state machines `fsmxxx` constructors unavailble.
+ 
+ - `UTL_NOPMX` will make the pattern matching functions `pmxyyy` unavailble.
+ 
+ - `UTL_NOVEC` will make the containers functions (`vecxxx`, `stkxxx`, `bufxxx`, ...) unavailble.
+
+ - `UTL_MEMCHECK` will instrument the dynamic memory functions (`malloc()`, `free()`, ...) 
+   to log their activities and perform additional checks. It also enables logging
+   even if `UTL_NOLOG` is defined.
+
+** ]]]
 */
    
 
@@ -65,97 +116,341 @@ file where your `main()` function is.
 #define utl_extern(n,v) extern n
 #endif
 
-#define utl_NULLSTATEMENT do {} while (0)
+#ifdef UTL_MAIN
+int   utl_ret(int x)      {return x;}
+void *utl_retptr(void *x) {return x;}
+#else
+int   utl_ret(int x);
+void *utl_retptr(void *x);
+#endif
 
 #ifndef UTL_NOLOG
 
-/* Use as if it was a printf */
-#define logprintf(...)  (utl_log_time(),               \
-                        fprintf(log_file,__VA_ARGS__), \
-                        fputc('\n',log_file),          \
-                        fflush(log_file))
-                                                   
-#define logclose()      utl_log_close("LOG STOP")
-#define logopen(f,m)    utl_log_open(f,m)
+/* [[[
+## Logging
 
-#ifndef NDEBUG
+Logging functions are just wrappers around the `fprintf()` function.
+They print a message on a file (by default `stderr`) adding a timestamp
+before the message and a newline `\n` at the end.
+To make things simple, there is only one level of logging and only one log file
+at the time.
+
+### Log messages
+
+  - `int logprintf(char *format, ...);`
+     is the main function. On executing:  
+     
+     ```C  
+       logprintf("Warp speed to %d.",count);
+       logprintf("Moving on now.")
+     ```
+     
+     the following lines will be printed (assuming `count` value is 4):
+     
+     ```
+       2016-09-03 11:33:01 Warp speed to 4.
+       2016-09-03 11:33:01 Moving on now. 
+     ```
+     On success it will return the number of characters written; on error
+     it will return -1. 
+     
+  - `FILE *logopen(char *fname, char *mode);`
+    sets the logging file (i.e. the 
+    file the messages will be printed to). The `mode` parameters can be `"w"`,
+    to start a new file, or `"a"` to append to an existing file. If anything
+    else is passed as parameter, it will default to `"a"`.
+    On success, the function returns the pointer to the log file. On failure
+    it will return NULL and the log file will be reverted to `stderr`.
+    To signal that the log file has been opened, the message `"LOG START"` is
+    printed.
+    
+  - `void logclose(void);`
+    Closes the current log files and revert back to `stderr`. Before closing it,
+    the message `"LOG STOP"` is printed. Together with the `"LOG START"` message
+    printed on opening the file, this is an easy way to determine how much time
+    passed between 
+
+### Testing
+
+A simple way to create unit test (or applying
+[Test Driven Development](https://en.wikipedia.org/wiki/Test-driven_development))
+is to use the following functions:
+
+  - `int logcheck(int test);`
+    evaluates the test expression (whose result must be non-zero if the test passed
+    and zero if it failed) and writes the result on the log file.
+
+  - `void logassert(int test);`
+    same as logcheck() but exits (with `abort()`)on failure. Should be used when
+    the test could reveal that something went horribly wrong.
+
+For eaxmple, the following code:
+
+   ```C
+     x = get_number_from(outer_space);
+     y = get_number_from(inner_space);
+     logcheck(x > 100.);
+     logassert(y > 0.);
+     logcheck(x/y > 0.33);
+   ```
+will print, assuming `x=35.2` and `y=3.0`:
+
+   ```
+     2016-09-03 11:33:01 CHK FAIL (x > 100.) spacing.c 34
+     2016-09-03 11:33:01 CHK PASS (y > 0.) spacing.c 35
+     2016-09-03 11:33:01 CHK PASS (x/y > 0.33) spacing.c 36
+   ```
+
+If, instead, we had `x=145.7` and `y=0.0`, we would have had:
+
+   ```
+     2016-09-03 11:33:01 CHK PASS (x > 100.) spacing.c 34
+     2016-09-03 11:33:01 CHK FAIL (y > 0.) spacing.c 35
+     2016-09-03 11:33:01 CHK EXITING ON FAIL
+   ```
+    
+and the program would have been terminated with exit code 1 to  prevent the
+division by zero to happen on the next line.
+
+The fact that `logcheck()` returns the result of the test can be used to get more
+information in case of a failure:
+
+   ```C
+     y = get_number_from(inner_space);
+     if (!logcheck(x > 100.)) {
+       logprintf("          x: %.1f",x);
+     }
+     logassert(y != 0.);
+     logcheck(x/y > 0.33);
+   ```
+
+   will result in:
+    
+   ```
+      2016-09-03 11:33:01 CHK FAIL (x > 100.) spacing.c 34
+      2016-09-03 11:33:01           x: 35.2
+   ```
+
+### Debugging
+
+While using a symbolic debugger like `gdb` is the *"right thing to do"*, there
+are times when you need some more traces of the execution of your program to really
+get what is going on (and catch that damned bug!). Insted of using `printf()` or
+`logprintf()` (which you can always do, of course) you can use the 
+
+  - `int logdebug(char *format, ...);`
+  
+function that behaves exactly as the `logprintf()` function but will do nothing if
+the `NDEBUG` symbol is defined.
+
+This way you can easily differentiate between normal log messages and messages that
+are there just for debugging purposes.
+
+### Temporary disabled functions
+
+There are times when you don't want some log message to be generated or some check
+to be performed. This is esepcially true for debugging messages that tend to fill
+up the log file with a lot of information you may no longer need.
+
+You could delete the call to the logging function altogether but you might need
+them again afterward and it would be a waste to have to write them again.
+
+For cases like this, the following functions are defined:
+
+   - `int   _logprintf(char *format, ...);`
+   - `int   _logdebug(char *format, ...);`
+   - `int   _logcheck(int test);`
+   - `void  _logassert(int test);`
+   - `FILE *_logopen(char *fname, char *mode);`
+   - `void  _logclose(void);`
+
+that do nothing (`_logcheck()` will always return 1 as if the test passed).
+
+Technically speaking I'm in violation of the C standard here (section 7.1.3):
+identifiers starting with underscore are reserved for use as identifiers
+with file scope.  I've tried many times to get rid of the initial underscore
+(e.g. by using `X` or `X_`) but i still believe this is the best choice and
+the worst that could happen is that they clash with some other library.
+By the way, this is a risk that still must be taken into consideration for
+any other identifier, so I'm not feeling particularly pressed on changing it.
+  
+** ]]] */
+
+
+#define logprintf(...)  utl_log_printf(__VA_ARGS__)
+
+#define logopen(f,m)    utl_log_open(f,m)
+#define logclose()      utl_log_close("LOG STOP")
+                        
+#ifndef NDEBUG          
 #define logcheck(e)     utl_log_check(!!(e),#e,__FILE__,__LINE__)
 #define logassert(e)    utl_log_assert(!!(e),#e,__FILE__,__LINE__)
 #define logdebug        logprintf
-#else
-#define logcheck(e)     1
-#define logassert(e)    utl_NULLSTATEMENT
-#define logdebug(...)   utl_NULLSTATEMENT
-#endif
+#else                   
+#define logcheck(e)     utl_ret(1)
+#define logassert(e)    ((void)0)
+#define logdebug(...)   utl_ret(0)
+#endif                  
+                        
+#define _logprintf(...) utl_ret(0)
+#define _logdebug(...)  utl_ret(0)
+#define _logcheck(...)  utl_ret(1)
+#define _logassert(...) ((void)0)
+#define _logopen(f,m)   utl_retptr(NULL)
+#define _logclose()     utl_ret(0)
 
-/* To disable a message (without deleting the line). Useful for debugging  */                   
-#define _logprintf(...) utl_NULLSTATEMENT
-#define _logdebug(...)  utl_NULLSTATEMENT
-#define _logcheck(...)  1
-#define _logassert(...) utl_NULLSTATEMENT
-
-int  utl_log_time(void);
-void utl_log_close(char *msg);
-void utl_log_open(char *fname, char *mode);
-int  utl_log_check(int res, char *test, char *file, int line);
-void utl_log_assert(int res, char *test, char *file, int line);
+int   utl_log_printf(char *format, ...);
+FILE *utl_log_open(char *fname, char *mode);
+int   utl_log_close(char *msg);
+int   utl_log_check(int res, char *test, char *file, int32_t line);
+void  utl_log_assert(int res, char *test, char *file, int32_t line);
 
 #ifdef UTL_MAIN
 
-static FILE *log_file = NULL;
+static FILE *utl_log_file = NULL;
 
-int utl_log_time()
+int utl_log_close(char *msg)
 {
-  char     log_tstr[32];
-  time_t   log_time;
-  
-  if (!log_file) log_file = stderr;
-  time(&log_time);
-  strftime(log_tstr,32,"%Y-%m-%d %X",localtime(&log_time));
-  return fprintf(log_file,"%s ",log_tstr);
-}
-
-void utl_log_close(char *msg)
-{
+  int ret = 0;
   if (msg) logprintf(msg);
-  if (log_file && log_file != stderr) fclose(log_file);
-  log_file = NULL;
+  if (utl_log_file && utl_log_file != stderr) ret = fclose(utl_log_file);
+  utl_log_file = NULL;
+  return ret;
 }
 
-void utl_log_open(char *fname, char *mode)
+FILE *utl_log_open(char *fname, char *mode)
 {
   char md[2];
-  md[0] = (mode && *mode == 'w')? 'w' : 'a'; md[1] = '\0';
-  log_file = fopen(fname,md);
+  md[0] = (mode && *mode == 'w')? 'w' : 'a';
+  md[1] = '\0';
+  utl_log_close(NULL);
+  utl_log_file = fopen(fname,md);
   logprintf("LOG START");
+  return utl_log_file;
 }
 
-int utl_log_check(int res, char *test, char *file, int line)
+int utl_log_printf(char *format, ...)
+{
+  va_list    args;
+  char       log_tstr[32];
+  time_t     log_time;
+  int        ret = 0;
+  struct tm *log_time_tm;
+  
+  if (!utl_log_file) utl_log_file = stderr;
+  if (time(&log_time) < 0) ret = -1;
+  if (ret >= 0 && !(log_time_tm = localtime(&log_time))) ret = -1;
+  if (ret >= 0 && !strftime(log_tstr,32,"%Y-%m-%d %H:%M:%S",log_time_tm)) ret =-1;
+  if (ret >= 0) ret = fprintf(utl_log_file,"%s ",log_tstr);
+  if (ret >= 0 && fflush(utl_log_file)) ret = -1;
+  va_start(args, format);
+  if (ret >= 0) ret = vfprintf(utl_log_file, format, args);
+  va_end(args);
+  if (ret >= 0 && (fputc('\n',utl_log_file) == EOF)) ret = -1;
+  if (ret >= 0 && fflush(utl_log_file)) ret = -1;
+  return ret;
+}
+
+int utl_log_check(int res, char *test, char *file, int32_t line)
 {
   logprintf("CHK %s (%s) %s:%d", (res?"PASS":"FAIL"), test, file, line);
   return res;
 }
 
-void utl_log_assert(int res, char *test, char *file, int line)
+void utl_log_assert(int res, char *test, char *file, int32_t line)
 {
   if (!utl_log_check(res,test,file,line)) {
     logprintf("CHK EXITING ON FAIL");
     logclose();
-    exit(1);
+    abort();
   }
 }
+
 #endif
 
 #endif /* UTL_NOLOG */
 
 #ifndef UTL_NOFSM
-/* ---------------------------- */
-/* You should have only one FSM per function to avoid clash in 
-** state names. It's a limitation but can help keeping things tidy.
-*/
+/* [[[
+
+## Finite State Machines
+
+Many piece of software are better understood (and desigend) as
+[Finite State Machines](https://en.wikipedia.org/wiki/Finite-state_machine).
+
+There are many way to represent a FSM in C. Most common methods are:
+  - Using a `state` variable and a `switch{...}` within a loop. 
+  - Using a table of pointers to functions that will be invoked to
+    perform the actions and move from a state to another.
+    
+These methods, however, hide the structure of the FSM itself which is better
+understood as a graph with nodes representing states and arcs representing 
+transitions. 
+
+The following macros implement a technique explained by Tim Cooper in the
+the article [*Goto? Yes Goto!*](http://ftp.math.utah.edu/pub/tex/bib/complang.html#Cooper:1991:GYG)
+published on the May 1991 issue of the *Computer Language* magazine.
+
+The main advantage is to directly implement the FSM transition diagram
+to the point that is extremely easy to draw the diagram from the code (which 
+is not an easy task with the other methods).
+
+The code for each state (which performs the actions for that state,
+read the next input, etc. ) is enclosed in a `fsmSTATE(statename)` macro;
+to move from a state to another the `fsmGOTO(statename)` is used.
+
+The following is an example to show how easy is to relate the code to 
+the transition diagram.
+
+   ```C
+     fsm {
+       fsmSTATE(start_of_the_day) {
+         num_cust = 0;
+         fsmGOTO(gate_closed);
+       }
+       
+       fsmSTATE(gate_closed) {
+         if (ticket valid(getticket())) fsmGOTO(gate_opened);
+         if (time_to_close() fsmGOTO(closed_for_the_day);
+         fsmGOTO(gate_closed);          
+       }
+       
+       fsmSTATE(gate_opened) {
+         if (customer_passed()) {
+           num_cust++;
+           if (num_cust == 100) fsmGOTO(closed_for_the day);
+           if (time_to_close()) fsmGOTO(closed_for_the day);
+           fsmGOTO(gate_closed);
+         }
+         fsmGOTO(gate_opened);
+       }
+       
+       fsmSTATE(closed_for_the_day) {
+         printf("%d customer served", num_cust);
+       }
+     }
+   ```
+   
+   ``` 
+                                    ,--------------.
+                                   v                \    
+          start_of_the_day --->  gate_closed  ---> gate_opened --.
+                                    \   \            ^           /
+                                     \   `-----------'          /
+                                      \                        V
+                                       '------> closed_for_the_day
+   ```
+
+The original article had many suggestions on how to extended this
+basic idea. However, after so many years, I still think that this
+is the best way to represent FSM in C code.
+
+** ]]] */
+
 #define fsm           
 #define fsmGOTO(x)    goto fsm_state_##x
 #define fsmSTATE(x)   fsm_state_##x :
+
 #endif
 
 /* ---------------------------- */
@@ -171,18 +466,17 @@ void utl_log_assert(int res, char *test, char *file, int line)
 
 #ifdef UTL_MEMCHECK
 
-void  *utl_malloc   (size_t size, char *file, int line );
-void  *utl_calloc   (size_t num, size_t size, char *file, int line);
-void  *utl_realloc  (void *ptr, size_t size, char *file, int line);
-void   utl_free     (void *ptr, char *file, int line );
-void  *utl_strdup   (void *ptr, char *file, int line);
+void  *utl_malloc   (size_t size, char *file, int32_t line );
+void  *utl_calloc   (size_t num, size_t size, char *file, int32_t line);
+void  *utl_realloc  (void *ptr, size_t size, char *file, int32_t line);
+void   utl_free     (void *ptr, char *file, int32_t line );
+void  *utl_strdup   (void *ptr, char *file, int32_t line);
                     
-int    utl_check    (void *ptr,char *file, int line);
+int    utl_check    (void *ptr,char *file, int32_t line);
 size_t utl_mem_used (void);
 
 
 #ifdef UTL_MAIN
-/*************************************/
 
 static char  *utl_BEG_CHK = "\xBE\xEF\xF0\x0D";
 static char  *utl_END_CHK = "\xDE\xAD\xC0\xDA";
@@ -197,19 +491,19 @@ typedef struct {
 
 #define utl_mem(x) ((utl_mem_t *)((char *)(x) -  offsetof(utl_mem_t, blk)))
 
-int utl_check(void *ptr,char *file, int line)
+int utl_check(void *ptr,char *file, int32_t line)
 {
   utl_mem_t *p;
   
   if (ptr == NULL) return memNULL;
   p = utl_mem(ptr);
   if (memcmp(p->chk,utl_BEG_CHK,4)) { 
-    logprintf("MEM Invalid or double freed %p (%lu %s:%d)",p->blk, \
+    logprintf("MEM Invalid or double freed %p (%lu %s:%d)",p->blk,
                                                utl_mem_allocated, file, line);     
     return memINVALID; 
   }
   if (memcmp(p->blk+p->size,utl_END_CHK,4)) {
-    logprintf("MEM Boundary overflow detected %p [%lu] (%lu %s:%d)", \
+    logprintf("MEM Boundary overflow detected %p [%lu] (%lu %s:%d)",
                               p->blk, p->size, utl_mem_allocated, file, line); 
     return memOVERFLOW;
   }
@@ -217,11 +511,11 @@ int utl_check(void *ptr,char *file, int line)
   return memVALID; 
 }
 
-void *utl_malloc(size_t size, char *file, int line )
+void *utl_malloc(size_t size, char *file, int32_t line )
 {
   utl_mem_t *p;
   
-  if (size == 0) logprintf("MEM Shouldn't allocate 0 bytes (%lu %s:%d)", \
+  if (size == 0) logprintf("MEM Shouldn't allocate 0 bytes (%lu %s:%d)",
                                                 utl_mem_allocated, file, line);
   p = malloc(sizeof(utl_mem_t) +size);
   if (p == NULL) {
@@ -234,9 +528,9 @@ void *utl_malloc(size_t size, char *file, int line )
   utl_mem_allocated += size;
   logprintf("MEM alloc %p [%lu] (%lu %s:%d)",p->blk,size,utl_mem_allocated,file,line);
   return p->blk;
-};
+}
 
-void *utl_calloc(size_t num, size_t size, char *file, int line)
+void *utl_calloc(size_t num, size_t size, char *file, int32_t line)
 {
   void *ptr;
   
@@ -244,9 +538,9 @@ void *utl_calloc(size_t num, size_t size, char *file, int line)
   ptr = utl_malloc(size,file,line);
   if (ptr)  memset(ptr,0x00,size);
   return ptr;
-};
+}
 
-void utl_free(void *ptr, char *file, int line)
+void utl_free(void *ptr, char *file, int32_t line)
 {
   utl_mem_t *p=NULL;
   
@@ -269,37 +563,38 @@ void utl_free(void *ptr, char *file, int line)
                           free(p);
                           break;
                           
-    case memINVALID :  logprintf("MEM free an invalid pointer! (%lu %s:%d)", \
+    case memINVALID :  logprintf("MEM free an invalid pointer! (%lu %s:%d)", 
                                                 utl_mem_allocated, file, line);
                           break;
   }
 }
 
-void *utl_realloc(void *ptr, size_t size, char *file, int line)
+void *utl_realloc(void *ptr, size_t size, char *file, int32_t line)
 {
   utl_mem_t *p;
   
   if (size == 0) {
-    logprintf("MEM realloc() used as free() %p -> [0] (%lu %s:%d)",ptr,utl_mem_allocated, file, line);
+    logprintf("MEM realloc() used as free() %p -> [0] (%lu %s:%d)",
+                                                      ptr,utl_mem_allocated, file, line);
     utl_free(ptr,file,line); 
   } 
   else {
     switch (utl_check(ptr,file,line)) {
-      case memNULL   : logprintf("MEM realloc() used as malloc() (%lu %s:%d)", \
+      case memNULL   : logprintf("MEM realloc() used as malloc() (%lu %s:%d)", 
                                              utl_mem_allocated, file, line);
                           return utl_malloc(size,file,line);
                         
       case memVALID  : p = utl_mem(ptr); 
                           p = realloc(p,sizeof(utl_mem_t) + size); 
                           if (p == NULL) {
-                            logprintf("MEM Out of Memory (%lu %s:%d)", \
+                            logprintf("MEM Out of Memory (%lu %s:%d)", 
                                              utl_mem_allocated, file, line);
                             return NULL;
                           }
                           utl_mem_allocated -= p->size;
                           utl_mem_allocated += size; 
-                          logprintf("MEM realloc %p [%lu] -> %p [%lu] (%lu %s:%d)", \
-                                          ptr, p->size, p->blk, size, \
+                          logprintf("MEM realloc %p [%lu] -> %p [%lu] (%lu %s:%d)", 
+                                          ptr, p->size, p->blk, size, 
                                           utl_mem_allocated, file, line);
                           p->size = size;
                           memcpy(p->chk,utl_BEG_CHK,4);
@@ -311,7 +606,7 @@ void *utl_realloc(void *ptr, size_t size, char *file, int line)
   return ptr;
 }
 
-void *utl_strdup(void *ptr, char *file, int line)
+void *utl_strdup(void *ptr, char *file, int32_t line)
 {
   char *dest;
   size_t size;
@@ -324,7 +619,7 @@ void *utl_strdup(void *ptr, char *file, int line)
 
   dest = utl_malloc(size,file,line);
   if (dest) memcpy(dest,ptr,size);
-  logprintf("MEM strdup %p [%lu] -> %p (%lu %s:%d)", ptr, size, dest, \
+  logprintf("MEM strdup %p [%lu] -> %p (%lu %s:%d)", ptr, size, dest, 
                                                 utl_mem_allocated, file, line);
   return dest;
 }
@@ -725,22 +1020,22 @@ int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j)
 
 #ifndef UTL_NOPMX
 
-utl_extern(int(*utl_pmx_ext)(char *r, char *t) , NULL);
-
 utl_extern(char     *utl_pmx_capt[20]   , {0} );
 utl_extern(uint8_t   utl_pmx_capnum     ,  0  );
-utl_extern(uint8_t   utl_pmx_capstk_num ,  0  );
-utl_extern(uint8_t   utl_pmx_capstk[10] , {0} );
 
+#define pmxsearch(r,t) utl_pmx_search(r,t)
 #define pmxstart(n) utl_pmx_capt[2*(n)]
 #define pmxend(n)   utl_pmx_capt[2*(n)+1]
 #define pmxlen(n)   ((int)(pmxend(n)-pmxstart(n)))
 #define pmxcount()  utl_pmx_capnum
 
 char *utl_pmx_search(char *r, char *t);
-#define pmxsearch(r,t) utl_pmx_search(r,t)
 
 #ifdef UTL_MAIN
+
+static uint8_t utl_pmx_capstk_num = 0;
+static uint8_t utl_pmx_capstk[10];
+static int(*utl_pmx_ext)(char *r, char *t) = NULL;
 
 static char *utl_pmx_alt(char *r)
 {
@@ -760,7 +1055,7 @@ static char *utl_pmx_alt(char *r)
   return NULL;
 }
 
-static char *utl_pmx_skip(char *r)
+static char *utl_pmx_alt_skip(char *r)
 {
   int paren=0;
   
@@ -777,15 +1072,11 @@ static char *utl_pmx_skip(char *r)
   return r;
 }
 
-static int utl_pmx_is_in(char *r, char c)
+static int utl_pmx_is_in(char *r, char c, char *s)
 {
-  char *s=r;
-  while (*s && *s != '>') s++;
-  if (*s && s[1] == '>') s++; /* allow '>' as last element of the set */
-  
-  if (c == *r)   return 1; /* just in case of a - */
+  if (c == *r)   return 1; /* just in case of a - at the beginning*/
   while (r<s) {
-    if (r[1] == '-' && (s-r) >= 3 ) { /* its a range */
+    if (r[1] == '-' && (s-r) > 2 ) { /* its a range */
       if (r[0] <= c && c <= r[2]) return 1;
       r+=3;
     }
@@ -795,7 +1086,15 @@ static int utl_pmx_is_in(char *r, char c)
   return 0;
 }
 
-static int utl_pmx_class(char *r, char *t)
+static int utl_pmx_quoted(char *r, char *t, char *s)
+{
+  if (r == s) { /* just <q>  */
+    
+  }
+  return 0;
+}
+
+static int utl_pmx_class(char *r, char *t, char *s)
 {
   int inv = 0;
   int rc = *r;
@@ -813,10 +1112,12 @@ static int utl_pmx_class(char *r, char *t)
     case 'g' : return inv ^ (c == '+'  || c == '-');
     case 'n' : return inv ^ (c == '\r' || c == '\n');
     case '!' : inv = 1;
-    case '=' : return inv ^ utl_pmx_is_in(r+1,c);
+    case '=' : return inv ^ utl_pmx_is_in(r+1,c,s);
     
     case '$' : return c == '\0';
     case '.' : return 1;
+    
+    case 'q' : return utl_pmx_quoted(r+1,t,s);
     
     default  : if (utl_pmx_ext) return utl_pmx_ext(r,t);
   }
@@ -835,6 +1136,7 @@ static char *utl_pmx_match(char *r, char *t)
   uint32_t max_n;
   uint32_t l;
   char c;
+  char *s;
     
   for (l=0;l<20;l++) utl_pmx_capt[l] = NULL;
   
@@ -848,18 +1150,19 @@ static char *utl_pmx_match(char *r, char *t)
     c ='\0'; 
     switch (*r) {
       case '<' : r++; n = 0; min_n = 1; max_n = 1;
+                 s=r; while (*s && *s != '>') s++;
+                 if (s[1] == '>') s++;
                  switch (*r) {
                    case '?' : min_n = 0; max_n = 1; r++; break;
                    case '*' : min_n = 0; max_n = 0xFFFFFFFF; r++; break;
                    case '+' : min_n = 1; max_n = 0xFFFFFFFF; r++; break;
                  }
-                 while ((l=utl_pmx_class(r,t)) && (n < max_n)) {
+                 while ((l=utl_pmx_class(r,t,s)) && (n < max_n)) {
                    n++;
                    while (*t && l>0) {t++; l--;}
                  }
-                 if ( n < min_n ) utl_pmx_fail();
-                 while (*r && *r != '>') r++;
-                 while (*r == '>') r++; 
+                 if (n < min_n) utl_pmx_fail();
+                 r=s;  while (*r == '>') r++; 
                  break;
 
       case '(' : if (utl_pmx_capnum<10) {
@@ -870,7 +1173,7 @@ static char *utl_pmx_match(char *r, char *t)
                  break;
                  
       case '|' : /* matched! skip the rest */
-                 r = utl_pmx_skip(r);
+                 r = utl_pmx_alt_skip(r);
                  break;
       
       case ')' : if (utl_pmx_capstk_num > 0) {
@@ -912,5 +1215,4 @@ char *utl_pmx_search(char *r, char *t)
 
 
 #endif /* UTL_H */
-
 
