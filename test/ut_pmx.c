@@ -111,14 +111,33 @@ int main(int argc, char *argv[])
 
   p="^(<=A-G>)(<*=b#>)(<?=whqest>)(<*d>)(/<+d>|)";
    
-  q="F#";   s=pmxsearch(p,q);  prtnote(q);
-  q="G";     s=pmxsearch(p,q);  prtnote(q);
-  q="Fbq";    s=pmxsearch(p,q);  prtnote(q);
-  q="Cq3";    s=pmxsearch(p,q);  prtnote(q);
-  q="Cbbq/2";  s=pmxsearch(p,q);  prtnote(q);
+  q="F#";      s=pmxsearch(p,q);  logcheck(s); prtnote(q);
+  q="G";       s=pmxsearch(p,q);  logcheck(s); prtnote(q);
+  q="Fbq";     s=pmxsearch(p,q);  logcheck(s); prtnote(q);
+  q="Cq3";     s=pmxsearch(p,q);  logcheck(s); prtnote(q);
+  q="Cbbq/2";  s=pmxsearch(p,q);  logcheck(s); prtnote(q);
   
   s=pmxsearch(p,"H");
   logcheck(!s);
+  
+  p = "'0123'sad";
+  s=pmxsearch("<q>",p);
+  logcheck(s);
+  
+  p = "(0(123)pd)xy";
+  s=pmxsearch("<q>",p);
+  logcheck(s);
+  logcheck(pmxlen(0) == 9);
+  logprintf("'%.*s'",pmxlen(0),pmxstart(0));
+  
+  s=pmxsearch("<q{}>",p);
+  logcheck(!s);
+  
+  p = "(0(123)pd)xy";
+  s=pmxsearch("<?q[]><+l>",p);
+  logcheck(s);
+  logcheck(pmxstart(0) == p+7);
+  logprintf("'%.*s'",pmxlen(0),pmxstart(0));
   
   logclose();
   exit(0);

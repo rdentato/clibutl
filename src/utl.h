@@ -1088,10 +1088,53 @@ static int utl_pmx_is_in(char *r, char c, char *s)
 
 static int utl_pmx_quoted(char *r, char *t, char *s)
 {
-  if (r == s) { /* just <q>  */
-    
+  int ret;
+  int n;
+  
+  n=s-r;
+  char c_esc='\\';
+  char c_beg='"';
+  char c_end='"';
+  char c;
+  
+  c= *t;
+  if (c == '\0') return 0;
+  _logdebug("QUOTED: [%s] [%s] [%s] (%d)",r,t,s,s-r);
+  n=s-r;
+  if (n <= 1) { /* just <q> or <q\\> */
+         if (c == '"')  {c_esc='\\';  c_beg=c;  c_end='"';}
+    else if (c == '\'') {c_esc='\\';  c_beg=c;  c_end='\'';}
+    else if (c == '(')  {c_esc='\0';  c_beg=c;  c_end=')';}
+    else if (c == '[')  {c_esc='\0';  c_beg=c;  c_end=']';}
+    else if (c == '{')  {c_esc='\0';  c_beg=c;  c_end='}';}
+    else if (c == '<')  {c_esc='\0';  c_beg=c;  c_end='>';}
   }
-  return 0;
+  if (n == 1) { /* escape character provided */
+    c_esc = r[0];
+  }
+  else if (n == 2) { /* start/end but no escape character */
+    c_esc = '\0'; c_beg = r[0]; c_end = r[1];
+  }
+  else if (n >= 3) { /* escape/start/end */
+    c_esc = r[0]; c_beg = r[1]; c_end = r[2];    
+  }
+  _logdebug("QUOTED: '%c' '%c' '%c'",c_esc?c_esc:' ',c_beg,c_end);
+  if (*t == c_beg) {
+    for (t++, n=0, ret=2; *t;  t++, ret++) {
+      if (*t == c_esc && t[1] != '\0') {
+        t++;
+        ret++;
+      }
+      else if (*t == c_end) {
+        if (n > 0) n--;
+        else break;
+      }
+      else if (*t == c_beg) n++;
+    }
+    if (*t == '\0') ret = 0;
+  }
+  
+  return ret;
 }
 
 static int utl_pmx_class(char *r, char *t, char *s)
