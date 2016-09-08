@@ -17,14 +17,14 @@ _BAT=.sh
 
 UTL_H=../src/utl.h
 
-TESTS = t_vec$(_EXE) t_buf$(_EXE) t_mem$(_EXE) t_pmx$(_EXE) t_logassert$(_EXE)
+TESTS = t_vec$(_EXE) t_buf$(_EXE) t_mem$(_EXE) t_pmx$(_EXE) t_pmx2$(_EXE) t_logassert$(_EXE)
 		 
 .SUFFIXES: .c .h .o
 
 DBGFLAGS =
 WRNFLAGS = -Wall -pedantic
 PRFFLAGS =
-CCFLAGS  = 
+CCFLAGS  = -std=c99 
 
 CFLAGS= $(PRFFLAGS) $(WRNFLAGS) $(CCFLAGS) $(DBGFLAGS) -I../src 
 
@@ -44,6 +44,10 @@ t_buf$(_EXE): $(UTL_H)  ut_buf.c
 t_pmx$(_EXE): $(UTL_H)  ut_pmx.c
 	$(CC) $(CFLAGS) -c ut_pmx.c
 	$(CC) $(PRFFLAGS) -o $@ ut_pmx.o
+
+t_pmx2$(_EXE): $(UTL_H)  ut_pmx2.c
+	$(CC) $(CFLAGS) -c ut_pmx2.c
+	$(CC) $(PRFFLAGS) -o $@ ut_pmx2.o
 
 t_mem$(_EXE): $(UTL_H)  ut_mem.c
 	$(CC) $(CFLAGS) -c ut_mem.c

@@ -124,6 +124,9 @@ int   utl_ret(int x);
 void *utl_retptr(void *x);
 #endif
 
+utl_extern(char *utl_emptystring,"");
+
+
 #ifndef UTL_NOLOG
 
 /* [[[
@@ -1020,82 +1023,212 @@ int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j)
 
 #ifndef UTL_NOPMX
 
-utl_extern(char     *utl_pmx_capt[20]   , {0} );
+#define utl_pmx_MAXCAPT 16
+
+utl_extern(char     *utl_pmx_capt[utl_pmx_MAXCAPT][2]   , {{0}} );
 utl_extern(uint8_t   utl_pmx_capnum     ,  0  );
 
 #define pmxsearch(r,t) utl_pmx_search(r,t)
-#define pmxstart(n) utl_pmx_capt[2*(n)]
-#define pmxend(n)   utl_pmx_capt[2*(n)+1]
-#define pmxlen(n)   ((int)(pmxend(n)-pmxstart(n)))
-#define pmxcount()  utl_pmx_capnum
+#define pmxstart(n)    (utl_pmx_capt[n][0])
+#define pmxend(n)      (utl_pmx_capt[n][1])
+#define pmxcount()     (utl_pmx_capnum)
+#define pmxlen(n)      utl_pmx_len(n)
 
 char *utl_pmx_search(char *r, char *t);
+size_t utl_pmx_len(uint8_t n);
 
 #ifdef UTL_MAIN
+#if 0
+static int(*utl_pmx_ext)(char *r, char *t) = NULL;
+#endif
 
 static uint8_t utl_pmx_capstk_num = 0;
-static uint8_t utl_pmx_capstk[10];
-static int(*utl_pmx_ext)(char *r, char *t) = NULL;
+static uint8_t utl_pmx_capstk[utl_pmx_MAXCAPT];
 
-static char *utl_pmx_alt(char *r)
-{
-  int paren=0;
-  
-  while (*r) {
-    switch (*r++) {
-      case '%' : if (*r)  r++; break;
-      case '(' : paren++; break;
-      case ')' : if (paren == 0) return NULL;
-                 paren--; break;
-      case '<' : while (*r && *r != '>') r++; while (*r == '>') r++;
-                 break;
-      case '|' : if (paren == 0) return r;
-    }
-  }
-  return NULL;
+static int utl_pmx_utf8 = 0;
+
+#define utl_pmx_cappush(n) (utl_pmx_capstk[utl_pmx_capstk_num++] = n)
+#define utl_pmx_captop()   (utl_pmx_capstk[utl_pmx_capstk_num-1])
+#define utl_pmx_FAIL       goto fail
+
+static uint8_t utl_pmx_cappop()  {return utl_pmx_capstk[--utl_pmx_capstk_num];}
+
+
+size_t utl_pmx_len(uint8_t n) {
+  return pmxend(n)-pmxstart(n);
 }
 
-static char *utl_pmx_alt_skip(char *r)
+
+static int utl_pmx_get_utf8(char*t, int32_t *u)
+{
+  int n = 0;
+  int32_t v;
+  v=0;
+  
+       if ((*t & 0x80) == 0x00) { v =  *t        ; n = 1; }
+  else if ((*t & 0xE0) == 0xC0) { v = (*t & 0x1F); n = 2; }
+  else if ((*t & 0xF0) == 0xE0) { v = (*t & 0x0F); n = 3; }
+  else if ((*t & 0xF8) == 0xF0) { v = (*t & 0x07); n = 4; }
+  
+  switch (n) {  /* WARNING: falls through! */
+    case 4: if ((*++t & 0xC0) != 0x80) {n=0; break;}
+            v = (v << 6) | (*t & 0x3F);
+    case 3: if ((*++t & 0xC0) != 0x80) {n=0; break;}
+            v = (v << 6) | (*t & 0x3F);
+    case 2: if ((*++t & 0xC0) != 0x80) {n=0; break;}
+            v = (v << 6) | (*t & 0x3F);
+  }
+  if (n && u) *u = v;
+  return n;
+}
+
+static int32_t utl_pmx_nextch(char *t, int32_t *c_ptr)
+{
+  int32_t l=0;
+  
+  if (utl_pmx_utf8) l=utl_pmx_get_utf8(t, c_ptr);
+  else if ((*c_ptr = (uint8_t)(*t))) l = 1;
+  
+  return l;
+}
+
+static char *utl_pmx_alt(char *r, char **t_ptr)
+{
+  int paren=0;
+  
+  *t_ptr=pmxstart(utl_pmx_captop()); /* reset text */
+                 
+  while (*r) {
+    _logdebug("alt: {%s} {%s}",r,*t_ptr);
+    switch (*r++) {
+      case '%': if (*r) r++;
+                break;
+                
+      case '(': paren++;
+                if (utl_pmx_capnum < utl_pmx_MAXCAPT) {
+                  utl_pmx_capt[utl_pmx_capnum][0] = *t_ptr;
+                  utl_pmx_capt[utl_pmx_capnum][1] = *t_ptr;
+                  utl_pmx_capnum++;
+                }
+                break;
+                
+      case ')': if (paren > 0) {
+                  paren--;
+                }
+                else if (utl_pmx_capstk_num>0) {
+                  utl_pmx_cappop();
+                  *t_ptr = pmxstart(utl_pmx_captop());
+                } 
+                else return utl_emptystring;
+                break;
+
+      case '<': while (*r && *r != '>') r++;
+                while (*r == '>') r++;
+                break;
+                 
+      case '|': if (paren == 0) return r;
+    }
+  }
+  return utl_emptystring;
+}
+
+static char *utl_pmx_alt_skip(char *r, char *t)
 {
   int paren=0;
   
   while (*r) {
     switch (*r++) {
-      case '%' : if (*r)  r++; break;
-      case '(' : paren++; break;
-      case ')' : if (paren == 0) return (r-1);
-                 paren--; break;
-      case '<' : while (*r && *r != '>') r++; while (*r == '>') r++;
-                 break;
+      case '%': if (*r)  r++;
+                break;
+                
+      case '(': paren++;
+                if (utl_pmx_capnum < utl_pmx_MAXCAPT) {
+                  utl_pmx_capt[utl_pmx_capnum][0] = t;
+                  utl_pmx_capt[utl_pmx_capnum][1] = t;
+                  utl_pmx_capnum++;
+                }
+                break;
+                
+      case ')': if (paren == 0) return (r-1);
+                paren--;
+                break;
+                
+      case '<': while (*r && *r != '>') r++;
+                while (*r == '>') r++;
+                break;
     }
   }
   return r;
 }
 
-static int utl_pmx_is_in(char *r, char c, char *s)
+static int utl_pmx_isin(char *r, char *s, int32_t c)
 {
-  if (c == *r)   return 1; /* just in case of a - at the beginning*/
+  int32_t c1,c2;
+  int32_t l;
+  /* handle a '-' at the beginning*/
+  if (c == '-' && *r == '-') return 1;
   while (r<s) {
-    if (r[1] == '-' && (s-r) > 2 ) { /* its a range */
-      if (r[0] <= c && c <= r[2]) return 1;
-      r+=3;
+    c2=0;
+    l = utl_pmx_nextch(r,&c1);
+    if (c == c1) return 1;
+    r +=l; 
+    if (*r == '-') {
+      l = utl_pmx_nextch(++r,&c2);
+      if (c1 <= c && c <= c2) return 1;
+      r += l; 
     }
-    else if (c == *r) return 1;
-    r++;
   }
   return 0;
 }
 
+static int32_t utl_pmx_gethex(char *r, int32_t *c_ptr)
+{
+  int32_t c =0;
+  int32_t l =0;
+  
+  while (*r && (*r != '>') && !isxdigit(*r)) {l++; r++;}
+  while (*r) {
+         if ('0'<= *r && *r <= '9') c = (c << 4) + (*r -'0');
+    else if ('A'<= *r && *r <= 'F') c = (c << 4) + (*r -'A'+10);
+    else if ('a'<= *r && *r <= 'f') c = (c << 4) + (*r -'a'+10);
+    else break;
+    l++; r++;
+  }
+  *c_ptr = c;
+  return l;  
+}
+
+static int utl_pmx_isin_codes(char *r, char *s, int32_t c)
+{
+  int32_t c1,c2;
+  int32_t l;
+  while (r<s) {
+    c2=0; c1=0;
+    logdebug("isin: %02x [%s]",c,r);
+    l = utl_pmx_gethex(r,&c1);
+    logdebug("            l:%d c1:%d",l,c1);
+    if (c == c1) return 1;
+    r +=l; 
+    if (*r == '-') {
+      l = utl_pmx_gethex(r,&c2);
+      if (c1 <= c && c <= c2) return 1;
+      r += l; 
+    }
+  }
+  return 0;
+}
+
+#if 0
 static int utl_pmx_quoted(char *r, char *t, char *s)
 {
-  int ret;
+  int ret = 0;
   int n;
   
   n=s-r;
-  char c_esc='\\';
-  char c_beg='"';
-  char c_end='"';
-  char c;
+  int32_t c_esc='\\';
+  int32_t c_beg='"';
+  int32_t c_end='"';
+  int32_t c;
   
   c= *t;
   if (c == '\0') return 0;
@@ -1133,58 +1266,88 @@ static int utl_pmx_quoted(char *r, char *t, char *s)
     }
     if (*t == '\0') ret = 0;
   }
-  
   return ret;
 }
 
-static int utl_pmx_class(char *r, char *t, char *s)
+#endif 
+
+
+static int utl_pmx_class(char **r_ptr, char **t_ptr)
 {
   int inv = 0;
-  int rc = *r;
-  int c = *t;
-  if (isupper(rc)) {inv = 1; rc = tolower(rc); }
-  switch (rc) {
-    case 'a' : return inv ^ !!isalpha(c) ;
-    case 's' : return inv ^ !!isspace(c) ;
-    case 'u' : return inv ^ !!isupper(c) ;
-    case 'l' : return inv ^ !!islower(c) ;
-    case 'd' : return inv ^ !!isdigit(c) ;
-    case 'x' : return inv ^ !!isxdigit(c);
-    case 'w' : return inv ^ !!isalnum(c) ;
   
-    case 'g' : return inv ^ (c == '+'  || c == '-');
-    case 'n' : return inv ^ (c == '\r' || c == '\n');
-    case '!' : inv = 1;
-    case '=' : return inv ^ utl_pmx_is_in(r+1,c,s);
-    
-    case '$' : return c == '\0';
-    case '.' : return 1;
-    
-    case 'q' : return utl_pmx_quoted(r+1,t,s);
-    
-    default  : if (utl_pmx_ext) return utl_pmx_ext(r,t);
+  char *r = *r_ptr;
+  char *t = *t_ptr;
+  char *s;
+  
+  int32_t l;
+  int32_t n;
+  int32_t min_n;
+  int32_t max_n;
+  int32_t c;
+  
+  _logdebug("class:[%s][%s]",r,t);
+                
+  r++; n = 0; min_n = 1; max_n = 1;
+  s=r; while (*s && *s != '>') s++;
+  if (s[1] == '>') s++; /* allow '>' at the end of a pattern */
+  
+  switch (*r) {
+    case '?' : min_n = 0; max_n = 1; r++; break;
+    case '*' : min_n = 0; max_n = INT32_MAX; r++; break;
+    case '+' : min_n = 1; max_n = INT32_MAX; r++; break;
   }
-  return 0;
-}
+  
+  if (*r == '!') {inv = 1; r++;}
+  
+  #define utl_W(tst) while ((l = utl_pmx_nextch(t,&c)) && ((!tst) == inv) && (n<max_n)) {n++; t+=l;}
+  switch (*r) {
+    case 'a' : utl_W(isalpha(c))   ; break;
+    case 's' : utl_W(isspace(c))   ; break;
+    case 'u' : utl_W(isupper(c))   ; break;
+    case 'l' : utl_W(islower(c))   ; break;
+    case 'd' : utl_W(isdigit(c))   ; break;
+    case 'x' : utl_W(isxdigit(c))  ; break;
+    case 'w' : utl_W(isalnum(c))   ; break;
+    case 'c' : utl_W(iscntrl(c))   ; break;
+    case 'g' : utl_W(isgraph(c))   ; break;
+    case 'i' : utl_W((c < 0x80))   ; break;
+    case 'k' : utl_W((c == ' '  || c =='\t')) ; break;
+    case 'n' : utl_W((c == '\r' || c =='\n')) ; break;
+    case 'p' : utl_W(ispunct(c))   ; break;
+    case 'q' : utl_W(isalnum(c))   ; break;
+    case 'r' : utl_W(isprint(c))   ; break;
+    
+    case 'N' : utl_W((t[0]=='\r'
+                          ? (t[1] == '\n'? (l++) : 1)
+                          : (t[0] == '\n'?  1 : 0)) ) ; break;
+    
+    
+    case '.' : utl_W(c)          ; break;
 
-#define utl_pmx_cappush(n) (utl_pmx_capstk[utl_pmx_capstk_num++] = n)
-#define utl_pmx_cappop()   (utl_pmx_capstk[--utl_pmx_capstk_num])
-#define utl_pmx_captop()   (utl_pmx_capstk[utl_pmx_capstk_num-1])
-#define utl_pmx_fail()      goto fail
+    case '=' : utl_W(utl_pmx_isin(r+1,s,c));       break;
+    case '#' : utl_W(utl_pmx_isin_codes(r+1,s,c)); break;
+    
+    case '$' : if (*t == '\0') n=min_n; break;
+    
+  }
+  #undef utl_W
+
+  if (n < min_n) return 0;
+  
+  while (*s == '>') s++;
+  *r_ptr=s;
+  *t_ptr=t;
+  return 1;
+}
 
 static char *utl_pmx_match(char *r, char *t)
 {
-  uint32_t n;
-  uint32_t min_n;
-  uint32_t max_n;
-  uint32_t l;
-  char c;
-  char *s;
-    
-  for (l=0;l<20;l++) utl_pmx_capt[l] = NULL;
-  
-  utl_pmx_capt[0] = t; utl_pmx_capt[1] = t;
-  utl_pmx_capnum=0;
+  int32_t l;
+  int32_t c;
+
+  utl_pmx_capt[0][0] = utl_pmx_capt[0][1] = t;
+  utl_pmx_capnum = 0;
   utl_pmx_capstk_num = 0;   
   utl_pmx_cappush(utl_pmx_capnum++);
   
@@ -1192,64 +1355,68 @@ static char *utl_pmx_match(char *r, char *t)
     logdebug("match %d [%s] [%s]",pmxcount(),r,t);
     c ='\0'; 
     switch (*r) {
-      case '<' : r++; n = 0; min_n = 1; max_n = 1;
-                 s=r; while (*s && *s != '>') s++;
-                 if (s[1] == '>') s++;
-                 switch (*r) {
-                   case '?' : min_n = 0; max_n = 1; r++; break;
-                   case '*' : min_n = 0; max_n = 0xFFFFFFFF; r++; break;
-                   case '+' : min_n = 1; max_n = 0xFFFFFFFF; r++; break;
-                 }
-                 while ((l=utl_pmx_class(r,t,s)) && (n < max_n)) {
-                   n++;
-                   while (*t && l>0) {t++; l--;}
-                 }
-                 if (n < min_n) utl_pmx_fail();
-                 r=s;  while (*r == '>') r++; 
+      case '<' : if (!utl_pmx_class(&r,&t)) utl_pmx_FAIL;
                  break;
 
-      case '(' : if (utl_pmx_capnum<10) {
-                   pmxstart(utl_pmx_capnum) = pmxend(utl_pmx_capnum) = t;
+      case '(' : if (utl_pmx_capnum < utl_pmx_MAXCAPT) {
+                   utl_pmx_capt[utl_pmx_capnum][0] = t;
+                   utl_pmx_capt[utl_pmx_capnum][1] = t;
                    utl_pmx_cappush(utl_pmx_capnum++);
                  }
                  r++;
                  break;
                  
-      case '|' : /* matched! skip the rest */
-                 r = utl_pmx_alt_skip(r);
+      case '|' : /* matched! skip the rest up to ')' */
+                 r = utl_pmx_alt_skip(r,t);
                  break;
       
       case ')' : if (utl_pmx_capstk_num > 0) {
-                   pmxend(utl_pmx_cappop()) = t;
+                   utl_pmx_capt[utl_pmx_cappop()][1] = t;
                  }
                  r++;
                  break;
       
-      case '%' : if (r[1]) {c = r[1]; r++; }
+      case '%' : if (r[1]) {l = utl_pmx_nextch(++r,&c);r+=l;}
+
       default  : if (c == '\0') c = *r;
-                 if (*t != c) utl_pmx_fail();
-                 t++; r++;
+                 while (c) {
+                   if (*t != c) utl_pmx_FAIL;
+                   t++; r++;
+                   c=*r;
+                   if (!(utl_pmx_utf8 && ((c & 0xC0) == 0x80))) break;
+                 }
+                 break;
+                 
+      fail     : r=utl_pmx_alt(r,&t); /* search for an alternative */
+                 if (*r == '\0') utl_pmx_capnum = 0;
                  break;
     }
-    continue;
-    
-    fail: t=pmxstart(utl_pmx_captop()); /* reset text */
-          /* search for an alternative pattern to match */
-          r=utl_pmx_alt(r);
-          /*pmxcount() = 0;*/
-          if (!r) return NULL;
   }
-  utl_pmx_capt[1] = t;
-  return utl_pmx_capt[0];
+  utl_pmx_capt[0][1] = t;
+  
+  for (l = utl_pmx_capnum; l < utl_pmx_MAXCAPT; l++) {
+    utl_pmx_capt[l][0] = utl_pmx_capt[l][1] = NULL;
+  }
+  _logdebug("res: %p - %p",utl_pmx_capt[0][0],utl_pmx_capt[0][1]);
+  return utl_pmx_capt[0][0];
 }
 
 char *utl_pmx_search(char *r, char *t)
 {
   char *ret=NULL;
+  utl_pmx_utf8=0;
   
-  if (*r == '^') ret = utl_pmx_match(r+1,t);
-  else while (!(ret = utl_pmx_match(r,t)) && *t) t++;
-  
+  if (strncmp(r,"<utf>",5) == 0) {r+=5; utl_pmx_utf8=1;}
+  else if (strncmp(r,"<iso>",5) == 0) {r+=5; utl_pmx_utf8=0;}
+    
+  if (*r == '^') {
+    ret = utl_pmx_match(r+1,t);
+  }
+  else {
+    while (!(ret = utl_pmx_match(r,t)) && *t) 
+      t += utl_pmx_utf8 ? utl_pmx_get_utf8(t, NULL) : 1;
+  }
+  _logdebug("ret: %p",ret);
   return ret;
 }
 

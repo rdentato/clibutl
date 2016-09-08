@@ -22,11 +22,37 @@ int main(int argc, char *argv[])
   
   logopen("t_pmx.log","w");
  
-  p = "aersrx";
+  p = "AaBer33444sr3x";
+ 
+  s = pmxsearch("e",p);
+  logcheck(s);
+ 
+  s = pmxsearch("<l>",p);
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
+ 
+  s = pmxsearch("<l><+l>",p);
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
+ 
+  s = pmxsearch("<l><.><l>",p);
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
+ 
+  s = pmxsearch("<+=b-z34>",p);
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
+
+  p = "Aa電ersrx";
+  s = pmxsearch("<utf><l><.><l>",p);
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
+
+  s = pmxsearch("<utf><+=b-z>",p);
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
   
-  s = pmxsearch("a",p);
-  logcheck(s==p);
+  s = pmxsearch("<utf><=è-ë>","eé");
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
   
+  s = pmxsearch("<utf><+!=è-ëà>","eòùé");
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
+  
+
   s = pmxsearch("r",p);
   logcheck(s==p+2);
 
@@ -123,61 +149,31 @@ int main(int argc, char *argv[])
   s=pmxsearch(p,"H");
   logcheck(!s);
   
-  p = "'0123'sad";
-  s=pmxsearch("<q>",p);
-  logcheck(s);
-
-  p = "(0(123)pd)xy";
-  s=pmxsearch("<q>",p);
-  logcheck(s);
-  if (!logcheck(pmxlen(0) == 10)) {
-    logprintf("len: %d",pmxlen(0));
-  }
-  logprintf("'%.*s'",pmxlen(0),pmxstart(0));
-  
-  s=pmxsearch("<q{}>",p);
-  logcheck(!s);
-  
-  p = "(0(123)pd)xy";
-  s=pmxsearch("<?q[]><+l>",p);
-  logcheck(s);
-  logcheck(pmxstart(0) == p+7);
-  logprintf("'%.*s'",pmxlen(0),pmxstart(0));
-  
-  p = "'a\\'b'";
-  s=pmxsearch("<q>",p);
-  logcheck(s && pmxlen(0) ==6);
-
-  s=pmxsearch("<q\\''>",p);
-  logcheck(s && pmxlen(0) ==6);
-
-  s=pmxsearch("<q''>",p);
-  logcheck(s && pmxlen(0) ==4);
-  
-  s=pmxsearch("<?d>",p);
-  logcheck(s && pmxcount()==1 && pmxlen(0)==0);
-  
-  s=pmxsearch("(a|(b c)|(d))","d");
+  p="ABho";
+  s=pmxsearch("<+!u>",p);
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
+ 
+   s=pmxsearch("(a|(b c)|(d))","d");
   logcheck(s);
   logdebug("matched: %d (%.*s) (%.*s) (%.*s) (%.*s)",pmxcount(),pmxlen(0),pmxstart(0),pmxlen(1),pmxstart(1),pmxlen(2),pmxstart(2),pmxlen(3),pmxstart(3));
 
   s=pmxsearch("(a|b|c|d)","d");
-  logcheck(s);
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
 
   s=pmxsearch("é","aèbéc");
-  logcheck(s);
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
   
   s=pmxsearch("田","電田説");
-  logcheck(s);
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
 
   s=pmxsearch("(田|","電田説");
-  logcheck(s);
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
 
   s=pmxsearch("<utf>えxもa","電田説モ");
-  logcheck(!s);
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
   
   s=pmxsearch("<utf>田(もa|)","電田説モ");
-  logcheck(s);
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
   
   s=pmxsearch("(<.>)a","電a");
   logcheck(s && pmxlen(1) == 1);
@@ -186,16 +182,23 @@ int main(int argc, char *argv[])
   logcheck(s && pmxlen(1) == 3);
 
   s=pmxsearch("<+.>","レモ デンタト");
-  logcheck(s);
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
 
   s=pmxsearch("<utf><+.>","レモ デンタト");
-  logcheck(s);
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
 
   s=pmxsearch("<+.>","z電");
-  logcheck(s);
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
   
   s=pmxsearch("<utf>電田説モ","電田説モ");
-  logcheck(s);
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
+ 
+  s=pmxsearch("<+#41-4F>","abcABC");
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
+
+  s=pmxsearch("<utf><+#E0 F2>","aàòb");
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
+
   
   logclose();
   exit(0);
