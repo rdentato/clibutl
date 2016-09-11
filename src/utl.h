@@ -1085,16 +1085,7 @@ size_t utl_pmx_len(uint8_t n);
 static int(*utl_pmx_ext)(char *r, char *t) = NULL;
 #endif
 
-typedef struct {
-  char *txt;
-  char *pat;
-  int32_t min_n;
-  int32_t max_n;
-  int16_t inv;
-} utl_pmx_state_s;
 
-utl_pmx_state_s utl_pmx_stack[utl_pmx_MAXCAPT];
-uint8_t utl_pmx_stack_cnt = 0;
 
 #define utl_pmx_set_paterror(t) do {if (utl_pmx_error == NULL) {utl_pmx_error = t;}} while (0)
 
@@ -1111,18 +1102,60 @@ static int utl_pmx_utf8 = 0;
                           } while(0)
 
 
-static uint32_t utl_pmx_neg = 0;
-#define utl_pmx_is_negated()   (utl_pmx_neg &   (1<<utl_pmx_captop()))
-#define utl_pmx_clr_negated()  (utl_pmx_neg &= ~(1<<utl_pmx_captop()))
-#define utl_pmx_set_negated()  (utl_pmx_neg |=  (1<<utl_pmx_capnum))
 
-static uint8_t utl_pmx_capstk_num = 0;
-static uint8_t utl_pmx_capstk[utl_pmx_MAXCAPT];
+typedef struct {
+  char *pat;
+  char *txt;
+  int32_t min_n;
+  int32_t max_n;
+  int32_t n;
+  int16_t inv;
+  int16_t cap;
+} utl_pmx_state_s;
 
-#define utl_pmx_cappush(n) (utl_pmx_capstk[utl_pmx_capstk_num++] = n)
-#define utl_pmx_captop()   (utl_pmx_capstk[utl_pmx_capstk_num-1])
+utl_pmx_state_s utl_pmx_stack[utl_pmx_MAXCAPT];
+uint8_t utl_pmx_stack_cnt = 0;
 
-static uint8_t utl_pmx_cappop()  {return utl_pmx_capstk[--utl_pmx_capstk_num];}
+static void utl_pmx_state_reset()
+{
+  utl_pmx_stack_cnt = 0;
+  utl_pmx_capnum = 0;
+}
+
+static int utl_pmx_state_push(char *pat, char *txt, int32_t min_n, int32_t max_n, int16_t inv)
+{
+  utl_pmx_state_s *state;
+  
+  if (utl_pmx_stack_cnt >= utl_pmx_MAXCAPT) return 0;
+  
+  state = utl_pmx_stack + utl_pmx_stack_cnt;
+  
+  state->pat   = pat;
+  state->txt   = txt;
+  state->min_n = min_n;
+  state->max_n = max_n;
+  state->n     = 0;
+  state->inv   = inv;
+  state->cap   = utl_pmx_capnum;
+  
+  utl_pmx_newcap(txt);
+  utl_pmx_stack_cnt++;
+  
+  return 1;
+}
+
+static int utl_pmx_state_pop()
+{
+  if (utl_pmx_stack_cnt == 0) return 0;
+  utl_pmx_stack_cnt--;
+  return 1;
+}
+
+static utl_pmx_state_s *utl_pmx_state_top()
+{
+  if (utl_pmx_stack_cnt == 0) return NULL;
+  return utl_pmx_stack + (utl_pmx_stack_cnt-1);
+}
 
 size_t utl_pmx_len(uint8_t n) {return pmxend(n)-pmxstart(n);}
 
@@ -1304,6 +1337,17 @@ static int utl_pmx_class(char **pat_ptr, char **txt_ptr)
   
   if (*pat == '!') {inv = 1; pat++;}
   
+  // {{ This is for handling repetition of patterns between parenthesis:
+  //      Example: '<*>(\\'|<!='>)'   <--  single quoted string (\' as escaped)
+  
+  if (pat[0] == '>' && pat[1] == '(') {
+    pat += 2;
+    if (!utl_pmx_state_push(pat,txt,min_n,max_n,inv)) 
+      utl_pmx_set_paterror(pat);
+    *pat_ptr = pat;
+    return 1;
+  }
+  // }}
   // {{ Matches a pattern n times
   #define utl_W(tst) while ((len = utl_pmx_nextch(txt,&ch)) && ((!tst) == inv) && (n<max_n)) {n++; txt+=len;}
   switch (*pat) {
@@ -1333,17 +1377,20 @@ static int utl_pmx_class(char **pat_ptr, char **txt_ptr)
                             : (txt[0] == '\n'?  1 : 0)) ) ; break;
     
     case '$' : if (*txt == '\0') n=min_n; break;
-    case '>' : return 0;
-    
+    case '>' : utl_pmx_set_paterror(pat);
+               return 0;
+  
+    default  : utl_pmx_set_paterror(pat);
   }
   #undef utl_W
   // }}
+
+  while (*pat_end == '>') pat_end++;
+  *pat_ptr=pat_end;
   
   if (n < min_n) return 0;
   
   // {{ Advance pattern and matched text
-  while (*pat_end == '>') pat_end++;
-  *pat_ptr=pat_end;
   *txt_ptr=txt;
   // }}
   
@@ -1375,9 +1422,11 @@ static char *utl_pmx_alt_skip(char *pat)
   return pat;
 }
 
-static char *utl_pmx_alt(char *pat)
+static char *utl_pmx_alt(char *pat, char **txt_ptr)
 {
   int paren=0;
+  utl_pmx_state_s *state;
+  int inv;
   
   while (*pat) {
     switch (*pat++) {
@@ -1390,22 +1439,38 @@ static char *utl_pmx_alt(char *pat)
                 
       case ')': if (paren > 0) {
                   paren--;
+                  break;
                 }
-                else if (utl_pmx_capstk_num > 0) {
-                  if (utl_pmx_is_negated()) {
-                    utl_pmx_clr_negated();
-                    return pat - 1;
-                  }
-                  else utl_pmx_cappop();
-                } 
-                else return utl_emptystring;
-                break;
+                if (utl_pmx_stack_cnt < 2) {
+                  utl_pmx_set_paterror(pat);
+                  break;
+                }
+                /* If we are here, we have NOT matched what is in the (...) */
+                state = utl_pmx_state_top();
+                inv = state->inv;
+                _logdebug("failed #%d inv:%d min:%d max:%d",state->n,state->inv, state->min_n, state->max_n);
+                if (inv) *txt_ptr = pmxstart(state->cap); /* We WANTED to fail (...) */
+                else if (state->n >= state->min_n) {
+                  /* Failed (...) but still ok */
+                  utl_pmx_capt[state->cap][0] = state->txt;
+                  utl_pmx_capt[state->cap][1] = *txt_ptr;
+                  inv = 1; /* just to avoid retest for n */
+                }
+                
+                utl_pmx_state_pop();
+                
+                if (inv) return pat;
+                return utl_emptystring;
 
       case '<': while (*pat && *pat != '>') pat++;
                 while (*pat == '>') pat++;
                 break;
                  
-      case '|': if (paren == 0) return pat;
+      case '|': if (paren == 0) {
+                  state = utl_pmx_state_top();
+                  *txt_ptr = pmxstart(state->cap); 
+                  return pat;
+                }
     }
   }
   return utl_emptystring;
@@ -1416,70 +1481,68 @@ static char *utl_pmx_match(char *pat, char *txt)
   int32_t len;
   int32_t ch;
   int32_t c1;
-
-  utl_pmx_neg = 0;
-  utl_pmx_capnum = 0;
-  utl_pmx_capstk_num = 0;   
+  int16_t inv =0;
+  utl_pmx_state_s *state;
   
-  utl_pmx_cappush(utl_pmx_capnum);
-  utl_pmx_newcap(txt);
+  utl_pmx_state_reset();
+  utl_pmx_state_push(pat,txt,1,1,0);
   
   while (*pat) {
     logdebug("match %d [%s] [%s]",pmxcount(),pat,txt);
     c1 = 0; 
     switch (*pat) {
+      case '(' : pat++;
+                 if (*pat == '|') {inv = 1; pat++;}
+                 if (!utl_pmx_state_push(pat,txt,1,1,inv)) 
+                   utl_pmx_set_paterror(pat);
+                 break;
+                 
+      case '|' : pat = utl_pmx_alt_skip(pat);
+                 break;
+      
+      case ')' : /* If we are here, we have matched what is in the (...) */
+                 pat++;
+                 _logdebug(")->%d",utl_pmx_stack_cnt);
+                 if (utl_pmx_stack_cnt > 1) {                 
+                   state = utl_pmx_state_top();
+                   inv = state->inv;
+                   if (inv) { /* we shouldn't have matched it :( */
+                     utl_pmx_state_pop();
+                     utl_pmx_FAIL;
+                   }
+                   utl_pmx_capt[state->cap][1] = txt;  
+                   state->n++;
+                   _logdebug("match #%d min:%d max:%d",state->n,state->min_n, state->max_n);
+                   
+                   if (state->n < state->max_n) { /* try again */
+                     utl_pmx_capt[state->cap][0] = txt;
+                     pat = state->pat;
+                   }
+                   else {
+                     utl_pmx_capt[state->cap][0] = state->txt;  
+                     utl_pmx_state_pop();
+                   }
+                 }
+                 else utl_pmx_set_paterror(pat-1); 
+                 break;
+                 
       case '<' : if (!utl_pmx_class(&pat,&txt)) utl_pmx_FAIL;
                  break;
 
-      case '(' : pat++;
-                 if (*pat == '|') {
-                   pat++;
-                   utl_pmx_set_negated();
-                 }
-                 if (utl_pmx_capnum < utl_pmx_MAXCAPT) {
-                   utl_pmx_cappush(utl_pmx_capnum);
-                   utl_pmx_newcap(txt);
-                 }
-                 else utl_pmx_set_paterror(pat);
-                 break;
-                 
-      case '|' : if (utl_pmx_is_negated()) {
-                   pat = utl_pmx_alt(pat);
-                   txt = pmxstart(utl_pmx_captop());
-                   utl_pmx_clr_negated();
-                 }
-                 else
-                   pat = utl_pmx_alt_skip(pat);
-                 break;
-      
-      case ')' : if (utl_pmx_is_negated()) {
-                   utl_pmx_clr_negated();
-                   utl_pmx_FAIL;
-                 } 
-                 if (utl_pmx_capstk_num > 0) {
-                   utl_pmx_capt[utl_pmx_cappop()][1] = txt;
-                 }
-                 else utl_pmx_set_paterror(pat);
-                 pat++;
-                 break;
-                 
       case '%' : if (pat[1]) len = utl_pmx_nextch(++pat, &c1);
 
       default  : if (c1 == 0) len = utl_pmx_nextch(pat, &c1);
                  len = utl_pmx_nextch(txt, &ch);
                  if (ch != c1) utl_pmx_FAIL;
-                 txt+=len; pat+=len;
+                 txt += len; pat += len;
                  break;
                  
-      fail     : pat = utl_pmx_alt(pat) ; /* search for an alternative */
+      fail     : pat = utl_pmx_alt(pat, &txt) ; /* search for an alternative */
                  if (*pat == '\0') utl_pmx_capnum = 0;
-                 txt = pmxstart(utl_pmx_captop()); /* reset text */
                  break;
     }
   }
   utl_pmx_capt[0][1] = txt;
-  
-  if (utl_pmx_capstk_num != 0)  utl_pmx_set_paterror(pat);
   
   for (len = utl_pmx_capnum; len < utl_pmx_MAXCAPT; len++) {
     utl_pmx_capt[len][0] = utl_pmx_capt[len][1] = NULL;

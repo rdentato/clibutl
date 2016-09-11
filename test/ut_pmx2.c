@@ -241,25 +241,10 @@ int main(int argc, char *argv[])
   if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
   
   s=pmxsearch("a(b|(cd|CD))","acD");
-  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
+  logcheck(!s);
   
   s=pmxsearch("a(b|(cd|CD|))","acD");
   if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
-  
-  s=pmxsearch("a(!b)<l>)","acD");
-  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
-  
-  s=pmxsearch("a(!b)<l>)","abcD");
-  if (logcheck(!s)) {logprintf("not matched: %d",pmxlen(1)); }
-  
-  s=pmxsearch("a(!b|x)<l>)","acD");
-  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
-  
-  s=pmxsearch("a(!b|x)<l>)","axcD");
-  if (logcheck(!s)) {logprintf("not matched: %d",pmxlen(1)); }
-  
-  s=pmxsearch("a(!b|x)<l>)","abcD");
-  if (logcheck(!s)) {logprintf("not matched: %d",pmxlen(1)); }
   
   logclose();
   exit(0);
