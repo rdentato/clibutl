@@ -197,6 +197,9 @@ int main(int argc, char *argv[])
   s=pmxsearch("<utf>電田説モ","電田説モ");
   logcheck(s);
   
+   s=pmxsearch("<+.>","z電");
+  logcheck(s);
+  
   logclose();
   exit(0);
 }

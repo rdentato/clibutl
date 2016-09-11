@@ -123,6 +123,11 @@ int main(int argc, char *argv[])
   s = pmxsearch("<+d>(cm|in)",p);
   logcheck(!s);
   
+  p ="17in";
+  s = pmxsearch("<+d>(cm|in|)",p);
+  logcheck(s);
+  logcheck(strncmp(pmxstart(1),"in",pmxlen(1))==0);
+
   
   p = "1234abcde3123";
   s = pmxsearch("<l><*d><l>",p);
@@ -175,7 +180,7 @@ int main(int argc, char *argv[])
   s=pmxsearch("<utf>田(もa|)","電田説モ");
   if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
   
-  s=pmxsearch("(<.>)a","電a");
+  s=pmxsearch("<iso>(<.>)a","電a");
   logcheck(s && pmxlen(1) == 1);
 
   s=pmxsearch("<utf>(<.>)a","電a");
@@ -199,6 +204,62 @@ int main(int argc, char *argv[])
   s=pmxsearch("<utf><+#E0 F2>","aàòb");
   if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
 
+  s=pmxsearch("<N>","ab\ncd");
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
+  
+  s=pmxsearch("<l><+N><l>","ab\n\r\ncd");
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
+  
+  s=pmxsearch("<l><*N><l>","ab\n\r\ncd");
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
+  
+  s=pmxsearch("<3l>","AbcDef");
+  logcheck(!s);
+  
+  s=pmxsearch("<3l>","Abcdef");
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
+  
+  s=pmxsearch("<3-l>","Abcdef");
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
+  
+  s=pmxsearch("<3l>","AbcDef");
+  logcheck(!s);
+  
+  s=pmxsearch("<3-4l>","Abcdef");
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
+  
+  s=pmxsearch("<3-4l>","AbcDef");
+  logcheck(!s);
+  
+  s=pmxsearch("<2-3l>","AbcDefg");
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
+  
+  s=pmxsearch("a(b|(cd|CD))","acd");
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
+  
+  s=pmxsearch("a(b|(cd|CD))","aCD");
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
+  
+  s=pmxsearch("a(b|(cd|CD))","acD");
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
+  
+  s=pmxsearch("a(b|(cd|CD|))","acD");
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
+  
+  s=pmxsearch("a(!b)<l>)","acD");
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
+  
+  s=pmxsearch("a(!b)<l>)","abcD");
+  if (logcheck(!s)) {logprintf("not matched: %d",pmxlen(1)); }
+  
+  s=pmxsearch("a(!b|x)<l>)","acD");
+  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
+  
+  s=pmxsearch("a(!b|x)<l>)","axcD");
+  if (logcheck(!s)) {logprintf("not matched: %d",pmxlen(1)); }
+  
+  s=pmxsearch("a(!b|x)<l>)","abcD");
+  if (logcheck(!s)) {logprintf("not matched: %d",pmxlen(1)); }
   
   logclose();
   exit(0);
