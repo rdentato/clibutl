@@ -129,7 +129,19 @@ utl_extern(char *utl_emptystring,"");
 
 #ifndef UTL_NOLOG
 
-/* [[[
+/*
+
+**          __
+**         /  )
+**        /  /______   ______
+**       /  //  __  \ /  __  \
+**      /  //  /_/  //  /_/  /
+**     (__/ \______/ \___   /
+**                    __/  /
+**                   (____/
+ 
+
+[[[
 ## Logging
 
 Logging functions are just wrappers around the `fprintf()` function.
@@ -374,14 +386,26 @@ void utl_log_assert(int res, char *test, char *file, int32_t line)
 #endif /* UTL_NOLOG */
 
 #ifndef UTL_NOFSM
-/* [[[
+/*
+
+**                     ____
+**                    /  __)
+**                  _/  /_ _____   ______ 
+**                 |   __//  ___) /      \
+**                 /  /   \___ \ /  / /  /
+**                /  /   (_____//__/_/__/ 
+**               /  /
+**               \_/   
+
+
+ [[[
 
 ## Finite State Machines
 
 Many piece of software are better understood (and desigend) as
 [Finite State Machines](https://en.wikipedia.org/wiki/Finite-state_machine).
 
-There are many way to represent a FSM in C. Most common methods are:
+There are many ways to represent a FSM in C. Most common methods are:
   - Using a `state` variable and a `switch{...}` within a loop. 
   - Using a table of pointers to functions that will be invoked to
     perform the actions and move from a state to another.
@@ -433,15 +457,15 @@ the transition diagram.
        }
      }
    ```
-   
+
    ``` 
-                                    ,--------------.
-                                   v                \    
-          start_of_the_day --->  gate_closed  ---> gate_opened --.
-                                    \   \            ^           /
-                                     \   `-----------'          /
-                                      \                        V
-                                       '------> closed_for_the_day
+                               ,--------------.      ,----,
+                              V                \    V    /
+     start_of_the_day --->  gate_closed  ---> gate_opened ---,
+                               \   \            ^           /
+                                \   `-----------'          /
+                                 \                        V
+                                  `------> closed_for_the_day
    ```
 
 The original article had many suggestions on how to extended this
@@ -460,6 +484,13 @@ is the best way to represent FSM in C code.
 
 /*  .% Traced memory
 **  ================
+
+**      ______   _____   ______ 
+**     /      \ / ___ \ /      \
+**    /  / /  //   ___//  / /  /
+**   /__/_/__/ \_____//__/_/__/ 
+**   
+**   
 */
 
 #define memINVALID    -2
@@ -506,7 +537,7 @@ int utl_check(void *ptr,char *file, int32_t line)
     return memINVALID; 
   }
   if (memcmp(p->blk+p->size,utl_END_CHK,4)) {
-    logprintf("MEM Boundary overflow detected %p [%lu] (%lu %s:%d)",
+    logprintf("MEM Boundary overflow %p [%lu] (%lu %s:%d)",
                               p->blk, p->size, utl_mem_allocated, file, line); 
     return memOVERFLOW;
   }
@@ -518,7 +549,7 @@ void *utl_malloc(size_t size, char *file, int32_t line )
 {
   utl_mem_t *p;
   
-  if (size == 0) logprintf("MEM Shouldn't allocate 0 bytes (%lu %s:%d)",
+  if (size == 0) logprintf("MEM Requesto for 0 bytes (%lu %s:%d)",
                                                 utl_mem_allocated, file, line);
   p = malloc(sizeof(utl_mem_t) +size);
   if (p == NULL) {
@@ -529,7 +560,7 @@ void *utl_malloc(size_t size, char *file, int32_t line )
   memcpy(p->chk,utl_BEG_CHK,4);
   memcpy(p->blk+p->size,utl_END_CHK,4);
   utl_mem_allocated += size;
-  logprintf("MEM alloc %p [%lu] (%lu %s:%d)",p->blk,size,utl_mem_allocated,file,line);
+  logprintf("MEM Allocated %p [%lu] (%lu %s:%d)",p->blk,size,utl_mem_allocated,file,line);
   return p->blk;
 }
 
@@ -550,25 +581,25 @@ void utl_free(void *ptr, char *file, int32_t line)
   switch (utl_check(ptr,file,line)) {
     case memNULL  :    logprintf("MEM free NULL (%lu %s:%d)", 
                                                 utl_mem_allocated, file, line);
-                          break;
+                       break;
                           
     case memOVERFLOW : logprintf( "MEM Freeing an overflown block  (%lu %s:%d)", 
                                                            utl_mem_allocated, file, line);
     case memVALID :    p = utl_mem(ptr); 
-                          memcpy(p->chk,utl_CLR_CHK,4);
-                          utl_mem_allocated -= p->size;
-                          if (p->size == 0)
-                            logprintf("MEM Freeing a block of 0 bytes (%lu %s:%d)", 
-                                                utl_mem_allocated, file, line);
+                       memcpy(p->chk,utl_CLR_CHK,4);
+                       utl_mem_allocated -= p->size;
+                       if (p->size == 0)
+                         logprintf("MEM Freeing a block of 0 bytes (%lu %s:%d)", 
+                                             utl_mem_allocated, file, line);
 
-                          logprintf("MEM free %p [%lu] (%lu %s %d)", ptr, 
-                                    p?p->size:0,utl_mem_allocated, file, line);
-                          free(p);
-                          break;
+                       logprintf("MEM free %p [%lu] (%lu %s %d)", ptr, 
+                                 p?p->size:0,utl_mem_allocated, file, line);
+                       free(p);
+                       break;
                           
     case memINVALID :  logprintf("MEM free an invalid pointer! (%lu %s:%d)", 
                                                 utl_mem_allocated, file, line);
-                          break;
+                       break;
   }
 }
 
@@ -588,22 +619,22 @@ void *utl_realloc(void *ptr, size_t size, char *file, int32_t line)
                           return utl_malloc(size,file,line);
                         
       case memVALID  : p = utl_mem(ptr); 
-                          p = realloc(p,sizeof(utl_mem_t) + size); 
-                          if (p == NULL) {
-                            logprintf("MEM Out of Memory (%lu %s:%d)", 
-                                             utl_mem_allocated, file, line);
-                            return NULL;
-                          }
-                          utl_mem_allocated -= p->size;
-                          utl_mem_allocated += size; 
-                          logprintf("MEM realloc %p [%lu] -> %p [%lu] (%lu %s:%d)", 
-                                          ptr, p->size, p->blk, size, 
+                       p = realloc(p,sizeof(utl_mem_t) + size); 
+                       if (p == NULL) {
+                         logprintf("MEM Out of Memory (%lu %s:%d)", 
                                           utl_mem_allocated, file, line);
-                          p->size = size;
-                          memcpy(p->chk,utl_BEG_CHK,4);
-                          memcpy(p->blk+p->size,utl_END_CHK,4);
-                          ptr = p->blk;
-                          break;
+                         return NULL;
+                       }
+                       utl_mem_allocated -= p->size;
+                       utl_mem_allocated += size; 
+                       logprintf("MEM realloc %p [%lu] -> %p [%lu] (%lu %s:%d)", 
+                                       ptr, p->size, p->blk, size, 
+                                       utl_mem_allocated, file, line);
+                       p->size = size;
+                       memcpy(p->chk,utl_BEG_CHK,4);
+                       memcpy(p->blk+p->size,utl_END_CHK,4);
+                       ptr = p->blk;
+                       break;
     }
   }
   return ptr;
@@ -755,7 +786,6 @@ char *utl_buf_sets(buf_t b, uint32_t i, char *s);
 char *utl_buf_inss(buf_t b, uint32_t i, char *s);
 char *utl_buf_insc(buf_t b, uint32_t i, char c);
 int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j);
-
 
 #ifdef UTL_MAIN
 
@@ -1023,200 +1053,151 @@ int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j)
 
 #ifndef UTL_NOPMX
 
+/*
+**        ______   ______ ___  ___ 
+**       /  __  \ /      \\  \/  /  
+**      /  /_/  //  / /  / \    \  
+**     /  _____//__/_/__/ /__/\__\ 
+**    /  /
+**   (__/
+*/
+
+
 #define utl_pmx_MAXCAPT 16
 
 utl_extern(char     *utl_pmx_capt[utl_pmx_MAXCAPT][2]   , {{0}} );
-utl_extern(uint8_t   utl_pmx_capnum     ,  0  );
+utl_extern(uint8_t   utl_pmx_capnum                     ,  0  );
+utl_extern(char     *utl_pmx_error                      ,  NULL );
 
-#define pmxsearch(r,t) utl_pmx_search(r,t)
+#define pmxsearch(r,t)  utl_pmx_search(r,t)
 #define pmxstart(n)    (utl_pmx_capt[n][0])
 #define pmxend(n)      (utl_pmx_capt[n][1])
 #define pmxcount()     (utl_pmx_capnum)
-#define pmxlen(n)      utl_pmx_len(n)
+#define pmxlen(n)       utl_pmx_len(n)
+#define pmxerror()     (utl_pmx_error)
 
-char *utl_pmx_search(char *r, char *t);
+char *utl_pmx_search(char *pat, char *txt);
 size_t utl_pmx_len(uint8_t n);
+
 
 #ifdef UTL_MAIN
 #if 0
 static int(*utl_pmx_ext)(char *r, char *t) = NULL;
 #endif
 
-static uint8_t utl_pmx_capstk_num = 0;
-static uint8_t utl_pmx_capstk[utl_pmx_MAXCAPT];
+typedef struct {
+  char *txt;
+  char *pat;
+  int32_t min_n;
+  int32_t max_n;
+  int16_t inv;
+} utl_pmx_state_s;
+
+utl_pmx_state_s utl_pmx_stack[utl_pmx_MAXCAPT];
+uint8_t utl_pmx_stack_cnt = 0;
+
+#define utl_pmx_set_paterror(t) do {if (utl_pmx_error == NULL) {utl_pmx_error = t;}} while (0)
 
 static int utl_pmx_utf8 = 0;
 
+#define utl_pmx_FAIL       goto fail
+
+#define utl_pmx_newcap(t) do {                                       \
+                            if (utl_pmx_capnum < utl_pmx_MAXCAPT) {  \
+                              utl_pmx_capt[utl_pmx_capnum][0] =      \
+                              utl_pmx_capt[utl_pmx_capnum][1] = (t); \
+                              utl_pmx_capnum++;                      \
+                            }                                        \
+                          } while(0)
+
+
+static uint32_t utl_pmx_neg = 0;
+#define utl_pmx_is_negated()   (utl_pmx_neg &   (1<<utl_pmx_captop()))
+#define utl_pmx_clr_negated()  (utl_pmx_neg &= ~(1<<utl_pmx_captop()))
+#define utl_pmx_set_negated()  (utl_pmx_neg |=  (1<<utl_pmx_capnum))
+
+static uint8_t utl_pmx_capstk_num = 0;
+static uint8_t utl_pmx_capstk[utl_pmx_MAXCAPT];
+
 #define utl_pmx_cappush(n) (utl_pmx_capstk[utl_pmx_capstk_num++] = n)
 #define utl_pmx_captop()   (utl_pmx_capstk[utl_pmx_capstk_num-1])
-#define utl_pmx_FAIL       goto fail
 
 static uint8_t utl_pmx_cappop()  {return utl_pmx_capstk[--utl_pmx_capstk_num];}
 
+size_t utl_pmx_len(uint8_t n) {return pmxend(n)-pmxstart(n);}
 
-size_t utl_pmx_len(uint8_t n) {
-  return pmxend(n)-pmxstart(n);
-}
-
-
-static int utl_pmx_get_utf8(char*t, int32_t *u)
+static int utl_pmx_get_utf8(char*t, int32_t *ch)
 {
-  int n = 0;
-  int32_t v;
-  v=0;
+  int len = 0;
+  int32_t val;
+  val=0;
   
-       if ((*t & 0x80) == 0x00) { v =  *t        ; n = 1; }
-  else if ((*t & 0xE0) == 0xC0) { v = (*t & 0x1F); n = 2; }
-  else if ((*t & 0xF0) == 0xE0) { v = (*t & 0x0F); n = 3; }
-  else if ((*t & 0xF8) == 0xF0) { v = (*t & 0x07); n = 4; }
+       if ((*t & 0x80) == 0x00) { val =  *t        ; len = 1; }
+  else if ((*t & 0xE0) == 0xC0) { val = (*t & 0x1F); len = 2; }
+  else if ((*t & 0xF0) == 0xE0) { val = (*t & 0x0F); len = 3; }
+  else if ((*t & 0xF8) == 0xF0) { val = (*t & 0x07); len = 4; }
   
-  switch (n) {  /* WARNING: falls through! */
-    case 4: if ((*++t & 0xC0) != 0x80) {n=0; break;}
-            v = (v << 6) | (*t & 0x3F);
-    case 3: if ((*++t & 0xC0) != 0x80) {n=0; break;}
-            v = (v << 6) | (*t & 0x3F);
-    case 2: if ((*++t & 0xC0) != 0x80) {n=0; break;}
-            v = (v << 6) | (*t & 0x3F);
+  switch (len) {  /* WARNING: falls through! */
+    case 4: if ((*++t & 0xC0) != 0x80) {len=0; break;}
+            val = (val << 6) | (*t & 0x3F);
+    case 3: if ((*++t & 0xC0) != 0x80) {len=0; break;}
+            val = (val << 6) | (*t & 0x3F);
+    case 2: if ((*++t & 0xC0) != 0x80) {len=0; break;}
+            val = (val << 6) | (*t & 0x3F);
   }
-  if (n && u) *u = v;
-  return n;
+  if (len && ch) *ch = val;
+  return len;
 }
 
+// Returns the length in bytes of the character or 0 if it is '\0'
 static int32_t utl_pmx_nextch(char *t, int32_t *c_ptr)
 {
-  int32_t l=0;
+  int32_t len = 0;
   
-  if (utl_pmx_utf8) l=utl_pmx_get_utf8(t, c_ptr);
-  else if ((*c_ptr = (uint8_t)(*t))) l = 1;
+  if (utl_pmx_utf8) len = utl_pmx_get_utf8(t, c_ptr);
+  else if ((*c_ptr = (uint8_t)(*t))) len = 1;
   
-  return l;
+  return len;
 }
 
-static char *utl_pmx_alt(char *r, char **t_ptr)
+static int32_t utl_pmx_gethex(char *pat, int32_t *c_ptr)
 {
-  int paren=0;
+  int32_t ch =0;
+  int32_t len =0;
   
-  *t_ptr=pmxstart(utl_pmx_captop()); /* reset text */
-                 
-  while (*r) {
-    _logdebug("alt: {%s} {%s}",r,*t_ptr);
-    switch (*r++) {
-      case '%': if (*r) r++;
-                break;
-                
-      case '(': paren++;
-                if (utl_pmx_capnum < utl_pmx_MAXCAPT) {
-                  utl_pmx_capt[utl_pmx_capnum][0] = *t_ptr;
-                  utl_pmx_capt[utl_pmx_capnum][1] = *t_ptr;
-                  utl_pmx_capnum++;
-                }
-                break;
-                
-      case ')': if (paren > 0) {
-                  paren--;
-                }
-                else if (utl_pmx_capstk_num>0) {
-                  utl_pmx_cappop();
-                  *t_ptr = pmxstart(utl_pmx_captop());
-                } 
-                else return utl_emptystring;
-                break;
-
-      case '<': while (*r && *r != '>') r++;
-                while (*r == '>') r++;
-                break;
-                 
-      case '|': if (paren == 0) return r;
-    }
-  }
-  return utl_emptystring;
-}
-
-static char *utl_pmx_alt_skip(char *r, char *t)
-{
-  int paren=0;
-  
-  while (*r) {
-    switch (*r++) {
-      case '%': if (*r)  r++;
-                break;
-                
-      case '(': paren++;
-                if (utl_pmx_capnum < utl_pmx_MAXCAPT) {
-                  utl_pmx_capt[utl_pmx_capnum][0] = t;
-                  utl_pmx_capt[utl_pmx_capnum][1] = t;
-                  utl_pmx_capnum++;
-                }
-                break;
-                
-      case ')': if (paren == 0) return (r-1);
-                paren--;
-                break;
-                
-      case '<': while (*r && *r != '>') r++;
-                while (*r == '>') r++;
-                break;
-    }
-  }
-  return r;
-}
-
-static int utl_pmx_isin(char *r, char *s, int32_t c)
-{
-  int32_t c1,c2;
-  int32_t l;
-  /* handle a '-' at the beginning*/
-  if (c == '-' && *r == '-') return 1;
-  while (r<s) {
-    c2=0;
-    l = utl_pmx_nextch(r,&c1);
-    if (c == c1) return 1;
-    r +=l; 
-    if (*r == '-') {
-      l = utl_pmx_nextch(++r,&c2);
-      if (c1 <= c && c <= c2) return 1;
-      r += l; 
-    }
-  }
-  return 0;
-}
-
-static int32_t utl_pmx_gethex(char *r, int32_t *c_ptr)
-{
-  int32_t c =0;
-  int32_t l =0;
-  
-  while (*r && (*r != '>') && !isxdigit(*r)) {l++; r++;}
-  while (*r) {
-         if ('0'<= *r && *r <= '9') c = (c << 4) + (*r -'0');
-    else if ('A'<= *r && *r <= 'F') c = (c << 4) + (*r -'A'+10);
-    else if ('a'<= *r && *r <= 'f') c = (c << 4) + (*r -'a'+10);
+  while (*pat && (*pat != '>') && !isxdigit(*pat)) {len++; pat++;}
+  while (*pat) {
+         if ('0'<= *pat && *pat <= '9') ch = (ch << 4) + (*pat -'0');
+    else if ('A'<= *pat && *pat <= 'F') ch = (ch << 4) + (*pat -'A'+10);
+    else if ('a'<= *pat && *pat <= 'f') ch = (ch << 4) + (*pat -'a'+10);
     else break;
-    l++; r++;
+    len++; pat++;
   }
-  *c_ptr = c;
-  return l;  
+  *c_ptr = ch;
+  return len;  
 }
 
-static int utl_pmx_isin_codes(char *r, char *s, int32_t c)
+static int utl_pmx_isin(char *pat, char *pat_end, int32_t ch, int32_t (*nxt)(char *, int32_t *))
 {
   int32_t c1,c2;
-  int32_t l;
-  while (r<s) {
+  int32_t len;
+  
+  while (pat<pat_end) {
     c2=0; c1=0;
-    logdebug("isin: %02x [%s]",c,r);
-    l = utl_pmx_gethex(r,&c1);
-    logdebug("            l:%d c1:%d",l,c1);
-    if (c == c1) return 1;
-    r +=l; 
-    if (*r == '-') {
-      l = utl_pmx_gethex(r,&c2);
-      if (c1 <= c && c <= c2) return 1;
-      r += l; 
+    len = nxt(pat, &c1);
+    if (ch == c1) return 1;
+    pat +=len; 
+    if (*pat == '-') {
+      len = nxt(++pat, &c2);
+      if (c1 <= ch && ch <= c2) return 1;
+      pat += len; 
     }
   }
   return 0;
 }
+
+#define utl_pmx_isin_chars(p,e,c) utl_pmx_isin(p,e,c,utl_pmx_nextch)
+#define utl_pmx_isin_codes(p,e,c) utl_pmx_isin(p,e,c,utl_pmx_gethex)
 
 #if 0
 static int utl_pmx_quoted(char *r, char *t, char *s)
@@ -1228,19 +1209,19 @@ static int utl_pmx_quoted(char *r, char *t, char *s)
   int32_t c_esc='\\';
   int32_t c_beg='"';
   int32_t c_end='"';
-  int32_t c;
+  int32_t ch;
   
-  c= *t;
-  if (c == '\0') return 0;
+  ch= *t;
+  if (ch == '\0') return 0;
   _logdebug("QUOTED: [%s] [%s] [%s] (%d)",r,t,s,s-r);
   n=s-r;
   if (n <= 1) { /* just <q> or <q\\> */
-         if (c == '"')  {c_esc='\\';  c_beg=c;  c_end='"';}
-    else if (c == '\'') {c_esc='\\';  c_beg=c;  c_end='\'';}
-    else if (c == '(')  {c_esc='\0';  c_beg=c;  c_end=')';}
-    else if (c == '[')  {c_esc='\0';  c_beg=c;  c_end=']';}
-    else if (c == '{')  {c_esc='\0';  c_beg=c;  c_end='}';}
-    else if (c == '<')  {c_esc='\0';  c_beg=c;  c_end='>';}
+         if (ch == '"')  {c_esc='\\';  c_beg=ch;  c_end='"';}
+    else if (ch == '\'') {c_esc='\\';  c_beg=ch;  c_end='\'';}
+    else if (ch == '(')  {c_esc='\0';  c_beg=ch;  c_end=')';}
+    else if (ch == '[')  {c_esc='\0';  c_beg=ch;  c_end=']';}
+    else if (ch == '{')  {c_esc='\0';  c_beg=ch;  c_end='}';}
+    else if (ch == '<')  {c_esc='\0';  c_beg=ch;  c_end='>';}
   }
   if (n == 1) { /* escape character provided */
     c_esc = r[0];
@@ -1251,7 +1232,7 @@ static int utl_pmx_quoted(char *r, char *t, char *s)
   else if (n >= 3) { /* escape/start/end */
     c_esc = r[0]; c_beg = r[1]; c_end = r[2];    
   }
-  _logdebug("QUOTED: '%c' '%c' '%c'",c_esc?c_esc:' ',c_beg,c_end);
+  _logdebug("QUOTED: '%ch' '%c' '%c'",c_esc?c_esc:' ',c_beg,c_end);
   if (*t == c_beg) {
     for (t++, n=0, ret=2; *t;  t++, ret++) {
       if (*t == c_esc && t[1] != '\0') {
@@ -1268,154 +1249,258 @@ static int utl_pmx_quoted(char *r, char *t, char *s)
   }
   return ret;
 }
-
 #endif 
 
-
-static int utl_pmx_class(char **r_ptr, char **t_ptr)
+static int utl_pmx_class(char **pat_ptr, char **txt_ptr)
 {
   int inv = 0;
   
-  char *r = *r_ptr;
-  char *t = *t_ptr;
-  char *s;
+  char *pat = *pat_ptr;
+  char *txt = *txt_ptr;
+  char *pat_end;
   
-  int32_t l;
-  int32_t n;
-  int32_t min_n;
-  int32_t max_n;
-  int32_t c;
+  int32_t len = 0;
+  int32_t n = 0;
+  int32_t min_n=0;
+  int32_t max_n=0;
+  int32_t ch;
   
-  _logdebug("class:[%s][%s]",r,t);
+  _logdebug("class:[%s][%s]",pat,txt);
                 
-  r++; n = 0; min_n = 1; max_n = 1;
-  s=r; while (*s && *s != '>') s++;
-  if (s[1] == '>') s++; /* allow '>' at the end of a pattern */
+  pat++;  /* skip the '<' */
   
-  switch (*r) {
-    case '?' : min_n = 0; max_n = 1; r++; break;
-    case '*' : min_n = 0; max_n = INT32_MAX; r++; break;
-    case '+' : min_n = 1; max_n = INT32_MAX; r++; break;
+  // {{ Find the end of the pattern
+  pat_end=pat;
+  while (*pat_end && *pat_end != '>') pat_end++;
+  if (pat_end[1] == '>') pat_end++; /* allow just one '>' at the end of a pattern */
+  //}}
+  
+  // {{ Get how many times the match has to occur.
+  //      Examples: <2-4l> matches 2,3 or 4 lower case letters
+  //                <-4d>  matches from 0 to 4 decimal digits
+  //                <2-s>  matches at 2 spaces or more
+  //                <3u>   matches exactly 3 upper case letters
+  while ('0' <= *pat && *pat <= '9') 
+    min_n = (min_n*10) + (*pat++ - '0');
+  
+  if (*pat == '-') {
+    pat++;
+    while ('0'<=*pat && *pat <= '9') 
+      max_n = (max_n*10) + (*pat++ - '0'); 
+    
+    if (max_n == 0) max_n = INT32_MAX;
   }
+  if (max_n < min_n) max_n = min_n;
   
-  if (*r == '!') {inv = 1; r++;}
+  if (max_n == 0) {
+    switch (*pat) {
+      case '*' : min_n = 0; max_n = INT32_MAX; pat++; break;
+      case '+' : min_n = 1; max_n = INT32_MAX; pat++; break;
+      case '?' : min_n = 0; max_n = 1;         pat++; break;
+      default  : min_n = 1; max_n = 1;                break;
+    }
+  }
+  // }}
   
-  #define utl_W(tst) while ((l = utl_pmx_nextch(t,&c)) && ((!tst) == inv) && (n<max_n)) {n++; t+=l;}
-  switch (*r) {
-    case 'a' : utl_W(isalpha(c))   ; break;
-    case 's' : utl_W(isspace(c))   ; break;
-    case 'u' : utl_W(isupper(c))   ; break;
-    case 'l' : utl_W(islower(c))   ; break;
-    case 'd' : utl_W(isdigit(c))   ; break;
-    case 'x' : utl_W(isxdigit(c))  ; break;
-    case 'w' : utl_W(isalnum(c))   ; break;
-    case 'c' : utl_W(iscntrl(c))   ; break;
-    case 'g' : utl_W(isgraph(c))   ; break;
-    case 'i' : utl_W((c < 0x80))   ; break;
-    case 'k' : utl_W((c == ' '  || c =='\t')) ; break;
-    case 'n' : utl_W((c == '\r' || c =='\n')) ; break;
-    case 'p' : utl_W(ispunct(c))   ; break;
-    case 'q' : utl_W(isalnum(c))   ; break;
-    case 'r' : utl_W(isprint(c))   ; break;
+  if (*pat == '!') {inv = 1; pat++;}
+  
+  // {{ Matches a pattern n times
+  #define utl_W(tst) while ((len = utl_pmx_nextch(txt,&ch)) && ((!tst) == inv) && (n<max_n)) {n++; txt+=len;}
+  switch (*pat) {
+    case 'a' : utl_W(isalpha(ch))               ; break;
+    case 's' : utl_W(isspace(ch))               ; break;
+    case 'u' : utl_W(isupper(ch))               ; break;
+    case 'l' : utl_W(islower(ch))               ; break;
+    case 'd' : utl_W(isdigit(ch))               ; break;
+    case 'x' : utl_W(isxdigit(ch))              ; break;
+    case 'w' : utl_W(isalnum(ch))               ; break;
+    case 'c' : utl_W(iscntrl(ch))               ; break;
+    case 'g' : utl_W(isgraph(ch))               ; break;
+    case 'i' : utl_W((ch < 0x80))               ; break;
+    case 'k' : utl_W((ch == ' '  || ch =='\t')) ; break;
+    case 'n' : utl_W((ch == '\r' || ch =='\n')) ; break;
+    case 'p' : utl_W(ispunct(ch))               ; break;
+    case 'q' : utl_W(isalnum(ch))               ; break;
+    case 'r' : utl_W(isprint(ch))               ; break;
     
-    case 'N' : utl_W((t[0]=='\r'
-                          ? (t[1] == '\n'? (l++) : 1)
-                          : (t[0] == '\n'?  1 : 0)) ) ; break;
-    
-    
-    case '.' : utl_W(c)          ; break;
+    case '.' : utl_W(ch)                        ; break;
 
-    case '=' : utl_W(utl_pmx_isin(r+1,s,c));       break;
-    case '#' : utl_W(utl_pmx_isin_codes(r+1,s,c)); break;
+    case '=' : utl_W(utl_pmx_isin_chars(pat+1,pat_end,ch)); break;
+    case '#' : utl_W(utl_pmx_isin_codes(pat+1,pat_end,ch)); break;
     
-    case '$' : if (*t == '\0') n=min_n; break;
+    case 'N' : utl_W((txt[0]=='\r'
+                            ? (txt[1] == '\n'? (len++) : 1)
+                            : (txt[0] == '\n'?  1 : 0)) ) ; break;
+    
+    case '$' : if (*txt == '\0') n=min_n; break;
+    case '>' : return 0;
     
   }
   #undef utl_W
-
+  // }}
+  
   if (n < min_n) return 0;
   
-  while (*s == '>') s++;
-  *r_ptr=s;
-  *t_ptr=t;
+  // {{ Advance pattern and matched text
+  while (*pat_end == '>') pat_end++;
+  *pat_ptr=pat_end;
+  *txt_ptr=txt;
+  // }}
+  
   return 1;
 }
 
-static char *utl_pmx_match(char *r, char *t)
+static char *utl_pmx_alt_skip(char *pat)
 {
-  int32_t l;
-  int32_t c;
+  int paren=0;
+  
+  while (*pat) {
+    switch (*pat++) {
+      case '%': if (*pat) pat++; /* works for utf8 as well */
+                break;
+                
+      case '(': paren++;
+                utl_pmx_newcap(NULL);
+                break;
+                
+      case ')': if (paren == 0) return (pat-1);
+                paren--;
+                break;
+                
+      case '<': while (*pat && *pat != '>') pat++;
+                while (*pat == '>') pat++;
+                break;
+    }
+  }
+  return pat;
+}
 
-  utl_pmx_capt[0][0] = utl_pmx_capt[0][1] = t;
+static char *utl_pmx_alt(char *pat)
+{
+  int paren=0;
+  
+  while (*pat) {
+    switch (*pat++) {
+      case '%': if (*pat) pat++; /* works for utf8 as well */
+                break;
+                
+      case '(': paren++;
+                utl_pmx_newcap(NULL);
+                break;
+                
+      case ')': if (paren > 0) {
+                  paren--;
+                }
+                else if (utl_pmx_capstk_num > 0) {
+                  if (utl_pmx_is_negated()) {
+                    utl_pmx_clr_negated();
+                    return pat - 1;
+                  }
+                  else utl_pmx_cappop();
+                } 
+                else return utl_emptystring;
+                break;
+
+      case '<': while (*pat && *pat != '>') pat++;
+                while (*pat == '>') pat++;
+                break;
+                 
+      case '|': if (paren == 0) return pat;
+    }
+  }
+  return utl_emptystring;
+}
+
+static char *utl_pmx_match(char *pat, char *txt)
+{
+  int32_t len;
+  int32_t ch;
+  int32_t c1;
+
+  utl_pmx_neg = 0;
   utl_pmx_capnum = 0;
   utl_pmx_capstk_num = 0;   
-  utl_pmx_cappush(utl_pmx_capnum++);
   
-  while (*r) {
-    logdebug("match %d [%s] [%s]",pmxcount(),r,t);
-    c ='\0'; 
-    switch (*r) {
-      case '<' : if (!utl_pmx_class(&r,&t)) utl_pmx_FAIL;
+  utl_pmx_cappush(utl_pmx_capnum);
+  utl_pmx_newcap(txt);
+  
+  while (*pat) {
+    logdebug("match %d [%s] [%s]",pmxcount(),pat,txt);
+    c1 = 0; 
+    switch (*pat) {
+      case '<' : if (!utl_pmx_class(&pat,&txt)) utl_pmx_FAIL;
                  break;
 
-      case '(' : if (utl_pmx_capnum < utl_pmx_MAXCAPT) {
-                   utl_pmx_capt[utl_pmx_capnum][0] = t;
-                   utl_pmx_capt[utl_pmx_capnum][1] = t;
-                   utl_pmx_cappush(utl_pmx_capnum++);
+      case '(' : pat++;
+                 if (*pat == '|') {
+                   pat++;
+                   utl_pmx_set_negated();
                  }
-                 r++;
+                 if (utl_pmx_capnum < utl_pmx_MAXCAPT) {
+                   utl_pmx_cappush(utl_pmx_capnum);
+                   utl_pmx_newcap(txt);
+                 }
+                 else utl_pmx_set_paterror(pat);
                  break;
                  
-      case '|' : /* matched! skip the rest up to ')' */
-                 r = utl_pmx_alt_skip(r,t);
-                 break;
-      
-      case ')' : if (utl_pmx_capstk_num > 0) {
-                   utl_pmx_capt[utl_pmx_cappop()][1] = t;
+      case '|' : if (utl_pmx_is_negated()) {
+                   pat = utl_pmx_alt(pat);
+                   txt = pmxstart(utl_pmx_captop());
+                   utl_pmx_clr_negated();
                  }
-                 r++;
+                 else
+                   pat = utl_pmx_alt_skip(pat);
                  break;
       
-      case '%' : if (r[1]) {l = utl_pmx_nextch(++r,&c);r+=l;}
+      case ')' : if (utl_pmx_is_negated()) {
+                   utl_pmx_clr_negated();
+                   utl_pmx_FAIL;
+                 } 
+                 if (utl_pmx_capstk_num > 0) {
+                   utl_pmx_capt[utl_pmx_cappop()][1] = txt;
+                 }
+                 else utl_pmx_set_paterror(pat);
+                 pat++;
+                 break;
+                 
+      case '%' : if (pat[1]) len = utl_pmx_nextch(++pat, &c1);
 
-      default  : if (c == '\0') c = *r;
-                 while (c) {
-                   if (*t != c) utl_pmx_FAIL;
-                   t++; r++;
-                   c=*r;
-                   if (!(utl_pmx_utf8 && ((c & 0xC0) == 0x80))) break;
-                 }
+      default  : if (c1 == 0) len = utl_pmx_nextch(pat, &c1);
+                 len = utl_pmx_nextch(txt, &ch);
+                 if (ch != c1) utl_pmx_FAIL;
+                 txt+=len; pat+=len;
                  break;
                  
-      fail     : r=utl_pmx_alt(r,&t); /* search for an alternative */
-                 if (*r == '\0') utl_pmx_capnum = 0;
+      fail     : pat = utl_pmx_alt(pat) ; /* search for an alternative */
+                 if (*pat == '\0') utl_pmx_capnum = 0;
+                 txt = pmxstart(utl_pmx_captop()); /* reset text */
                  break;
     }
   }
-  utl_pmx_capt[0][1] = t;
+  utl_pmx_capt[0][1] = txt;
   
-  for (l = utl_pmx_capnum; l < utl_pmx_MAXCAPT; l++) {
-    utl_pmx_capt[l][0] = utl_pmx_capt[l][1] = NULL;
+  if (utl_pmx_capstk_num != 0)  utl_pmx_set_paterror(pat);
+  
+  for (len = utl_pmx_capnum; len < utl_pmx_MAXCAPT; len++) {
+    utl_pmx_capt[len][0] = utl_pmx_capt[len][1] = NULL;
   }
   _logdebug("res: %p - %p",utl_pmx_capt[0][0],utl_pmx_capt[0][1]);
   return utl_pmx_capt[0][0];
 }
 
-char *utl_pmx_search(char *r, char *t)
+char *utl_pmx_search(char *pat, char *txt)
 {
   char *ret=NULL;
-  utl_pmx_utf8=0;
   
-  if (strncmp(r,"<utf>",5) == 0) {r+=5; utl_pmx_utf8=1;}
-  else if (strncmp(r,"<iso>",5) == 0) {r+=5; utl_pmx_utf8=0;}
+  utl_pmx_error = NULL;
+  
+       if (strncmp(pat,"<utf>",5) == 0) {pat+=5; utl_pmx_utf8=1;}
+  else if (strncmp(pat,"<iso>",5) == 0) {pat+=5; utl_pmx_utf8=0;}
     
-  if (*r == '^') {
-    ret = utl_pmx_match(r+1,t);
-  }
-  else {
-    while (!(ret = utl_pmx_match(r,t)) && *t) 
-      t += utl_pmx_utf8 ? utl_pmx_get_utf8(t, NULL) : 1;
-  }
+  if (*pat == '^')  ret = utl_pmx_match(pat+1,txt);
+  else while (!(ret = utl_pmx_match(pat,txt)) && *txt) {
+         txt += utl_pmx_utf8 ? utl_pmx_get_utf8(txt, NULL) : 1;
+       }
   _logdebug("ret: %p",ret);
   return ret;
 }
