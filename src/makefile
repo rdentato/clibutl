@@ -13,7 +13,7 @@ endif
 CC=gcc
 AR=ar -ru
 RM=rm -f
-
+CP=cp 
 CFLAGS = -O2
 
 LIBOBJS = utl_pmx.o utl_vec.o
@@ -21,7 +21,7 @@ LIBOBJS = utl_pmx.o utl_vec.o
 HDRS = utl_hdr.h utl_log.h utl_mem.h utl_vec.h utl_pmx.h utl_fsm.h utl_end.h
 CSRC = utl_hdr.c utl_log.c utl_mem.c utl_vec.c utl_pmx.c
 
-all:  utl_unc$(_EXE) libutl.a
+all:  libutl.a
 
 utl.h: utl_unc$(_EXE) $(HDRS)
 	./utl_unc $(HDRS) > utl.h
@@ -35,5 +35,8 @@ utl_unc$(_EXE): utl_unc.o
 libutl.a:  utl.o
 	$(AR) $@ utl.o
 
+dist: libutl.a
+	$(CP) libutl.a utl.h utl.c utl.o ../dist
+  
 clean:
 	$(RM) utl.c utl.h libutl.a *.o
