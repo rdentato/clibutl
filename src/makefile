@@ -14,7 +14,12 @@ CC=gcc
 AR=ar -ru
 RM=rm -f
 CP=cp 
-CFLAGS = -O2
+
+CCFLAGS =  -O2
+PRFFLAGS = 
+WRNFLAGS = -Wall -pedantic
+
+CFLAGS =  $(PRFFLAGS) $(WRNFLAGS) $(CCFLAGS) -std=c99 
 
 LIBOBJS = utl_pmx.o utl_vec.o
 
@@ -30,13 +35,21 @@ utl.c: utl.h $(CSRC)
 	cat $(CSRC) > utl.c
 
 utl_unc$(_EXE): utl_unc.o
-	$(CC)  -o $@ utl_unc.o
+	$(CC) -o $@ utl_unc.o
 
 libutl.a:  utl.o
 	$(AR) $@ utl.o
 
+coverage:
+	make clean utl.h utl.c
+	make "CFLAGS=-fprofile-arcs -ftest-coverage" libutl.a
+  
+profile:
+	make clean utl.h utl.c
+	make "CCFLAGS=-pg" libutl.a
+  
 dist: libutl.a
 	$(CP) libutl.a utl.h utl.c utl.o ../dist
   
 clean:
-	$(RM) utl.c utl.h libutl.a *.o
+	$(RM) utl.c utl.h libutl.a *.o *.gc?? utl_unc$(_EXE)

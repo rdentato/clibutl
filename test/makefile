@@ -14,6 +14,7 @@ endif
 _OBJ=o
 CC=gcc
 _BAT=.sh
+CP=cp
 
 UTL_H=../src/utl.h
 
@@ -59,7 +60,17 @@ t_logassert$(_EXE): $(LIBUTL) ut_logassert.o
 
 $(LIBUTL): 
 	cd ../src; make
+
+coverage:
+	cd ../src; make coverage
+	$(CP) ../src/utl.c .
+	make "PRFFLAGS=-fprofile-arcs -ftest-coverage"
+ 
+profile:
+	cd ../src; make profile
+	$(CP) ../src/utl.c .
+	make "PRFFLAGS=-pg"
   
 clean:
-	rm -f t_* *.o *.tmp *.log gmon.out
+	rm -f t_* *.o *.tmp *.log gmon.out *.gc?? utl.c
 
