@@ -6,9 +6,7 @@
 **   http://opensource.org/licenses/bsd-license.php 
 */
 
-#define UTL_MAIN
 #define UTL_MEMCHECK
-
 #include "utl.h"
 
 

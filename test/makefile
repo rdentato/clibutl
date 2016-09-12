@@ -54,10 +54,10 @@ t_pmx3$(_EXE): $(LIBUTL)  ut_pmx3.o
 t_mem$(_EXE): $(LIBUTL)  ut_mem.o
 	$(CC) $(LNFLAGS) -o $@ ut_mem.o -lutl
 
-t_logassert$(_EXE): $(LIBUTL) ut_logassert.c
+t_logassert$(_EXE): $(LIBUTL) ut_logassert.o
 	$(CC) $(LNFLAGS) -o $@ ut_logassert.o -lutl
 
-$(LIBUTL): $(UTL_H)
+$(LIBUTL): 
 	cd ../src; make
   
 clean:

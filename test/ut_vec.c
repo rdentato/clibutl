@@ -1,4 +1,3 @@
-#define UTL_MAIN
 #include "utl.h"
 #include <math.h>
 

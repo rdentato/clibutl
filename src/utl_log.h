@@ -11,6 +11,8 @@
  
 */
 
+//<<<//
+
 #define logprintf(...)  utl_log_printf(__VA_ARGS__)
 
 #define logopen(f,m)    utl_log_open(f,m)
@@ -39,3 +41,4 @@ int   utl_log_close(char *msg);
 int   utl_log_check(int res, char *test, char *file, int32_t line);
 void  utl_log_assert(int res, char *test, char *file, int32_t line);
 
+//>>>//

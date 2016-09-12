@@ -8,6 +8,7 @@
 **   
 **   
 */
+//<<<//
 
 #define memINVALID    -2
 #define memOVERFLOW   -1
@@ -50,3 +51,5 @@ void  *utl_strdup   (void *ptr, char *file, int32_t line);
                     
 int    utl_check    (void *ptr,char *file, int32_t line);
 size_t utl_mem_used (void);
+
+//>>>//

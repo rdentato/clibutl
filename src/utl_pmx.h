@@ -13,6 +13,8 @@
 ** 
 */
 
+//<<<//
+
 
 #define utl_pmx_MAXCAPT 16
 
@@ -29,3 +31,5 @@ extern char     *utl_pmx_error                   ;
 
 char *utl_pmx_search(char *pat, char *txt);
 size_t utl_pmx_len(uint8_t n);
+
+//>>>//

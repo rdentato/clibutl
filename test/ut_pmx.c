@@ -1,4 +1,4 @@
-#define UTL_MAIN
+
 #include "utl.h"
 
 void prtnote(char *s)

@@ -1,4 +1,3 @@
-#define UTL_MAIN
 #include "utl.h"
 
 int main(int argc, char *argv[])

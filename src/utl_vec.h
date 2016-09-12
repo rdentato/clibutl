@@ -13,6 +13,8 @@
 ** 
 */
 
+//<<<//
+
 #define vec_MIN_ELEM 16
 #define vec_MAX_ELEM (1<<24)
 
@@ -110,3 +112,5 @@ char *utl_buf_sets(buf_t b, uint32_t i, char *s);
 char *utl_buf_inss(buf_t b, uint32_t i, char *s);
 char *utl_buf_insc(buf_t b, uint32_t i, char c);
 int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j);
+
+//>>>//

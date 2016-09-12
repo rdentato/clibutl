@@ -86,6 +86,11 @@ is the best way to represent FSM in C code.
 
 ** ]]] */
 
+//<<<//
+
 #define fsm           
 #define fsmGOTO(x)    goto fsm_state_##x
 #define fsmSTATE(x)   fsm_state_##x :
+
+//>>>//
+
