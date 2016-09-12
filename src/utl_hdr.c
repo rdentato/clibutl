@@ -13,5 +13,10 @@
 ** 
 */
 
-#define UTL_MAIN
 #include "utl.h"
+
+char *utl_emptystring = "";
+
+int   utl_ret(int x)      {return x;}
+void *utl_retptr(void *x) {return x;}
+

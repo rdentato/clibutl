@@ -79,6 +79,24 @@ int main(int argc, char *argv[])
   s= pmxsearch("<utf>«<*>(\\»|<!=»>)»","a«»x");
   if (logcheck(s)) {logprintf("MATCH: %.*s (%.*s)",pmxlen(0),pmxstart(0),pmxlen(1),pmxstart(1));}
   
+  s= pmxsearch("(<l>)x<^1>","axa");
+  if (logcheck(s)) {logprintf("MATCH: %.*s (%.*s)",pmxlen(0),pmxstart(0),pmxlen(1),pmxstart(1));}
+  
+  s= pmxsearch("(<l>)x<^1>","axb");
+  logcheck(!s);
+
+  s= pmxsearch("(<l><d>)x<2^1>","a3xa3a3");
+  if (logcheck(s)) {logprintf("MATCH: %.*s (%.*s)",pmxlen(0),pmxstart(0),pmxlen(1),pmxstart(1));}
+
+  s= pmxsearch("(<l><d>)x<2^1>","a3xa3");
+  logcheck(!s);
+
+  s= pmxsearch("(<l><d>)x<2^1>","a3xa3b3xb3b3");
+  if (logcheck(s)) {logprintf("MATCH: %.*s (%.*s)",pmxlen(0),pmxstart(0),pmxlen(1),pmxstart(1));}
+
+  s= pmxsearch("(<l>)x<^2>","a3xa3");
+  logcheck(!s);
+
   logclose();
   exit(0);
 }

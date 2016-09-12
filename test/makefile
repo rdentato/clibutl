@@ -27,40 +27,39 @@ PRFFLAGS =
 CCFLAGS  = -std=c99 
 
 CFLAGS= $(PRFFLAGS) $(WRNFLAGS) $(CCFLAGS) $(DBGFLAGS) -I../src 
+LNFLAGS = $(PRFFLAGS) -L../src/
+
+LIBUTL = ../src/libutl.a
 
 all:  $(TESTS)
 
 prof:
 	make PRFFLAGS=-pg
 
-t_vec$(_EXE): $(UTL_H) ut_vec.c
-	$(CC) $(CFLAGS) -c ut_vec.c
-	$(CC) $(PRFFLAGS) -o $@ ut_vec.o
+t_vec$(_EXE): $(LIBUTL) ut_vec.o
+	$(CC) $(LNFLAGS) -o $@ ut_vec.o -lutl
 
-t_buf$(_EXE): $(UTL_H)  ut_buf.c
-	$(CC) $(CFLAGS) -c ut_buf.c
-	$(CC) $(PRFFLAGS) -o $@ ut_buf.o
+t_buf$(_EXE): $(LIBUTL)  ut_buf.o
+	$(CC) $(LNFLAGS) -o $@ ut_buf.o -lutl
 
-t_pmx$(_EXE): $(UTL_H)  ut_pmx.c
-	$(CC) $(CFLAGS) -c ut_pmx.c
-	$(CC) $(PRFFLAGS) -o $@ ut_pmx.o
+t_pmx$(_EXE): $(LIBUTL)  ut_pmx.o
+	$(CC) $(LNFLAGS) -o $@ ut_pmx.o -lutl
   
-t_pmx2$(_EXE): $(UTL_H)  ut_pmx2.c
-	$(CC) $(CFLAGS) -c ut_pmx2.c
-	$(CC) $(PRFFLAGS) -o $@ ut_pmx2.o
+t_pmx2$(_EXE): $(LIBUTL)  ut_pmx2.o
+	$(CC) $(LNFLAGS) -o $@ ut_pmx2.o -lutl
 
-t_pmx3$(_EXE): $(UTL_H)  ut_pmx3.c
-	$(CC) $(CFLAGS) -c ut_pmx3.c
-	$(CC) $(PRFFLAGS) -o $@ ut_pmx3.o
+t_pmx3$(_EXE): $(LIBUTL)  ut_pmx3.o
+	$(CC) $(LNFLAGS) -o $@ ut_pmx3.o -lutl
 
-t_mem$(_EXE): $(UTL_H)  ut_mem.c
-	$(CC) $(CFLAGS) -c ut_mem.c
-	$(CC) $(PRFFLAGS) -o $@ ut_mem.o
+t_mem$(_EXE): $(LIBUTL)  ut_mem.o
+	$(CC) $(LNFLAGS) -o $@ ut_mem.o -lutl
 
-t_logassert$(_EXE): $(UTL_H) ut_logassert.c
-	$(CC) $(CFLAGS) -c ut_logassert.c
-	$(CC) $(PRFFLAGS) -o $@ ut_logassert.o
+t_logassert$(_EXE): $(LIBUTL) ut_logassert.c
+	$(CC) $(LNFLAGS) -o $@ ut_logassert.o -lutl
 
+$(LIBUTL): $(UTL_H)
+	cd ../src; make
+  
 clean:
 	rm -f t_* *.o *.tmp *.log gmon.out
 
