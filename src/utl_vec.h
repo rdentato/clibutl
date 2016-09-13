@@ -31,12 +31,12 @@ typedef struct vec_s {
   uint32_t  elm;
 } vec_s, *vec_t;
 
-#define vecset(type,v,i,e)   (type *)utl_retptr((void *)(*((type *)(&(v->elm))) = (e)), utl_vec_set(v,i)))
-#define vecins(type,v,i,e)   (*((type *)(&(v->elm))) = (e), (type *)utl_vec_ins(v,i))
-#define vecadd(type,v,e)     (*((type *)(&(v->elm))) = (e), (type *)utl_vec_ins(v,(v)->cnt))
+#define vecset(type,v,i,e)   (type *)utl_retptr(((*((type *)(&((v)->elm))) = (e)), utl_vec_set(v,i)))
+#define vecins(type,v,i,e)   (*((type *)(&((v)->elm))) = (e), (type *)utl_vec_ins(v,i))
+#define vecadd(type,v,e)     (*((type *)(&((v)->elm))) = (e), (type *)utl_vec_ins(v,(v)->cnt))
 
 #define vecget(type,v,i)     (type *)utl_vec_get(v,i)
-#define vec(type,v)          ((type *)(v->vec))
+#define vec(type,v)          ((type *)((v)->vec))
 
 #define vecnew(type)         utl_vec_new(sizeof(type))
 #define vecfree(v)           utl_vec_free(v)
