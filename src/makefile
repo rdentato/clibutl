@@ -53,8 +53,8 @@ profile:
 	make clean utl.h utl.c
 	make "CCFLAGS=-pg" libutl.a
   
-dist: libutl.a
-	$(CP) libutl.a utl.h utl.c utl.o ../dist
+dist: libutl.a utl_single.h 
+	$(CP) libutl.a utl.h utl.c utl_single.h utl.o ../dist
   
 clean:
 	$(RM) utl.c utl.h utl_single.h libutl.a *.o *.gc?? utl_unc$(_EXE)

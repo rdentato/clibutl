@@ -13,4 +13,4 @@ dist:
 	cd ../src; make dist
   
 clean:
-	$(RM) libutl.a utl.h utl.c utl.o
+	$(RM) libutl.a utl.h utl.c utl_single.h utl.o
