@@ -2,3 +2,6 @@ sudo: false
 language: c
 script: make
 install: true
+compiler:
+  - clang
+  - gcc
