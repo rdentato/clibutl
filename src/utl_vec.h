@@ -31,7 +31,7 @@ typedef struct vec_s {
   uint32_t  elm;
 } vec_s, *vec_t;
 
-#define vecset(type,v,i,e)   (type *)utl_retptr(((*((type *)(&((v)->elm))) = (e)), utl_vec_set(v,i)))
+#define vecset(type,v,i,e)   (void)(((*((type *)(&((v)->elm))) = (e)), utl_vec_set(v,i)))
 #define vecins(type,v,i,e)   (*((type *)(&((v)->elm))) = (e), (type *)utl_vec_ins(v,i))
 #define vecadd(type,v,e)     (*((type *)(&((v)->elm))) = (e), (type *)utl_vec_ins(v,(v)->cnt))
 
