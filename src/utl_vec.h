@@ -32,8 +32,8 @@ typedef struct vec_s {
 } vec_s, *vec_t;
 
 #define vecset(type,v,i,e)   (void)(((*((type *)(&((v)->elm))) = (e)), utl_vec_set(v,i)))
-#define vecins(type,v,i,e)   (*((type *)(&((v)->elm))) = (e), (type *)utl_vec_ins(v,i))
-#define vecadd(type,v,e)     (*((type *)(&((v)->elm))) = (e), (type *)utl_vec_ins(v,(v)->cnt))
+#define vecins(type,v,i,e)   (void)(*((type *)(&((v)->elm))) = (e), (type *)utl_vec_ins(v,i))
+#define vecadd(type,v,e)     (void)(*((type *)(&((v)->elm))) = (e), (type *)utl_vec_ins(v,(v)->cnt))
 
 #define vecget(type,v,i)     (type *)utl_vec_get(v,i)
 #define vec(type,v)          ((type *)((v)->vec))
@@ -90,7 +90,7 @@ void *utl_vec_search(vec_t v);
 
 #define buf_t                 vec_t
 #define bufnew()              vecnew(char)
-#define bufaddc(b,c)           vecadd(char,b,c)
+#define bufaddc(b,c)          vecadd(char,b,c)
 #define bufsetc(b,i,c)        vecset(char,b,i,c)
 #define bufinsc(b,i,c)        utl_buf_insc(b,i,c)
 #define bufinss(b,i,s)        utl_buf_inss(b,i,s)
