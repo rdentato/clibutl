@@ -12,6 +12,16 @@
 #define UTL_MEM
 #include "utl.h"
 
+//<<<//
+#ifndef UTL_NOMEM
+#ifdef UTL_MAIN
+
+#ifndef memINVALID
+#define memINVALID    -2
+#define memOVERFLOW   -1
+#define memVALID       0
+#define memNULL        1
+#endif
 
 static char  *utl_BEG_CHK = "\xBE\xEF\xF0\x0D";
 static char  *utl_END_CHK = "\xDE\xAD\xC0\xDA";
@@ -160,4 +170,8 @@ void *utl_strdup(void *ptr, char *file, int32_t line)
 }
 #undef utl_mem
 
-size_t utl_mem_used() {return utl_mem_allocated;}
+size_t utl_mem_used(void) {return utl_mem_allocated;}
+
+#endif
+#endif
+//>>>//

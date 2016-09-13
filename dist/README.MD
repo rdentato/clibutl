@@ -20,4 +20,8 @@ Here you can find:
  - `utl.o`    : The object file you can link directly
  - `libutl.a` : The static linking library
  
- 
+  The best option is to statically link with `libutl.a` or recompile `utl.c` 
+as a static library. If you just link the object file, you might have warnings
+about function that are defined but not used (e.g. if you just use the log
+functions but not the pmx functions.
+

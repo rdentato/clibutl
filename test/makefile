@@ -18,7 +18,9 @@ CP=cp
 
 UTL_H=../src/utl.h
 
-TESTS = t_vec$(_EXE) t_buf$(_EXE) t_mem$(_EXE) t_pmx$(_EXE) t_pmx2$(_EXE)  t_pmx3$(_EXE) t_logassert$(_EXE)
+TESTS = t_vec$(_EXE) t_buf$(_EXE)  t_mem$(_EXE)  t_mem2$(_EXE)\
+        t_pmx$(_EXE) t_buf2$(_EXE) t_pmx2$(_EXE) t_pmx3$(_EXE) \
+        t_logassert$(_EXE)
 		 
 .SUFFIXES: .c .h .o
 
@@ -31,6 +33,7 @@ CFLAGS= $(PRFFLAGS) $(WRNFLAGS) $(CCFLAGS) $(DBGFLAGS) -I../src
 LNFLAGS = $(PRFFLAGS) -L../src/
 
 LIBUTL = ../src/libutl.a
+HDR_SINGLE = ../src/utl_single.h
 
 all:  $(TESTS)
 
@@ -58,9 +61,23 @@ t_mem$(_EXE): $(LIBUTL)  ut_mem.o
 t_logassert$(_EXE): $(LIBUTL) ut_logassert.o
 	$(CC) $(LNFLAGS) -o $@ ut_logassert.o -lutl
 
-$(LIBUTL): 
-	cd ../src; make
+# Test using `utl_single.h`
+t_mem2$(_EXE): $(HDR_SINGLE)  ut_mem2.o
+	$(CC) $(LNFLAGS) -o $@ ut_mem2.o
 
+t_buf2$(_EXE): $(HDR_SINGLE)  ut_buf2.o
+	$(CC) $(LNFLAGS) -o $@ ut_buf2.o
+
+  
+## -----------
+
+$(LIBUTL): 
+	cd ../src; make libutl.a
+
+$(HDR_SINGLE): 
+	cd ../src; make utl_single.h
+
+  
 coverage:
 	cd ../src; make coverage
 	$(CP) ../src/utl.c .

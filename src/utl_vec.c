@@ -1,5 +1,24 @@
+/* 
+**  (C) 2016 by Remo Dentato (rdentato@gmail.com)
+** 
+** This software is distributed under the terms of the MIT license:
+**  https://opensource.org/licenses/MIT
+**     
+**                     ___   __
+**                  __/  /_ /  )
+**          ___  __(_   ___)  /
+**         /  / /  )/  /  /  /  Minimalist
+**        /  /_/  //  (__/  /  C utility 
+**       (____,__/(_____(__/  Library
+** 
+*/
+
 
 #include "utl.h"
+
+//<<<//
+#ifndef UTL_NOVEC
+#ifdef UTL_MAIN
 
 static int16_t utl_vec_makeroom(vec_t v,uint32_t n)
 {
@@ -258,3 +277,7 @@ int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j)
   }
   return r;
 }
+
+#endif
+#endif
+//>>>//

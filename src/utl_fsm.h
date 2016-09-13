@@ -27,7 +27,8 @@ understood as a graph with nodes representing states and arcs representing
 transitions. 
 
 The following macros implement a technique explained by Tim Cooper in the
-the article [*Goto? Yes Goto!*](http://ftp.math.utah.edu/pub/tex/bib/complang.html#Cooper:1991:GYG)
+the article
+[*Goto? Yes Goto!*](http://ftp.math.utah.edu/pub/tex/bib/complang.html#Cooper:1991:GYG)
 published on the May 1991 issue of the *Computer Language* magazine.
 
 The main advantage is to directly implement the FSM transition diagram
@@ -88,9 +89,12 @@ is the best way to represent FSM in C code.
 
 //<<<//
 
+#ifndef UTL_NOFSM
+
 #define fsm           
 #define fsmGOTO(x)    goto fsm_state_##x
 #define fsmSTATE(x)   fsm_state_##x :
 
+#endif
 //>>>//
 

@@ -1,4 +1,3 @@
-
 /*
 
 **          __
@@ -9,7 +8,6 @@
 **     (__/ \______/ \___   /
 **                    __/  /
 **                   (____/
- 
 
 [[[
 ## Logging
@@ -160,8 +158,9 @@ By the way, this is a risk that still must be taken into consideration for
 any other identifier, so I'm not feeling particularly pressed on changing it.
   
 ** ]]] */
-
-
+//<<<//
+#ifndef UTL_NOLOG
+#ifdef UTL_MAIN
 
 static FILE *utl_log_file = NULL;
 
@@ -221,3 +220,7 @@ void utl_log_assert(int res, char *test, char *file, int32_t line)
     abort();
   }
 }
+
+#endif
+#endif
+//>>>//

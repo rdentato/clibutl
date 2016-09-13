@@ -15,6 +15,9 @@
 
 #include "utl.h"
 
+//<<<//
+#ifndef UTL_NOPMX
+#ifdef UTL_MAIN
 #if 0
 static int(*utl_pmx_ext)(char *r, char *t) = NULL;
 #endif
@@ -37,8 +40,6 @@ static int utl_pmx_utf8 = 0;
                               utl_pmx_capnum++;                      \
                             }                                        \
                           } while(0)
-
-
 
 typedef struct {
   char *pat;
@@ -535,3 +536,6 @@ char *utl_pmx_search(char *pat, char *txt)
   _logdebug("ret: %p",ret);
   return ret;
 }
+#endif
+#endif
+//>>>//

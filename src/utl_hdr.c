@@ -12,11 +12,13 @@
 **       (____,__/(_____(__/  Library
 ** 
 */
-
 #include "utl.h"
+#define UTL_MAIN
 
+//<<<//
 char *utl_emptystring = "";
 
 int   utl_ret(int x)      {return x;}
 void *utl_retptr(void *x) {return x;}
+//>>>//
 
