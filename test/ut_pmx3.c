@@ -7,7 +7,7 @@ int main(int argc, char *argv[])
   char *p;
   char *q;
   */
-  logopen("t_pmx.log","w");
+  logopen("t_pmx3.log","w");
  
   s = pmxsearch("a|b","xa");
   if (logcheck(s)) {logprintf("MATCH: %.*s",pmxlen(0),pmxstart(0));}

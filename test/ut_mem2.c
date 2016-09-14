@@ -18,7 +18,7 @@ int main (int argc, char *argv[])
   int valid;
   int k;
  
-  logopen("t_mem.log","w");
+  logopen("t_mem2.log","w");
   
  
   ptr_a = malloc(32); 

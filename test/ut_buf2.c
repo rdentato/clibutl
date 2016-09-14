@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
   char c;
   FILE *f;
   
-  logopen("t_buf.log","w");
+  logopen("t_buf2.log","w");
  
   
   b = bufnew();
