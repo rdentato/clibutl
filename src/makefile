@@ -10,7 +10,7 @@ ifeq "$(COMSPEC)" ""
 _EXE=
 endif
 
-CC=gcc
+#CC=gcc
 AR=ar -ru
 RM=rm -f
 CP=cp 

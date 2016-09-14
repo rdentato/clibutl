@@ -12,7 +12,7 @@ _EXE=
 endif
 
 _OBJ=o
-CC=gcc
+#CC=gcc
 _BAT=.sh
 CP=cp
 
