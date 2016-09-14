@@ -4,6 +4,9 @@
 # This software is distributed under the terms of the MIT license:
 #   https://opensource.org/licenses/MIT
 #
+#
+#  Makefile for Gcc tested on Linux and Msys
+#
 
 _EXE=.exe
 ifeq "$(COMSPEC)" ""
@@ -36,8 +39,20 @@ SNGL = src/utl_hdr.h src/utl_log.h src/utl_mem.c src/utl_mem.h \
 TESTS = test/t_vec$(_EXE)  test/t_buf$(_EXE)  test/t_mem$(_EXE)  \
         test/t_mem2$(_EXE) test/t_pmx$(_EXE)  test/t_buf2$(_EXE) \
         test/t_pmx2$(_EXE) test/t_pmx3$(_EXE) test/t_logassert$(_EXE)
-       
+
+#              __ __  
+#      ____ _ / // /_ 
+#     / __ `// // /(_)
+#    / /_/ // // /_   
+#    \__,_//_//_/(_)          
+
 all: src dist test
+
+#                            
+#       _____ _____ _____ _  
+#      / ___// ___// ___/(_) 
+#     (__  )/ /   / /__ _    
+#    /____//_/    \___/(_)   
 
 src: src/libutl.a src/utl_single.h
 
@@ -57,9 +72,21 @@ src/libutl.a:  src/utl.o
 	$(AR) $@ src/utl.o
 
 
+#            __ _        __  
+#       ____/ /(_)_____ / /_ _  
+#      / __  // // ___// __/(_) 
+#     / /_/ // /(__  )/ /_ _    
+#     \__,_//_//____/ \__/(_)   
+
 dist: src/libutl.a src/utl_single.h 
 	$(CP) src/libutl.a src/utl.h src/utl.c src/utl_single.h src/utl.o dist
 
+
+#       __               __    
+#      / /_ ___   _____ / /_ _ 
+#     / __// _ \ / ___// __/(_)
+#    / /_ /  __/(__  )/ /_ _   
+#    \__/ \___//____/ \__/(_)
 
 test:  $(TESTS)
 
@@ -91,8 +118,19 @@ test/t_mem2$(_EXE): src/utl_single.h  test/ut_mem2.o
 test/t_buf2$(_EXE): src/utl_single.h  test/ut_buf2.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_buf2.o
 
-  
+runtest: test
+	cd test; for f in t_*; do ./$$f ; done 
+	cd test; grep "#KO:" t_*.log
+
+
+#              __                      
+#       _____ / /___   ____ _ ____   _   
+#      / ___// // _ \ / __ `// __ \ (_)  
+#     / /__ / //  __// /_/ // / / /_     
+#     \___//_/ \___/ \__,_//_/ /_/(_)    
+
 clean:
 	cd src;  $(RM) utl.c utl.h utl_single.h libutl.a *.o *.gc?? utl_unc$(_EXE)
 	cd test; $(RM) t_* *.o *.tmp *.log gmon.out *.gc?? utl.c
 	cd dist; $(RM) libutl.a utl.h utl.c utl_single.h utl.o
+	$(RM) *.log
