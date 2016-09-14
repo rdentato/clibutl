@@ -127,7 +127,7 @@ size_t utl_mem_used (void);
 #ifndef UTL_NOVEC
 
 #define vec_MIN_ELEM 16
-#define vec_MAX_ELEM (1<<24)
+#define vec_MAX_ELEM (UINT32_MAX-1)
 
 typedef struct vec_s {
   uint32_t  fst; 
@@ -141,9 +141,10 @@ typedef struct vec_s {
   uint32_t  elm;
 } vec_s, *vec_t;
 
-#define vecset(type,v,i,e)   (void)(((*((type *)(&((v)->elm))) = (e)), utl_vec_set(v,i)))
-#define vecins(type,v,i,e)   (void)(*((type *)(&((v)->elm))) = (e), (type *)utl_vec_ins(v,i))
-#define vecadd(type,v,e)     (void)(*((type *)(&((v)->elm))) = (e), (type *)utl_vec_ins(v,(v)->cnt))
+#define vecset(type,v,i,e)   (void)(*((type *)((char *)(v) + offsetof(vec_s,elm))) = (e), (type *)utl_vec_set(v,i))
+#define vecins(type,v,i,e)   (void)(*((type *)((char *)(v) + offsetof(vec_s,elm))) = (e), (type *)utl_vec_ins(v,i))
+
+#define vecadd(type,v,e)     vecins(type,v,e,UINT32_MAX)
 
 #define vecget(type,v,i)     (type *)utl_vec_get(v,i)
 #define vec(type,v)          ((type *)((v)->vec))

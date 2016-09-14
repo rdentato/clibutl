@@ -288,7 +288,7 @@ size_t utl_mem_used (void);
 #ifndef UTL_NOVEC
 
 #define vec_MIN_ELEM 16
-#define vec_MAX_ELEM (1<<24)
+#define vec_MAX_ELEM (UINT32_MAX-1)
 
 typedef struct vec_s {
   uint32_t  fst; 
@@ -302,9 +302,10 @@ typedef struct vec_s {
   uint32_t  elm;
 } vec_s, *vec_t;
 
-#define vecset(type,v,i,e)   (void)(((*((type *)(&((v)->elm))) = (e)), utl_vec_set(v,i)))
-#define vecins(type,v,i,e)   (void)(*((type *)(&((v)->elm))) = (e), (type *)utl_vec_ins(v,i))
-#define vecadd(type,v,e)     (void)(*((type *)(&((v)->elm))) = (e), (type *)utl_vec_ins(v,(v)->cnt))
+#define vecset(type,v,i,e)   (void)(*((type *)((char *)(v) + offsetof(vec_s,elm))) = (e), (type *)utl_vec_set(v,i))
+#define vecins(type,v,i,e)   (void)(*((type *)((char *)(v) + offsetof(vec_s,elm))) = (e), (type *)utl_vec_ins(v,i))
+
+#define vecadd(type,v,e)     vecins(type,v,e,UINT32_MAX)
 
 #define vecget(type,v,i)     (type *)utl_vec_get(v,i)
 #define vec(type,v)          ((type *)((v)->vec))
@@ -421,10 +422,18 @@ void *utl_retptr(void *x) {return x;}
 #ifdef UTL_MAIN
 
 static FILE *utl_log_file = NULL;
+static uint32_t utl_log_check_num = 0;
+static uint32_t utl_log_check_fail  = 0;
 
 int utl_log_close(char *msg)
 {
   int ret = 0;
+  
+  if (utl_log_check_num) {
+    logprintf("CHK #KO: %d (of %d)",utl_log_check_fail,utl_log_check_num);
+    utl_log_check_fail = 0;
+    utl_log_check_num = 0;
+  }
   if (msg) logprintf(msg);
   if (utl_log_file && utl_log_file != stderr) ret = fclose(utl_log_file);
   utl_log_file = NULL;
@@ -439,6 +448,8 @@ FILE *utl_log_open(char *fname, char *mode)
   utl_log_close(NULL);
   utl_log_file = fopen(fname,md);
   logprintf("LOG START");
+  utl_log_check_num = 0;
+  utl_log_check_fail = 0;
   return utl_log_file;
 }
 
@@ -467,6 +478,8 @@ int utl_log_printf(char *format, ...)
 int utl_log_check(int res, char *test, char *file, int32_t line)
 {
   logprintf("CHK %s (%s) %s:%d", (res?"PASS":"FAIL"), test, file, line);
+  if (!res) utl_log_check_fail++;
+  utl_log_check_num++;
   return res;
 }
 
@@ -594,6 +607,7 @@ void *utl_vec_ins(vec_t v, uint32_t i)
 {
   uint8_t *elm=NULL;
 
+  if (i == UINT32_MAX) i = v->cnt;
   if (utl_vec_makegap(v,i,1)) elm = utl_vec_set(v,i);
   vecunsorted(v);
   return elm;
