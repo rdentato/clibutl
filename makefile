@@ -1,16 +1,98 @@
 # 
-#  (C) 2009 Remo Dentato (rdentato@gmail.com)
+#  (C) 2016 Remo Dentato (rdentato@gmail.com)
 # 
 # This software is distributed under the terms of the MIT license:
 #   https://opensource.org/licenses/MIT
 #
 
-all:  
-	cd src; make
-	cd test; make
-	cd dist; make
+_EXE=.exe
+ifeq "$(COMSPEC)" ""
+_EXE=
+endif
+
+#CC=gcc
+AR=ar -ru
+RM=rm -f
+CP=cp 
+
+CCFLAGS =  -O2
+PRFFLAGS = 
+WRNFLAGS = -Wall -pedantic
+DBGFLAGS =
+
+CFLAGS = $(PRFFLAGS) $(WRNFLAGS) $(CCFLAGS) -std=c99 -Isrc/
+LNFLAGS = $(PRFFLAGS) -Lsrc/
+
+HDRS = src/utl_hdr.h src/utl_log.h src/utl_mem.h src/utl_vec.h \
+       src/utl_pmx.h src/utl_fsm.h src/utl_end.h
+
+CSRC = src/utl_hdr.c src/utl_log.c src/utl_mem.c src/utl_vec.c \
+       src/utl_pmx.c 
+
+SNGL = src/utl_hdr.h src/utl_log.h src/utl_mem.c src/utl_mem.h \
+       src/utl_vec.h src/utl_pmx.h src/utl_fsm.h src/utl_hdr.c \
+       src/utl_log.c src/utl_vec.c src/utl_pmx.c src/utl_end.h
+
+TESTS = test/t_vec$(_EXE)  test/t_buf$(_EXE)  test/t_mem$(_EXE)  \
+        test/t_mem2$(_EXE) test/t_pmx$(_EXE)  test/t_buf2$(_EXE) \
+        test/t_pmx2$(_EXE) test/t_pmx3$(_EXE) test/t_logassert$(_EXE)
+       
+all: src dist test
+
+src: src/libutl.a src/utl_single.h
+
+src/utl.h: src/utl_unc$(_EXE) $(HDRS)
+	src/utl_unc $(HDRS) > src/utl.h
+
+src/utl.c: src/utl.h $(CSRC)
+	cat $(CSRC) > src/utl.c
+
+src/utl_single.h: src/utl_unc$(_EXE) $(SNGL)
+	src/utl_unc $(SNGL) > src/utl_single.h
+  
+src/utl_unc$(_EXE): src/utl_unc.o
+	$(CC) -o $@ src/utl_unc.o
+
+src/libutl.a:  src/utl.o
+	$(AR) $@ src/utl.o
+
+
+dist: src/libutl.a src/utl_single.h 
+	$(CP) src/libutl.a src/utl.h src/utl.c src/utl_single.h src/utl.o dist
+
+
+test:  $(TESTS)
+
+test/t_vec$(_EXE): src/libutl.a  test/ut_vec.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_vec.o -lutl
+
+test/t_buf$(_EXE): src/libutl.a test/ut_buf.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_buf.o -lutl
+
+test/t_pmx$(_EXE): src/libutl.a test/ut_pmx.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_pmx.o -lutl
+  
+test/t_pmx2$(_EXE): src/libutl.a test/ut_pmx2.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_pmx2.o -lutl
+
+test/t_pmx3$(_EXE): src/libutl.a test/ut_pmx3.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_pmx3.o -lutl
+
+test/t_mem$(_EXE): src/libutl.a test/ut_mem.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_mem.o -lutl
+
+test/t_logassert$(_EXE): src/libutl.a test/ut_logassert.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_logassert.o -lutl
+
+# Test using `utl_single.h`
+test/t_mem2$(_EXE): src/utl_single.h  test/ut_mem2.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_mem2.o
+
+test/t_buf2$(_EXE): src/utl_single.h  test/ut_buf2.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_buf2.o
+
   
 clean:
-	cd src; make clean
-	cd test; make clean
-	cd dist; make clean
+	cd src;  $(RM) utl.c utl.h utl_single.h libutl.a *.o *.gc?? utl_unc$(_EXE)
+	cd test; $(RM) t_* *.o *.tmp *.log gmon.out *.gc?? utl.c
+	cd dist; $(RM) libutl.a utl.h utl.c utl_single.h utl.o
