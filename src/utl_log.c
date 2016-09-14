@@ -163,10 +163,18 @@ any other identifier, so I'm not feeling particularly pressed on changing it.
 #ifdef UTL_MAIN
 
 static FILE *utl_log_file = NULL;
+static uint32_t utl_log_check_num = 0;
+static uint32_t utl_log_check_fail  = 0;
 
 int utl_log_close(char *msg)
 {
   int ret = 0;
+  
+  if (utl_log_check_num) {
+    logprintf("CHK #KO: %d (of %d)",utl_log_check_fail,utl_log_check_num);
+    utl_log_check_fail = 0;
+    utl_log_check_num = 0;
+  }
   if (msg) logprintf(msg);
   if (utl_log_file && utl_log_file != stderr) ret = fclose(utl_log_file);
   utl_log_file = NULL;
@@ -181,6 +189,8 @@ FILE *utl_log_open(char *fname, char *mode)
   utl_log_close(NULL);
   utl_log_file = fopen(fname,md);
   logprintf("LOG START");
+  utl_log_check_num = 0;
+  utl_log_check_fail = 0;
   return utl_log_file;
 }
 
@@ -209,6 +219,8 @@ int utl_log_printf(char *format, ...)
 int utl_log_check(int res, char *test, char *file, int32_t line)
 {
   logprintf("CHK %s (%s) %s:%d", (res?"PASS":"FAIL"), test, file, line);
+  if (!res) utl_log_check_fail++;
+  utl_log_check_num++;
   return res;
 }
 
