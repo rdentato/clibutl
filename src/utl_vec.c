@@ -130,6 +130,7 @@ void *utl_vec_ins(vec_t v, uint32_t i)
 {
   uint8_t *elm=NULL;
 
+  if (i == UINT32_MAX) i = v->cnt;
   if (utl_vec_makegap(v,i,1)) elm = utl_vec_set(v,i);
   vecunsorted(v);
   return elm;
