@@ -2,7 +2,7 @@
 
 int main(int argc, char *argv[])
 {
-  logopen("t_logassert.log","w");
+  logopen("l_logassert.log","w");
   
   logassert(5>10);
   logassert(utl_ret(0));

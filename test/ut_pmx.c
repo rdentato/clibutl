@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
   char *p;
   char *q;
   
-  logopen("t_pmx.log","w");
+  logopen("l_pmx.log","w");
  
   p = "aersrx";
   
