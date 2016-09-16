@@ -53,7 +53,6 @@ extern char *utl_emptystring;
 #ifndef UTL_NOLOG
 
 #define logprintf(...)  utl_log_printf(__VA_ARGS__)
-
 #define logopen(f,m)    utl_log_open(f,m)
 #define logclose()      utl_log_close("LOG STOP")
                         
@@ -422,7 +421,7 @@ void *utl_retptr(void *x) {return x;}
 #ifdef UTL_MAIN
 
 static FILE *utl_log_file = NULL;
-static uint32_t utl_log_check_num = 0;
+static uint32_t utl_log_check_num   = 0;
 static uint32_t utl_log_check_fail  = 0;
 
 int utl_log_close(char *msg)

@@ -53,7 +53,6 @@ extern char *utl_emptystring;
 #ifndef UTL_NOLOG
 
 #define logprintf(...)  utl_log_printf(__VA_ARGS__)
-
 #define logopen(f,m)    utl_log_open(f,m)
 #define logclose()      utl_log_close("LOG STOP")
                         

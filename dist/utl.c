@@ -187,7 +187,7 @@ any other identifier, so I'm not feeling particularly pressed on changing it.
 #ifdef UTL_MAIN
 
 static FILE *utl_log_file = NULL;
-static uint32_t utl_log_check_num = 0;
+static uint32_t utl_log_check_num   = 0;
 static uint32_t utl_log_check_fail  = 0;
 
 int utl_log_close(char *msg)
