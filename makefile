@@ -23,7 +23,7 @@ PRFFLAGS =
 WRNFLAGS = -Wall -pedantic
 DBGFLAGS =
 
-CFLAGS = $(PRFFLAGS) $(WRNFLAGS) $(CCFLAGS) -std=c99 -Isrc/
+CFLAGS  = $(PRFFLAGS) $(WRNFLAGS) $(CCFLAGS) -std=c99 -Isrc/
 LNFLAGS = $(PRFFLAGS) -Lsrc/
 
 HDRS = src/utl_hdr.h src/utl_log.h src/utl_mem.h src/utl_vec.h \
@@ -119,8 +119,8 @@ test/t_buf2$(_EXE): src/utl_single.h  test/ut_buf2.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_buf2.o
 
 runtest: test
-	cd test; for f in t_*; do ./$$f ; done 
-	cd test; grep "#KO:" t_*.log
+	cd test; for f in t_*; do ./$$f ; done ; grep -a "#KO:" l_*.log
+	cd test; 
 
 
 #              __                      
