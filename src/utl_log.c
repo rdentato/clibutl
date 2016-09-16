@@ -114,6 +114,9 @@ information in case of a failure:
       2016-09-03 11:33:01           x: 35.2
    ```
 
+   At the end of the log, the function `logclose()` will print the number of
+failures and the number of checks performed.
+   
 ### Debugging
 
 While using a symbolic debugger like `gdb` is the *"right thing to do"*, there
@@ -129,7 +132,7 @@ the `NDEBUG` symbol is defined.
 This way you can easily differentiate between normal log messages and messages that
 are there just for debugging purposes.
 
-### Temporary disabled functions
+### Temporarily disable logging
 
 There are times when you don't want some log message to be generated or some check
 to be performed. This is esepcially true for debugging messages that tend to fill
@@ -158,6 +161,7 @@ By the way, this is a risk that still must be taken into consideration for
 any other identifier, so I'm not feeling particularly pressed on changing it.
   
 ** ]]] */
+
 //<<<//
 #ifndef UTL_NOLOG
 #ifdef UTL_MAIN
@@ -208,9 +212,11 @@ int utl_log_printf(char *format, ...)
   if (ret >= 0 && !strftime(log_tstr,32,"%Y-%m-%d %H:%M:%S",log_time_tm)) ret =-1;
   if (ret >= 0) ret = fprintf(utl_log_file,"%s ",log_tstr);
   if (ret >= 0 && fflush(utl_log_file)) ret = -1;
+
   va_start(args, format);
   if (ret >= 0) ret = vfprintf(utl_log_file, format, args);
   va_end(args);
+
   if (ret >= 0 && (fputc('\n',utl_log_file) == EOF)) ret = -1;
   if (ret >= 0 && fflush(utl_log_file)) ret = -1;
   return ret;
