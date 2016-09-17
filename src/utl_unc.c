@@ -22,14 +22,21 @@ char buf[BUFSIZE];
 int main(int argc, char *argv[])
 {
   int prt=0;
+  int ln=0;
   int k;
   FILE *f;
   for (k=1; k<argc; k++) {
     if ((f=fopen(argv[k],"r"))) {
+      ln = 0;
+      prt=0;
       while (fgets(buf,BUFSIZE,f)) {
+        ln++;
         if (strncmp(buf,"//>>>//",7) == 0) prt = 0;
         if (prt) fputs(buf,stdout);    
-        if (strncmp(buf,"//<<<//",7) == 0) prt = 1;
+        if (strncmp(buf,"//<<<//",7) == 0) {
+          fprintf(stdout,"#line %d \"%s\"\n",ln,argv[k]);
+          prt = 1;
+        }
       }
       fclose(f);
     }

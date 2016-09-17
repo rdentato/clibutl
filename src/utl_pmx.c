@@ -18,9 +18,8 @@
 //<<<//
 #ifndef UTL_NOPMX
 #ifdef UTL_MAIN
-#if 0
-static int(*utl_pmx_ext)(char *r, char *t) = NULL;
-#endif
+
+static int(*utl_pmx_ext)(char *pat, char *txt, int, int32_t ch) = NULL;
 
 char     *utl_pmx_capt[utl_pmx_MAXCAPT][2] = {{0}} ;
 uint8_t   utl_pmx_capnum                   =   0   ;
@@ -189,6 +188,11 @@ static int32_t utl_pmx_iscapt(char *pat, char *txt)
   return len;
 }
 
+void utl_pmx_extend(int(*ext)(char *, char *,int,int32_t))
+{
+  utl_pmx_ext = ext;
+}
+
 #if 0
 static int utl_pmx_quoted(char *r, char *t, char *s)
 {
@@ -318,21 +322,23 @@ static int utl_pmx_class(char **pat_ptr, char **txt_ptr)
     case 'w' : utl_W(isalnum(ch))               ; break;
     case 'c' : utl_W(iscntrl(ch))               ; break;
     case 'g' : utl_W(isgraph(ch))               ; break;
-    case 'i' : utl_W((ch < 0x80))               ; break;
-    case 'k' : utl_W((ch == ' '  || ch =='\t')) ; break;
-    case 'n' : utl_W((ch == '\r' || ch =='\n')) ; break;
     case 'p' : utl_W(ispunct(ch))               ; break;
-    case 'q' : utl_W(isalnum(ch))               ; break;
     case 'r' : utl_W(isprint(ch))               ; break;
-    
-    case '.' : utl_W(ch)                        ; break;
 
-    case '=' : utl_W(utl_pmx_isin_chars(pat+1,pat_end,ch)); break;
-    case '#' : utl_W(utl_pmx_isin_codes(pat+1,pat_end,ch)); break;
+    case 'i' : utl_W((ch < 0x80))               ; break;
+    
+    case 'h' : utl_W((ch == ' ' ||
+                      ch =='\t' || ch == 0xA0)) ; break;
+    
+    case '.' : utl_W((ch !='\0' &&
+                      ch !='\n' && ch != '\r')) ; break;
+
+    case '=' : utl_W(utl_pmx_isin_chars(pat+1,pat_end,ch)) ; break;
+    case '#' : utl_W(utl_pmx_isin_codes(pat+1,pat_end,ch)) ; break;
     
     case 'N' : utl_W((txt[0]=='\r'
                             ? (txt[1] == '\n'? (len++) : 1)
-                            : (txt[0] == '\n'?  1 : 0)) ) ; break;
+                            : (txt[0] == '\n'?  1 : 0)    )) ; break;
     
     case '$' : if (*txt == '\0') n=min_n; break;
     
@@ -340,6 +346,10 @@ static int utl_pmx_class(char **pat_ptr, char **txt_ptr)
   
     case '^' : if (inv) utl_pmx_set_paterror(pat); inv = 0;
                utl_W((len=utl_pmx_iscapt(pat+1,txt)));
+               break;
+  
+    case ':' : if (utl_pmx_ext)
+                 utl_W((len=utl_pmx_ext(pat+1,txt,len,ch)));
                break;
   
     default  : utl_pmx_set_paterror(pat);

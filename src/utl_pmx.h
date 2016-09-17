@@ -77,20 +77,20 @@ exceptions:
   - `u`  (isupper)	matches an uppercase character
   - `w`  (isword)) matches an alphanumeric character or and underscore ''|_|'
   - `x`  (isxdigit) matches an hexadecimal digit. Not locale-specific.
-  - `.`  matches any character (except ''|\0|').
+  - `.`  matches any character except `\0` and `\n` .
   
 
 ### Recognizer modifiers
 
    
-  - `!` negates the recognizer: `<!d>` is any character that is not a digit
-  - `*` matches 0 or more times 
-  - `+` matches 1 or more times 
-  - `?` matches 0 or 1 times 
-  - *n* matches exactly *n* times
-  - *n*- matches at least *n* times
-  - -*m* matches at most *m* times
-  - *n*-*m* matches from *n* to *m* times
+  - `!`      negates the recognizer: `<!d>` is any character that is not a digit
+  - `*`      matches 0 or more times 
+  - `+`      matches 1 or more times 
+  - `?`      matches 0 or 1 times 
+  - *n*      matches exactly *n* times
+  - *n*-     matches at least *n* times
+  - -*m*     matches at most *m* times
+  - *n*-*m*  matches from *n* to *m* times
   
  
 ### Text encoding
@@ -99,8 +99,8 @@ exceptions:
 but it can also handle UTF-8 encoded strings.  To specify which encoding is expected, put
 at the beginning of the pattern one of the following:
 
-  - `<iso>` consider 8 bit per charactecr
-  - `<utf>` Assume utf-8 encoding
+  - `<iso>` consider 8 bit per character (eg. ISO-8859-1)
+  - `<utf>` Assume UTF-8 encoding
   
   The encoding is saved across multiple pmxsearch() calls:
   
@@ -144,10 +144,9 @@ the encoding to avoid unexpected results. Assuming the text is in UTF-8:
   
 ### Alternatives
 
-  To match one of multiple strings use the pattern '|<$...$...$...>|'. For
-example:
+  To match one of alternative patterns use the '|' character. For example:
   
- .['|<$abc$def>|] matches "'|abc|" or "'|def|"
+  - `a(b|c)|d` matches `ab` `ac` or `d` 
  ..
    
   If the characters '&', '>' or '$' are part of the strings specified,
@@ -485,9 +484,11 @@ extern char     *utl_pmx_error                   ;
 #define pmxcount()     (utl_pmx_capnum)
 #define pmxlen(n)       utl_pmx_len(n)
 #define pmxerror()     (utl_pmx_error)
+#define pmxextend(f)    utl_pmx_extend(f)
 
 char *utl_pmx_search(char *pat, char *txt);
 size_t utl_pmx_len(uint8_t n);
+void utl_pmx_extend(int(*ext)(char *, char *,int, int32_t));
 
 #endif
 //>>>//
