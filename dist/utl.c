@@ -1,3 +1,4 @@
+#line 1 "src/utl_hdr.c"
 /* 
 **  (C) 2014 by Remo Dentato (rdentato@gmail.com)
 ** 
@@ -22,6 +23,7 @@ int   utl_ret(int x)      {return x;}
 void *utl_retptr(void *x) {return x;}
 //>>>//
 
+#line 1 "src/utl_log.c"
 /*
 
 **          __
@@ -138,6 +140,9 @@ information in case of a failure:
       2016-09-03 11:33:01           x: 35.2
    ```
 
+   At the end of the log, the function `logclose()` will print the number of
+failures and the number of checks performed.
+   
 ### Debugging
 
 While using a symbolic debugger like `gdb` is the *"right thing to do"*, there
@@ -153,7 +158,7 @@ the `NDEBUG` symbol is defined.
 This way you can easily differentiate between normal log messages and messages that
 are there just for debugging purposes.
 
-### Temporary disabled functions
+### Temporarily disable logging
 
 There are times when you don't want some log message to be generated or some check
 to be performed. This is esepcially true for debugging messages that tend to fill
@@ -182,6 +187,7 @@ By the way, this is a risk that still must be taken into consideration for
 any other identifier, so I'm not feeling particularly pressed on changing it.
   
 ** ]]] */
+
 //<<<//
 #ifndef UTL_NOLOG
 #ifdef UTL_MAIN
@@ -232,9 +238,11 @@ int utl_log_printf(char *format, ...)
   if (ret >= 0 && !strftime(log_tstr,32,"%Y-%m-%d %H:%M:%S",log_time_tm)) ret =-1;
   if (ret >= 0) ret = fprintf(utl_log_file,"%s ",log_tstr);
   if (ret >= 0 && fflush(utl_log_file)) ret = -1;
+
   va_start(args, format);
   if (ret >= 0) ret = vfprintf(utl_log_file, format, args);
   va_end(args);
+
   if (ret >= 0 && (fputc('\n',utl_log_file) == EOF)) ret = -1;
   if (ret >= 0 && fflush(utl_log_file)) ret = -1;
   return ret;
@@ -260,6 +268,7 @@ void utl_log_assert(int res, char *test, char *file, int32_t line)
 #endif
 #endif
 //>>>//
+#line 1 "src/utl_mem.c"
 /*  .% Traced memory
 **  ================
 
@@ -437,6 +446,7 @@ size_t utl_mem_used(void) {return utl_mem_allocated;}
 #endif
 #endif
 //>>>//
+#line 1 "src/utl_vec.c"
 /* 
 **  (C) 2016 by Remo Dentato (rdentato@gmail.com)
 ** 
@@ -721,6 +731,7 @@ int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j)
 #endif
 #endif
 //>>>//
+#line 1 "src/utl_pmx.c"
 /* 
 **  (C) 2016 by Remo Dentato (rdentato@gmail.com)
 ** 
@@ -741,9 +752,8 @@ int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j)
 //<<<//
 #ifndef UTL_NOPMX
 #ifdef UTL_MAIN
-#if 0
-static int(*utl_pmx_ext)(char *r, char *t) = NULL;
-#endif
+
+static int(*utl_pmx_ext)(char *pat, char *txt, int, int32_t ch) = NULL;
 
 char     *utl_pmx_capt[utl_pmx_MAXCAPT][2] = {{0}} ;
 uint8_t   utl_pmx_capnum                   =   0   ;
@@ -912,6 +922,11 @@ static int32_t utl_pmx_iscapt(char *pat, char *txt)
   return len;
 }
 
+void utl_pmx_extend(int(*ext)(char *, char *,int,int32_t))
+{
+  utl_pmx_ext = ext;
+}
+
 #if 0
 static int utl_pmx_quoted(char *r, char *t, char *s)
 {
@@ -1041,21 +1056,23 @@ static int utl_pmx_class(char **pat_ptr, char **txt_ptr)
     case 'w' : utl_W(isalnum(ch))               ; break;
     case 'c' : utl_W(iscntrl(ch))               ; break;
     case 'g' : utl_W(isgraph(ch))               ; break;
-    case 'i' : utl_W((ch < 0x80))               ; break;
-    case 'k' : utl_W((ch == ' '  || ch =='\t')) ; break;
-    case 'n' : utl_W((ch == '\r' || ch =='\n')) ; break;
     case 'p' : utl_W(ispunct(ch))               ; break;
-    case 'q' : utl_W(isalnum(ch))               ; break;
     case 'r' : utl_W(isprint(ch))               ; break;
-    
-    case '.' : utl_W(ch)                        ; break;
 
-    case '=' : utl_W(utl_pmx_isin_chars(pat+1,pat_end,ch)); break;
-    case '#' : utl_W(utl_pmx_isin_codes(pat+1,pat_end,ch)); break;
+    case 'i' : utl_W((ch < 0x80))               ; break;
+    
+    case 'h' : utl_W((ch == ' ' ||
+                      ch =='\t' || ch == 0xA0)) ; break;
+    
+    case '.' : utl_W((ch !='\0' &&
+                      ch !='\n' && ch != '\r')) ; break;
+
+    case '=' : utl_W(utl_pmx_isin_chars(pat+1,pat_end,ch)) ; break;
+    case '#' : utl_W(utl_pmx_isin_codes(pat+1,pat_end,ch)) ; break;
     
     case 'N' : utl_W((txt[0]=='\r'
                             ? (txt[1] == '\n'? (len++) : 1)
-                            : (txt[0] == '\n'?  1 : 0)) ) ; break;
+                            : (txt[0] == '\n'?  1 : 0)    )) ; break;
     
     case '$' : if (*txt == '\0') n=min_n; break;
     
@@ -1063,6 +1080,10 @@ static int utl_pmx_class(char **pat_ptr, char **txt_ptr)
   
     case '^' : if (inv) utl_pmx_set_paterror(pat); inv = 0;
                utl_W((len=utl_pmx_iscapt(pat+1,txt)));
+               break;
+  
+    case ':' : if (utl_pmx_ext)
+                 utl_W((len=utl_pmx_ext(pat+1,txt,len,ch)));
                break;
   
     default  : utl_pmx_set_paterror(pat);

@@ -1,3 +1,5 @@
+#line 80 "src/utl_hdr.h"
+
 /* 
 **  (C) 2014 by Remo Dentato (rdentato@gmail.com)
 ** 
@@ -50,6 +52,7 @@ void *utl_retptr(void *x);
 extern char *utl_emptystring;
 
 
+#line 12 "src/utl_log.h"
 #ifndef UTL_NOLOG
 
 #define logprintf(...)  utl_log_printf(__VA_ARGS__)
@@ -80,6 +83,7 @@ int   utl_log_check(int res, char *test, char *file, int32_t line);
 void  utl_log_assert(int res, char *test, char *file, int32_t line);
 
 #endif
+#line 11 "src/utl_mem.h"
 #ifndef UTL_NOMEM
 
 #ifndef memINVALID
@@ -123,6 +127,7 @@ size_t utl_mem_used (void);
 
 #endif /* UTL_MEMCHECK */
 #endif /* UTL_NOMEM */
+#line 16 "src/utl_vec.h"
 #ifndef UTL_NOVEC
 
 #define vec_MIN_ELEM 16
@@ -225,6 +230,7 @@ char *utl_buf_insc(buf_t b, uint32_t i, char c);
 int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j);
 
 #endif 
+#line 472 "src/utl_pmx.h"
 #ifndef UTL_NOPMX
 
 #define utl_pmx_MAXCAPT 16
@@ -239,11 +245,14 @@ extern char     *utl_pmx_error                   ;
 #define pmxcount()     (utl_pmx_capnum)
 #define pmxlen(n)       utl_pmx_len(n)
 #define pmxerror()     (utl_pmx_error)
+#define pmxextend(f)    utl_pmx_extend(f)
 
 char *utl_pmx_search(char *pat, char *txt);
 size_t utl_pmx_len(uint8_t n);
+void utl_pmx_extend(int(*ext)(char *, char *,int, int32_t));
 
 #endif
+#line 90 "src/utl_fsm.h"
 
 #ifndef UTL_NOFSM
 
@@ -252,6 +261,7 @@ size_t utl_pmx_len(uint8_t n);
 #define fsmSTATE(x)   fsm_state_##x :
 
 #endif
+#line 15 "src/utl_end.h"
 
 #endif /* UTL_H */
 

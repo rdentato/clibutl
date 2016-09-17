@@ -1,3 +1,5 @@
+#line 80 "src/utl_hdr.h"
+
 /* 
 **  (C) 2014 by Remo Dentato (rdentato@gmail.com)
 ** 
@@ -50,6 +52,7 @@ void *utl_retptr(void *x);
 extern char *utl_emptystring;
 
 
+#line 12 "src/utl_log.h"
 #ifndef UTL_NOLOG
 
 #define logprintf(...)  utl_log_printf(__VA_ARGS__)
@@ -80,6 +83,7 @@ int   utl_log_check(int res, char *test, char *file, int32_t line);
 void  utl_log_assert(int res, char *test, char *file, int32_t line);
 
 #endif
+#line 15 "src/utl_mem.c"
 #ifndef UTL_NOMEM
 #ifdef UTL_MAIN
 
@@ -241,6 +245,7 @@ size_t utl_mem_used(void) {return utl_mem_allocated;}
 
 #endif
 #endif
+#line 11 "src/utl_mem.h"
 #ifndef UTL_NOMEM
 
 #ifndef memINVALID
@@ -284,6 +289,7 @@ size_t utl_mem_used (void);
 
 #endif /* UTL_MEMCHECK */
 #endif /* UTL_NOMEM */
+#line 16 "src/utl_vec.h"
 #ifndef UTL_NOVEC
 
 #define vec_MIN_ELEM 16
@@ -386,6 +392,7 @@ char *utl_buf_insc(buf_t b, uint32_t i, char c);
 int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j);
 
 #endif 
+#line 472 "src/utl_pmx.h"
 #ifndef UTL_NOPMX
 
 #define utl_pmx_MAXCAPT 16
@@ -400,11 +407,14 @@ extern char     *utl_pmx_error                   ;
 #define pmxcount()     (utl_pmx_capnum)
 #define pmxlen(n)       utl_pmx_len(n)
 #define pmxerror()     (utl_pmx_error)
+#define pmxextend(f)    utl_pmx_extend(f)
 
 char *utl_pmx_search(char *pat, char *txt);
 size_t utl_pmx_len(uint8_t n);
+void utl_pmx_extend(int(*ext)(char *, char *,int, int32_t));
 
 #endif
+#line 90 "src/utl_fsm.h"
 
 #ifndef UTL_NOFSM
 
@@ -413,10 +423,12 @@ size_t utl_pmx_len(uint8_t n);
 #define fsmSTATE(x)   fsm_state_##x :
 
 #endif
+#line 18 "src/utl_hdr.c"
 char *utl_emptystring = "";
 
 int   utl_ret(int x)      {return x;}
 void *utl_retptr(void *x) {return x;}
+#line 165 "src/utl_log.c"
 #ifndef UTL_NOLOG
 #ifdef UTL_MAIN
 
@@ -466,9 +478,11 @@ int utl_log_printf(char *format, ...)
   if (ret >= 0 && !strftime(log_tstr,32,"%Y-%m-%d %H:%M:%S",log_time_tm)) ret =-1;
   if (ret >= 0) ret = fprintf(utl_log_file,"%s ",log_tstr);
   if (ret >= 0 && fflush(utl_log_file)) ret = -1;
+
   va_start(args, format);
   if (ret >= 0) ret = vfprintf(utl_log_file, format, args);
   va_end(args);
+
   if (ret >= 0 && (fputc('\n',utl_log_file) == EOF)) ret = -1;
   if (ret >= 0 && fflush(utl_log_file)) ret = -1;
   return ret;
@@ -493,6 +507,7 @@ void utl_log_assert(int res, char *test, char *file, int32_t line)
 
 #endif
 #endif
+#line 19 "src/utl_vec.c"
 #ifndef UTL_NOVEC
 #ifdef UTL_MAIN
 
@@ -757,11 +772,11 @@ int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j)
 
 #endif
 #endif
+#line 18 "src/utl_pmx.c"
 #ifndef UTL_NOPMX
 #ifdef UTL_MAIN
-#if 0
-static int(*utl_pmx_ext)(char *r, char *t) = NULL;
-#endif
+
+static int(*utl_pmx_ext)(char *pat, char *txt, int, int32_t ch) = NULL;
 
 char     *utl_pmx_capt[utl_pmx_MAXCAPT][2] = {{0}} ;
 uint8_t   utl_pmx_capnum                   =   0   ;
@@ -930,6 +945,11 @@ static int32_t utl_pmx_iscapt(char *pat, char *txt)
   return len;
 }
 
+void utl_pmx_extend(int(*ext)(char *, char *,int,int32_t))
+{
+  utl_pmx_ext = ext;
+}
+
 #if 0
 static int utl_pmx_quoted(char *r, char *t, char *s)
 {
@@ -1059,21 +1079,23 @@ static int utl_pmx_class(char **pat_ptr, char **txt_ptr)
     case 'w' : utl_W(isalnum(ch))               ; break;
     case 'c' : utl_W(iscntrl(ch))               ; break;
     case 'g' : utl_W(isgraph(ch))               ; break;
-    case 'i' : utl_W((ch < 0x80))               ; break;
-    case 'k' : utl_W((ch == ' '  || ch =='\t')) ; break;
-    case 'n' : utl_W((ch == '\r' || ch =='\n')) ; break;
     case 'p' : utl_W(ispunct(ch))               ; break;
-    case 'q' : utl_W(isalnum(ch))               ; break;
     case 'r' : utl_W(isprint(ch))               ; break;
-    
-    case '.' : utl_W(ch)                        ; break;
 
-    case '=' : utl_W(utl_pmx_isin_chars(pat+1,pat_end,ch)); break;
-    case '#' : utl_W(utl_pmx_isin_codes(pat+1,pat_end,ch)); break;
+    case 'i' : utl_W((ch < 0x80))               ; break;
+    
+    case 'h' : utl_W((ch == ' ' ||
+                      ch =='\t' || ch == 0xA0)) ; break;
+    
+    case '.' : utl_W((ch !='\0' &&
+                      ch !='\n' && ch != '\r')) ; break;
+
+    case '=' : utl_W(utl_pmx_isin_chars(pat+1,pat_end,ch)) ; break;
+    case '#' : utl_W(utl_pmx_isin_codes(pat+1,pat_end,ch)) ; break;
     
     case 'N' : utl_W((txt[0]=='\r'
                             ? (txt[1] == '\n'? (len++) : 1)
-                            : (txt[0] == '\n'?  1 : 0)) ) ; break;
+                            : (txt[0] == '\n'?  1 : 0)    )) ; break;
     
     case '$' : if (*txt == '\0') n=min_n; break;
     
@@ -1081,6 +1103,10 @@ static int utl_pmx_class(char **pat_ptr, char **txt_ptr)
   
     case '^' : if (inv) utl_pmx_set_paterror(pat); inv = 0;
                utl_W((len=utl_pmx_iscapt(pat+1,txt)));
+               break;
+  
+    case ':' : if (utl_pmx_ext)
+                 utl_W((len=utl_pmx_ext(pat+1,txt,len,ch)));
                break;
   
     default  : utl_pmx_set_paterror(pat);
@@ -1279,6 +1305,7 @@ char *utl_pmx_search(char *pat, char *txt)
 }
 #endif
 #endif
+#line 15 "src/utl_end.h"
 
 #endif /* UTL_H */
 
