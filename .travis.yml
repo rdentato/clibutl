@@ -1,6 +1,6 @@
 sudo: false
 language: c
-script: make
+script: make runtest
 install: true
 compiler:
   - clang
