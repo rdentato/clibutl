@@ -38,7 +38,8 @@ SNGL = src/utl_hdr.h src/utl_log.h src/utl_mem.c src/utl_mem.h \
 
 TESTS = test/t_vec$(_EXE)  test/t_buf$(_EXE)  test/t_mem$(_EXE)  \
         test/t_mem2$(_EXE) test/t_pmx$(_EXE)  test/t_buf2$(_EXE) \
-        test/t_pmx2$(_EXE) test/t_pmx3$(_EXE) test/t_logassert$(_EXE)
+        test/t_pmx2$(_EXE) test/t_pmx3$(_EXE) test/t_pmx4$(_EXE) \
+        test/t_logassert$(_EXE)
 
 #              __ __  
 #      ____ _ / // /_ 
@@ -60,7 +61,8 @@ src/utl.h: src/utl_unc$(_EXE) $(HDRS)
 	src/utl_unc $(HDRS) > src/utl.h
 
 src/utl.c: src/utl.h $(CSRC)
-	cat $(CSRC) > src/utl.c
+	$(RM) src/utl.c
+	for f in $(CSRC); do echo "#line 1 \"$$f\"" >> src/utl.c; cat $$f >> src/utl.c; done
 
 src/utl_single.h: src/utl_unc$(_EXE) $(SNGL)
 	src/utl_unc $(SNGL) > src/utl_single.h
@@ -71,7 +73,7 @@ src/utl_unc$(_EXE): src/utl_unc.o
 src/libutl.a:  src/utl.o
 	$(AR) $@ src/utl.o
 
-
+  
 #            __ _        __  
 #       ____/ /(_)_____ / /_ _  
 #      / __  // // ___// __/(_) 
@@ -104,6 +106,9 @@ test/t_pmx2$(_EXE): src/libutl.a test/ut_pmx2.o
 
 test/t_pmx3$(_EXE): src/libutl.a test/ut_pmx3.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_pmx3.o -lutl
+
+test/t_pmx4$(_EXE): src/libutl.a test/ut_pmx4.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_pmx4.o -lutl
 
 test/t_mem$(_EXE): src/libutl.a test/ut_mem.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_mem.o -lutl
