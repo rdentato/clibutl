@@ -5,8 +5,8 @@ the developemnt phase.
 
 The functions are related to:
 
- - [*Logging*](#logging)
- - [*Finite State Machines*](#finite-state-machines)
+ - [*Logging*](https://github.com/rdentato/clibutl/blob/master/doc/log.md)
+ - [*Finite State Machines*](https://github.com/rdentato/clibutl/blob/master/doc/fsm.md)
  - *Memory check*
  - *Containers*
  - *Pattern matching* over string
