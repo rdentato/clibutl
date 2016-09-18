@@ -3,8 +3,8 @@
 int main(int argc, char *argv[])
 {
   char *s;
-/*
   char *p;
+  /*
   char *q;
   */
   logopen("l_pmx3.log","w");
@@ -45,7 +45,6 @@ int main(int argc, char *argv[])
   s = pmxsearch("<d>(|)<2l>","--4cm--");
   if (logcheck(!s)) {logprintf("NOMATCH: %d",pmxlen(1));}
  
-
   s = pmxsearch("<d>()<2l>","--4cm--");
   if (logcheck(s)) {logprintf("MATCH: %.*s",pmxlen(0),pmxstart(0));}
 
@@ -96,6 +95,13 @@ int main(int argc, char *argv[])
   s= pmxsearch("(<l>)x<^2>","a3xa3");
   logcheck(!s);
 
+  p = "a<!>(bc|de)<2l>";
+  s = pmxsearch(p,"abcbc");
+  logcheck(!s);
+
+  s = pmxsearch(p,"axybc");
+  if (logcheck(s)) {logprintf("MATCH: %.*s (%.*s)",pmxlen(0),pmxstart(0),pmxlen(1),pmxstart(1));}
+  
   logclose();
   exit(0);
 }
