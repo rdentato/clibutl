@@ -32,7 +32,7 @@ extern char     *utl_pmx_error                   ;
 #define pmxcount()     (utl_pmx_capnum)
 #define pmxlen(n)       utl_pmx_len(n)
 #define pmxerror()     (utl_pmx_error)
-#define pmxextend(f)   (utl_pmx_ext = f)
+#define pmxextend(f)   (void)(utl_pmx_ext = f)
 
 char  *utl_pmx_search(char *pat, char *txt);
 size_t utl_pmx_len(uint8_t n);
