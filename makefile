@@ -80,8 +80,8 @@ src/libutl.a:  src/utl.o
 #     / /_/ // /(__  )/ /_ _    
 #     \__,_//_//____/ \__/(_)   
 
-dist: src/libutl.a src/utl_single.h 
-	$(CP) src/libutl.a src/utl.h src/utl.c src/utl_single.h src/utl.o dist
+dist: src/utl.h src/utl.c src/utl_single.h 
+	$(CP) src/utl.h src/utl.c src/utl_single.h dist
 
 
 #       __               __    
@@ -137,5 +137,5 @@ runtest: test
 clean:
 	cd src;  $(RM) utl.c utl.h utl_single.h libutl.a *.o *.gc?? utl_unc$(_EXE)
 	cd test; $(RM) t_* *.o *.tmp *.log gmon.out *.gc?? utl.c
-	cd dist; $(RM) libutl.a utl.h utl.c utl_single.h utl.o
+	cd dist; $(RM) utl.h utl.c utl_single.h 
 	$(RM) *.log
