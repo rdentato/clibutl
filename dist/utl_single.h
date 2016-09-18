@@ -1,5 +1,4 @@
-#line 80 "src/utl_hdr.h"
-
+#line 1 "src/utl_hdr.h"
 /* 
 **  (C) 2014 by Remo Dentato (rdentato@gmail.com)
 ** 
@@ -392,7 +391,7 @@ char *utl_buf_insc(buf_t b, uint32_t i, char c);
 int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j);
 
 #endif 
-#line 472 "src/utl_pmx.h"
+#line 18 "src/utl_pmx.h"
 #ifndef UTL_NOPMX
 
 #define utl_pmx_MAXCAPT 16
@@ -409,14 +408,14 @@ extern char     *utl_pmx_error                   ;
 #define pmxcount()     (utl_pmx_capnum)
 #define pmxlen(n)       utl_pmx_len(n)
 #define pmxerror()     (utl_pmx_error)
-#define pmxextend(f)   (utl_pmx_ext = f)
+#define pmxextend(f)   (void)(utl_pmx_ext = f)
 
-char *utl_pmx_search(char *pat, char *txt);
+char  *utl_pmx_search(char *pat, char *txt);
 size_t utl_pmx_len(uint8_t n);
-void utl_pmx_extend(int(*ext)(char *, char *,int, int32_t));
+void   utl_pmx_extend(int(*ext)(char *, char *,int, int32_t));
 
 #endif
-#line 90 "src/utl_fsm.h"
+#line 91 "src/utl_fsm.h"
 
 #ifndef UTL_NOFSM
 
@@ -425,12 +424,12 @@ void utl_pmx_extend(int(*ext)(char *, char *,int, int32_t));
 #define fsmSTATE(x)   fsm_state_##x :
 
 #endif
-#line 18 "src/utl_hdr.c"
+#line 90 "src/utl_hdr.c"
 char *utl_emptystring = "";
 
 int   utl_ret(int x)      {return x;}
 void *utl_retptr(void *x) {return x;}
-#line 165 "src/utl_log.c"
+#line 166 "src/utl_log.c"
 #ifndef UTL_NOLOG
 #ifdef UTL_MAIN
 
@@ -774,7 +773,7 @@ int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j)
 
 #endif
 #endif
-#line 18 "src/utl_pmx.c"
+#line 250 "src/utl_pmx.c"
 #ifndef UTL_NOPMX
 #ifdef UTL_MAIN
 
@@ -1114,6 +1113,7 @@ static int utl_pmx_class(char **pat_ptr, char **txt_ptr)
     case 'u' : utl_W(isupper(ch))               ; break;
     case 'l' : utl_W(islower(ch))               ; break;
     case 'd' : utl_W(isdigit(ch))               ; break;
+    case 'k' : utl_W(isblank(ch))               ; break;
     case 'x' : utl_W(isxdigit(ch))              ; break;
     case 'w' : utl_W(isalnum(ch))               ; break;
     case 'c' : utl_W(iscntrl(ch))               ; break;

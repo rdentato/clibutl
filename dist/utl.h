@@ -1,5 +1,4 @@
-#line 80 "src/utl_hdr.h"
-
+#line 1 "src/utl_hdr.h"
 /* 
 **  (C) 2014 by Remo Dentato (rdentato@gmail.com)
 ** 
@@ -230,7 +229,7 @@ char *utl_buf_insc(buf_t b, uint32_t i, char c);
 int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j);
 
 #endif 
-#line 472 "src/utl_pmx.h"
+#line 18 "src/utl_pmx.h"
 #ifndef UTL_NOPMX
 
 #define utl_pmx_MAXCAPT 16
@@ -247,14 +246,14 @@ extern char     *utl_pmx_error                   ;
 #define pmxcount()     (utl_pmx_capnum)
 #define pmxlen(n)       utl_pmx_len(n)
 #define pmxerror()     (utl_pmx_error)
-#define pmxextend(f)   (utl_pmx_ext = f)
+#define pmxextend(f)   (void)(utl_pmx_ext = f)
 
-char *utl_pmx_search(char *pat, char *txt);
+char  *utl_pmx_search(char *pat, char *txt);
 size_t utl_pmx_len(uint8_t n);
-void utl_pmx_extend(int(*ext)(char *, char *,int, int32_t));
+void   utl_pmx_extend(int(*ext)(char *, char *,int, int32_t));
 
 #endif
-#line 90 "src/utl_fsm.h"
+#line 91 "src/utl_fsm.h"
 
 #ifndef UTL_NOFSM
 
