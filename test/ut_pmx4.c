@@ -104,6 +104,48 @@ int main(int argc, char *argv[])
   s = pmxsearch("<:I>"," = 3+fn(x)");
   if (logcheck(s)) {logprintf("MATCH: %.*s",pmxlen(0),pmxstart(0));}
   
+  s = pmxsearch("<B>","asds");
+  logcheck(!s);
+  
+  s = pmxsearch("<B>","af(23)ds");
+  if (logcheck(s)) {logprintf("MATCH: [%.*s] (err:%s)",pmxlen(0),pmxstart(0),pmxerror());}
+
+  s = pmxsearch("<B>","af(2(763))ds");
+  if (logcheck(s)) {logprintf("MATCH: [%.*s] (err:%s)",pmxlen(0),pmxstart(0),pmxerror());}
+
+  s = pmxsearch("<B>","af(2(763)ds");
+  if (logcheck(s)) {logprintf("MATCH: [%.*s] (err:%s)",pmxlen(0),pmxstart(0),pmxerror());}
+
+  s = pmxsearch("<B>","af(2(763)))ds");
+  if (logcheck(s)) {logprintf("MATCH: [%.*s] (err:%s)",pmxlen(0),pmxstart(0),pmxerror());}
+
+  s = pmxsearch("<B>","af{23}ds");
+  if (logcheck(s)) {logprintf("MATCH: [%.*s] (err:%s)",pmxlen(0),pmxstart(0),pmxerror());}
+
+  s = pmxsearch("<B>","af{2{763}}ds");
+  if (logcheck(s)) {logprintf("MATCH: [%.*s] (err:%s)",pmxlen(0),pmxstart(0),pmxerror());}
+
+  s = pmxsearch("<B>","af<23>ds");
+  if (logcheck(s)) {logprintf("MATCH: [%.*s] (err:%s)",pmxlen(0),pmxstart(0),pmxerror());}
+  
+  s = pmxsearch("<B<>>","af{2<763>}ds");
+  if (logcheck(s)) {logprintf("MATCH: [%.*s] (err:%s)",pmxlen(0),pmxstart(0),pmxerror());}
+  
+  s = pmxsearch("<utf><B«»>","af{2«763»}ds");
+  if (logcheck(s)) {logprintf("MATCH: [%.*s] (err:%s)",pmxlen(0),pmxstart(0),pmxerror());}
+  
+  s = pmxsearch("<utf><B>","af{2«763»}ds");
+  if (logcheck(s)) {logprintf("MATCH: [%.*s] (err:%s)",pmxlen(0),pmxstart(0),pmxerror());}
+  
+  s = pmxsearch("<Q>","x'pippo'");
+  if (logcheck(s)) {logprintf("MATCH: [%.*s] (err:%s)",pmxlen(0),pmxstart(0),pmxerror());}
+
+  s = pmxsearch("<utf><Q>","x“pippo”");
+  if (logcheck(s)) {logprintf("MATCH: [%.*s] (err:%s)",pmxlen(0),pmxstart(0),pmxerror());}
+    
+  
+
+  
   logclose();
   exit(0);
 }

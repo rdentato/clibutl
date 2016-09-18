@@ -124,8 +124,8 @@ test/t_buf2$(_EXE): src/utl_single.h  test/ut_buf2.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_buf2.o
 
 runtest: test
-	echo "'l_logassert.log' is expected to FAIL and generate a coredump" 
-	cd test; for f in t_*; do ./$$f ; done ; grep -a "#KO:" l_*.log
+	@echo "'l_logassert.log' is expected to FAIL and generate a coredump" 
+	@cd test; for f in t_*; do ./$$f ; done ; grep -a "#KO:" l_*.log
 
 
 #              __                      

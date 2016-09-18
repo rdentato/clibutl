@@ -397,6 +397,8 @@ int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j);
 
 #define utl_pmx_MAXCAPT 16
 
+extern int(*utl_pmx_ext)(char *pat, char *txt, int, int32_t ch);
+
 extern char     *utl_pmx_capt[utl_pmx_MAXCAPT][2];
 extern uint8_t   utl_pmx_capnum                  ;
 extern char     *utl_pmx_error                   ;
@@ -407,7 +409,7 @@ extern char     *utl_pmx_error                   ;
 #define pmxcount()     (utl_pmx_capnum)
 #define pmxlen(n)       utl_pmx_len(n)
 #define pmxerror()     (utl_pmx_error)
-#define pmxextend(f)    utl_pmx_extend(f)
+#define pmxextend(f)   (utl_pmx_ext = f)
 
 char *utl_pmx_search(char *pat, char *txt);
 size_t utl_pmx_len(uint8_t n);
@@ -776,14 +778,14 @@ int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j)
 #ifndef UTL_NOPMX
 #ifdef UTL_MAIN
 
-static int(*utl_pmx_ext)(char *pat, char *txt, int, int32_t ch) = NULL;
+int(*utl_pmx_ext)(char *pat, char *txt, int, int32_t ch) = NULL;
 
 char     *utl_pmx_capt[utl_pmx_MAXCAPT][2] = {{0}} ;
 uint8_t   utl_pmx_capnum                   =   0   ;
 char     *utl_pmx_error                    = NULL  ;
 
 
-#define utl_pmx_set_paterror(t) do {if (utl_pmx_error == NULL) {utl_pmx_error = t;}} while (0)
+#define utl_pmx_set_paterror(t) do {if (utl_pmx_error == utl_emptystring) {utl_pmx_error = t;}} while (0)
 
 static int utl_pmx_utf8 = 0;
 
@@ -950,57 +952,94 @@ void utl_pmx_extend(int(*ext)(char *, char *,int,int32_t))
   utl_pmx_ext = ext;
 }
 
-#if 0
-static int utl_pmx_quoted(char *r, char *t, char *s)
+#define UTL_PMX_QUOTED 0
+#define UTL_PMX_BRACED 1
+
+static int utl_pmx_get_limits(char *pat, char *pat_end, char *txt,int braced,
+                             int32_t *c_beg_ptr, int32_t *c_end_ptr, int32_t *c_esc_ptr)
 {
-  int ret = 0;
-  int n;
-  
-  n=s-r;
-  int32_t c_esc='\\';
-  int32_t c_beg='"';
-  int32_t c_end='"';
+  int32_t c_beg='('; int32_t c_end=')'; int32_t c_esc='\0';
   int32_t ch;
   
-  ch= *t;
-  if (ch == '\0') return 0;
-  _logdebug("QUOTED: [%s] [%s] [%s] (%d)",r,t,s,s-r);
-  n=s-r;
-  if (n <= 1) { /* just <q> or <q\\> */
-         if (ch == '"')  {c_esc='\\';  c_beg=ch;  c_end='"';}
-    else if (ch == '\'') {c_esc='\\';  c_beg=ch;  c_end='\'';}
-    else if (ch == '(')  {c_esc='\0';  c_beg=ch;  c_end=')';}
-    else if (ch == '[')  {c_esc='\0';  c_beg=ch;  c_end=']';}
-    else if (ch == '{')  {c_esc='\0';  c_beg=ch;  c_end='}';}
-    else if (ch == '<')  {c_esc='\0';  c_beg=ch;  c_end='>';}
-  }
-  if (n == 1) { /* escape character provided */
-    c_esc = r[0];
-  }
-  else if (n == 2) { /* start/end but no escape character */
-    c_esc = '\0'; c_beg = r[0]; c_end = r[1];
-  }
-  else if (n >= 3) { /* escape/start/end */
-    c_esc = r[0]; c_beg = r[1]; c_end = r[2];    
-  }
-  _logdebug("QUOTED: '%ch' '%c' '%c'",c_esc?c_esc:' ',c_beg,c_end);
-  if (*t == c_beg) {
-    for (t++, n=0, ret=2; *t;  t++, ret++) {
-      if (*t == c_esc && t[1] != '\0') {
-        t++;
-        ret++;
-      }
-      else if (*t == c_end) {
-        if (n > 0) n--;
-        else break;
-      }
-      else if (*t == c_beg) n++;
+  _logdebug("BRACE: [%.*s]",pat_end-pat,pat);
+  
+  if (pat < pat_end) { /* <B()\> <Q""\>*/
+    pat += utl_pmx_nextch(pat,&c_esc);
+    if (pat < pat_end) {
+      c_beg = c_esc; c_esc = '\0';
+      pat += utl_pmx_nextch(pat,&c_end);
     }
-    if (*t == '\0') ret = 0;
+    if (pat < pat_end) {
+      pat += utl_pmx_nextch(pat,&c_esc);
+    }
   }
-  return ret;
+  else {  /* Just <B> or <Q>, try to infer the braces */
+    (void)utl_pmx_nextch(txt,&ch);
+    if (braced) {
+           if (ch == '(')    {c_beg=ch;  c_end=')';}
+      else if (ch == '[')    {c_beg=ch;  c_end=']';}
+      else if (ch == '{')    {c_beg=ch;  c_end='}';}
+      else if (ch == '<')    {c_beg=ch;  c_end='>';}
+      else if (ch == '\xAB') {c_beg=ch;  c_end='\xBB';} /* Unicode and ISO-8859-1 "<<" and ">>" */
+      else if (ch == 0x2329) {c_beg=ch;  c_end=0x232A;} /* Unicode ANGLE BRACKETS */
+      else if (ch == 0x27E8) {c_beg=ch;  c_end=0x27E9;} /* Unicode MATHEMATICAL ANGLE BRACKETS */
+      else if (ch == 0x27EA) {c_beg=ch;  c_end=0x27EB;} /* Unicode MATHEMATICAL DOUBLE ANGLE BRACKETS */
+      else return 0;
+    }
+    else {
+      c_esc = '\\';
+           if (ch == '"')    {c_beg=ch;  c_end=ch;}
+      else if (ch == '\'')   {c_beg=ch;  c_end=ch;}
+      else if (ch == '`')    {c_beg=ch;  c_end=ch;}
+      else if (ch == '\xAB') {c_beg=ch;  c_end='\xBB';} /* Unicode and ISO-8859-1 "<<" and ">>" */
+      else if (ch == 0x2018) {c_beg=ch;  c_end=0x2019;} /* Unicode single quotes */
+      else if (ch == 0x201C) {c_beg=ch;  c_end=0x201D;} /* Unicode double quotes */
+      else return 0;
+    }
+  }
+  _logdebug("open:'%d' close:'%d' esc:'%d'",c_beg,c_end,c_esc);
+  
+  *c_beg_ptr = c_beg;
+  *c_end_ptr = c_end;
+  *c_esc_ptr = c_esc;
+  return 1;
 }
-#endif 
+
+static int utl_pmx_get_delimited(char *pat, char *txt,int32_t c_beg, int32_t c_end, int32_t c_esc)
+{
+  int n;
+  char *s;
+  int cnt;
+  int32_t ch;
+  
+  s = txt;
+  n = utl_pmx_nextch(s,&ch);
+  if (n == 0 || ch != c_beg) return 0;
+  cnt = 0;
+  do {
+    s += n;
+    n = utl_pmx_nextch(s,&ch);
+    if (ch == '\0') return 0;
+    _logdebug("BRACE: '%c' cnt:%d",ch,cnt);
+    
+         if (ch == c_end) { if (cnt == 0) return (s+n)-txt;  else cnt--; }
+    else if (ch == c_beg) { cnt++;                                       }
+    else if (ch == c_esc) { s += n; n = utl_pmx_nextch(s,&ch);           }
+    
+  } while (ch);
+  utl_pmx_set_paterror(pat);
+  
+  return s-txt;
+  
+}
+
+static int utl_pmx_delimited(char *pat, char *pat_end, char *txt,int braced)
+{
+  int32_t c_beg; int32_t c_end; int32_t c_esc;
+  if (!utl_pmx_get_limits(pat,pat_end,txt, braced, &c_beg, &c_end, &c_esc)) return 0;
+  return utl_pmx_get_delimited(pat,txt,c_beg,c_end,c_esc);  
+}
+
 
 static int utl_pmx_class(char **pat_ptr, char **txt_ptr)
 {
@@ -1010,10 +1049,10 @@ static int utl_pmx_class(char **pat_ptr, char **txt_ptr)
   char *txt = *txt_ptr;
   char *pat_end;
   
-  int32_t len = 0;
-  int32_t n = 0;
-  int32_t min_n=0;
-  int32_t max_n=0;
+  int32_t len   = 0;
+  int32_t n     = 0;
+  int32_t min_n = 0;
+  int32_t max_n = 0;
   int32_t ch;
   
   _logdebug("class:[%s][%s]",pat,txt);
@@ -1087,8 +1126,7 @@ static int utl_pmx_class(char **pat_ptr, char **txt_ptr)
     case 'h' : utl_W((ch == ' ' ||
                       ch =='\t' || ch == 0xA0)) ; break;
     
-    case '.' : utl_W((ch !='\0' &&
-                      ch !='\n' && ch != '\r')) ; break;
+    case '.' : utl_W((ch !='\0' && ch !='\n'))  ; break;
 
     case '=' : utl_W(utl_pmx_isin_chars(pat+1,pat_end,ch)) ; break;
     case '#' : utl_W(utl_pmx_isin_codes(pat+1,pat_end,ch)) ; break;
@@ -1096,7 +1134,10 @@ static int utl_pmx_class(char **pat_ptr, char **txt_ptr)
     case 'N' : utl_W((txt[0]=='\r'
                             ? (txt[1] == '\n'? (len++) : 1)
                             : (txt[0] == '\n'?  1 : 0)    )) ; break;
-    
+
+    case 'Q' : utl_W((len=utl_pmx_delimited(pat+1,pat_end,txt, UTL_PMX_QUOTED))); break;
+    case 'B' : utl_W((len=utl_pmx_delimited(pat+1,pat_end,txt, UTL_PMX_BRACED))); break;
+                            
     case '$' : if (*txt == '\0') n=min_n; break;
     
     case '>' : utl_pmx_set_paterror(pat); return 0;
@@ -1183,7 +1224,7 @@ static char *utl_pmx_alt(char *pat, char **txt_ptr)
                 inv = state->inv;
                 ret = pat;
                 if (inv) *txt_ptr = pmxstart(state->cap);  /* It's ok, we WANTED to fail */
-                else if (state->n >= state->min_n) {       /* Matched enough times, ok */
+                else if (state->n >= state->min_n) {       /* It's ok, we matched enough times */
                   utl_pmx_capt[state->cap][0] = state->txt;
                   utl_pmx_capt[state->cap][1] = *txt_ptr;
                 }
@@ -1291,7 +1332,7 @@ char *utl_pmx_search(char *pat, char *txt)
 {
   char *ret=NULL;
   
-  utl_pmx_error = NULL;
+  utl_pmx_error = utl_emptystring;
   
        if (strncmp(pat,"<utf>",5) == 0) {pat+=5; utl_pmx_utf8=1;}
   else if (strncmp(pat,"<iso>",5) == 0) {pat+=5; utl_pmx_utf8=0;}
