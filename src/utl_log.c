@@ -1,4 +1,17 @@
-/*
+/* 
+**  (C) 2016 by Remo Dentato (rdentato@gmail.com)
+** 
+** This software is distributed under the terms of the MIT license:
+**  https://opensource.org/licenses/MIT
+**     
+**                     ___   __
+**                  __/  /_ /  )
+**          ___  __(_   ___)  /
+**         /  / /  )/  /  /  /  Minimalist
+**        /  /_/  //  (__/  /  C utility 
+**       (____,__/(_____(__/  Library
+** 
+
 
 [[[
 # Logging
@@ -117,6 +130,10 @@ information in case of a failure:
 
    At the end of the log, the function `logclose()` will print the number of
 failures and the number of checks performed.
+
+   ```
+      2016-09-18 20:47:04 CHK #KO: 2 (of 23)
+   ```
    
 ### Debugging
 
