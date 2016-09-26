@@ -112,11 +112,11 @@ int main(int argc, char *argv[])
   logcheck(veccount(v)==2);
   {
     FILE *f;
-    f = fopen("t_point.tmp","wb");
+    f = fopen("l_point.tmp","wb");
     logassert(f);
     vecwrite(v,0,veccount(v),f);
     fclose(f);
-    f = fopen("t_point.tmp","rb");
+    f = fopen("l_point.tmp","rb");
     logassert(f);
     vecread(v,2,2,f);
     fclose(f);
