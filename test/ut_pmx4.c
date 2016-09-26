@@ -37,19 +37,38 @@ int iscons(char *pat,char *txt, int len, int32_t ch)
 int isid(char *pat,char *txt, int len, int32_t ch)
 {
   char *id = txt;
+  char *c = "0123456789_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
   
-  if (               *id == '_'  ||
-      ('A' <= *id && *id <= 'Z') || 
-      ('a' <= *id && *id <= 'z') ) {
-    id++;
-    while (               *id == '_'  ||
-           ('A' <= *id && *id <= 'Z') || 
-           ('a' <= *id && *id <= 'z') ||
-           ('0' <= *id && *id <= '9') ) {
+  if (strchr(c+10,*id)) {
+    do {
       id++;
-    }
+    } while (strchr(c,*id));
   }
   return id-txt;
+}
+
+int isprime(char *pat,char *txt, int len, int32_t ch)
+{
+  long int n;
+  char *s=txt;
+  uint8_t p[] = {  2,   3,   5,   7,  11,  13,  17,  19,  23,  29,  31,  37,  41,  43,
+                  47,  53,  59,  61,  67,  71,  73,  79,  83,  89,  97, 101, 103, 107,
+                 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181,
+                 191, 193, 197, 199, 0};
+  
+  n = strtol(txt,&s,10);
+  if (n == 0 || n >= 200) return 0;
+  if (!strchr((char*)p,n)) return 0;
+  logdebug("prime: %p %p %s",txt,s,txt);
+  return (s-txt);             
+}
+
+int isladder(char *pat,char *txt, int len, int32_t ch)
+{
+  char *s = txt;
+  
+  while (s[0] > s[1]) s++;
+  return 0;
 }
 
 int isCV(char *pat,char *txt, int len, int32_t ch)
@@ -57,6 +76,7 @@ int isCV(char *pat,char *txt, int len, int32_t ch)
   if (*pat == 'C') return iscons(pat,txt,len,ch);
   if (*pat == 'V') return isvowel(pat,txt,len,ch);
   if (*pat == 'I') return isid(pat,txt,len,ch);
+  if (*pat == 'P') return isprime(pat,txt,len,ch);
   return 0;
 }
 
@@ -64,9 +84,8 @@ int isCV(char *pat,char *txt, int len, int32_t ch)
 int main(int argc, char *argv[])
 {
   char *s;
-/*
   char *p;
-  char *q;
+/*  char *q;
   */
   logopen("l_pmx4.log","w");
  
@@ -141,6 +160,13 @@ int main(int argc, char *argv[])
   if (logcheck(s)) {logprintf("MATCH: [%.*s] (err:%s)",pmxlen(0),pmxstart(0),pmxerror());}
 
   s = pmxsearch("<utf><Q>","x“pippo”");
+  if (logcheck(s)) {logprintf("MATCH: [%.*s] (err:%s)",pmxlen(0),pmxstart(0),pmxerror());}
+    
+  p = "33";
+  s = pmxsearch("<:P>","33");
+  logcheck(s && s==p+1);
+
+  s = pmxsearch("<:P>","31");
   if (logcheck(s)) {logprintf("MATCH: [%.*s] (err:%s)",pmxlen(0),pmxstart(0),pmxerror());}
     
   

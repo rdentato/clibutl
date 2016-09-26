@@ -38,6 +38,8 @@ int main(int argc, char *argv[])
   s = pmxsearch("<+=b-z34>",p);
   if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
 
+  
+  
   p = "Aa電ersrx";
   s = pmxsearch("<utf><l><.><l>",p);
   if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
@@ -51,12 +53,12 @@ int main(int argc, char *argv[])
   s = pmxsearch("<utf><+!=è-ëà>","eòùé");
   if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
   
-
   s = pmxsearch("r",p);
-  logcheck(s==p+2);
+  logcheck(s==p+6);
 
   s = pmxsearch("<!=e>r",p);
-  if (!logcheck(s && s==p+3)) logprintf("matched at %lu",s-p);
+  if (!logcheck(s && s==p+7)) logprintf("matched at %lu",s-p);
+ 
   
   p = "x    tar";
   s = pmxsearch("<+s>",p);
@@ -157,7 +159,7 @@ int main(int argc, char *argv[])
   s=pmxsearch("<+!u>",p);
   if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
  
-   s=pmxsearch("(a|(b c)|(d))","d");
+  s=pmxsearch("<iso>(a|(b c)|(d))","d");
   logcheck(s);
   logdebug("matched: %d (%.*s) (%.*s) (%.*s) (%.*s)",pmxcount(),pmxlen(0),pmxstart(0),pmxlen(1),pmxstart(1),pmxlen(2),pmxstart(2),pmxlen(3),pmxstart(3));
 
@@ -174,7 +176,7 @@ int main(int argc, char *argv[])
   if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
 
   s=pmxsearch("<utf>えxもa","電田説モ");
-  if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
+  logcheck(!s);
   
   s=pmxsearch("<utf>田(もa|)","電田説モ");
   if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
