@@ -96,7 +96,20 @@ void *utl_retptr(void *x) {return x;}
 //>>>//
 
 #line 1 "src/utl_log.c"
-/*
+/* 
+**  (C) 2016 by Remo Dentato (rdentato@gmail.com)
+** 
+** This software is distributed under the terms of the MIT license:
+**  https://opensource.org/licenses/MIT
+**     
+**                     ___   __
+**                  __/  /_ /  )
+**          ___  __(_   ___)  /
+**         /  / /  )/  /  /  /  Minimalist
+**        /  /_/  //  (__/  /  C utility 
+**       (____,__/(_____(__/  Library
+** 
+
 
 [[[
 # Logging
@@ -215,6 +228,10 @@ information in case of a failure:
 
    At the end of the log, the function `logclose()` will print the number of
 failures and the number of checks performed.
+
+   ```
+      2016-09-18 20:47:04 CHK #KO: 2 (of 23)
+   ```
    
 ### Debugging
 
@@ -342,8 +359,19 @@ void utl_log_assert(int res, char *test, char *file, int32_t line)
 #endif
 //>>>//
 #line 1 "src/utl_mem.c"
-/*  .% Traced memory
-**  ================
+/* 
+**  (C) 2014 by Remo Dentato (rdentato@gmail.com)
+** 
+** This software is distributed under the terms of the MIT license:
+**  https://opensource.org/licenses/MIT
+**     
+**                     ___   __
+**                  __/  /_ /  )
+**          ___  __(_   ___)  /
+**         /  / /  )/  /  /  /  Minimalist
+**        /  /_/  //  (__/  /  C utility 
+**       (____,__/(_____(__/  Library
+**
 
 **      ______   ______  ______ 
 **     /      \ / ___  )/      \
@@ -999,10 +1027,44 @@ delimiters.
   
 ## Extending recognizers
   
-  
-  - `:`' : if (utl_pmx_ext)
-    
+  Sometimes you might want to recognize a pattern that is better described with
+a C function. You can do so by defining a function with the following prototype:
 
+  ```C
+  int mypatterns(char *pat,char *txt, int len, int32_t ch)
+  ```
+and enabling it by executing `pmxextend(mypatterns)`. The arguments are:
+  
+   - `pat` a pointer at the pattern, right after `:`
+   - `txt` a pointer to the text to match
+   - `len` the length of the representation of the first character in `txt`
+   - `ch`  the Unicode codepoint of the first character
+   
+  If the pattern matches, the function must return the length of the consumed text
+in `txt`. If it doesn't match it must return 0. attern is to be matched: 
+ 
+  The function wil be invoked any time the recognizer `<:>` is to be matched.
+  
+  This short example should (hopefully) clarify better how it works.
+  
+  ```C
+    
+  ```
+  
+  
+  
+  
+  ```
+                  len |--|  
+                       __ ch 
+    "...<:X>..."  "....xx."
+          ^pat         ^txt
+  ```
+  
+  
+  
+    
+    
 ## Text encoding
   
   By default, pmx assumes that strings are encoded with some 8-bit scheme (e.g. ISO-8859-x)
@@ -1065,7 +1127,7 @@ uint8_t   utl_pmx_capnum                   =   0   ;
 char     *utl_pmx_error                    = NULL  ;
 
 
-#define utl_pmx_set_paterror(t) do {if (utl_pmx_error == utl_emptystring) {utl_pmx_error = t;}} while (0)
+#define utl_pmx_set_paterror(t) do {if (!utl_pmx_error) {utl_pmx_error = t;}} while (0)
 
 static int utl_pmx_utf8 = 0;
 
@@ -1090,11 +1152,11 @@ typedef struct {
 } utl_pmx_state_s;
 
 utl_pmx_state_s utl_pmx_stack[utl_pmx_MAXCAPT];
-uint8_t utl_pmx_stack_cnt = 0;
+uint8_t utl_pmx_stack_ptr = 0;
 
 static void utl_pmx_state_reset()
 {
-  utl_pmx_stack_cnt = 0;
+  utl_pmx_stack_ptr = 0;
   utl_pmx_capnum = 0;
 }
 
@@ -1102,9 +1164,9 @@ static int utl_pmx_state_push(char *pat, char *txt, int32_t min_n, int32_t max_n
 {
   utl_pmx_state_s *state;
   
-  if (utl_pmx_stack_cnt >= utl_pmx_MAXCAPT) return 0;
+  if (utl_pmx_stack_ptr >= utl_pmx_MAXCAPT) return 0;
   
-  state = utl_pmx_stack + utl_pmx_stack_cnt;
+  state = utl_pmx_stack + utl_pmx_stack_ptr;
   
   state->pat   = pat;
   state->txt   = txt;
@@ -1115,46 +1177,95 @@ static int utl_pmx_state_push(char *pat, char *txt, int32_t min_n, int32_t max_n
   state->cap   = utl_pmx_capnum;
   
   utl_pmx_newcap(txt);
-  utl_pmx_stack_cnt++;
+  utl_pmx_stack_ptr++;
   
   return 1;
 }
 
 static int utl_pmx_state_pop()
 {
-  if (utl_pmx_stack_cnt == 0) return 0;
-  utl_pmx_stack_cnt--;
+  if (utl_pmx_stack_ptr == 0) return 0;
+  utl_pmx_stack_ptr--;
   return 1;
 }
 
 static utl_pmx_state_s *utl_pmx_state_top()
 {
-  if (utl_pmx_stack_cnt == 0) return NULL;
-  return utl_pmx_stack + (utl_pmx_stack_cnt-1);
+  if (utl_pmx_stack_ptr == 0) return NULL;
+  return utl_pmx_stack + (utl_pmx_stack_ptr-1);
 }
 
 size_t utl_pmx_len(uint8_t n) {return pmxend(n)-pmxstart(n);}
 
-static int utl_pmx_get_utf8(char*t, int32_t *ch)
+static int utl_pmx_get_utf8(char *txt, int32_t *ch)
 {
-  int len = 0;
+  int len;
+  uint8_t *s = (uint8_t *)txt;
+  uint8_t first = *s;
   int32_t val;
-  val=0;
   
-       if ((*t & 0x80) == 0x00) { val =  *t        ; len = 1; }
-  else if ((*t & 0xE0) == 0xC0) { val = (*t & 0x1F); len = 2; }
-  else if ((*t & 0xF0) == 0xE0) { val = (*t & 0x0F); len = 3; }
-  else if ((*t & 0xF8) == 0xF0) { val = (*t & 0x07); len = 4; }
-  
-  switch (len) {  /* WARNING: falls through! */
-    case 4: if ((*++t & 0xC0) != 0x80) {len=0; break;}
-            val = (val << 6) | (*t & 0x3F);
-    case 3: if ((*++t & 0xC0) != 0x80) {len=0; break;}
-            val = (val << 6) | (*t & 0x3F);
-    case 2: if ((*++t & 0xC0) != 0x80) {len=0; break;}
-            val = (val << 6) | (*t & 0x3F);
+  _logdebug("About to get UTF8: %s in %p",txt,ch);  
+  fsm {
+    fsmSTART {
+      if (*s <= 0xC1) { val = *s; len = (*s > 0); fsmGOTO(end);    }
+      if (*s <= 0xDF) { val = *s & 0x1F; len = 2; fsmGOTO(len2);   }
+      if (*s == 0xE0) { val = *s & 0x0F; len = 3; fsmGOTO(len3_0); }
+      if (*s <= 0xEC) { val = *s & 0x0F; len = 3; fsmGOTO(len3_1); }
+      if (*s == 0xED) { val = *s & 0x0F; len = 3; fsmGOTO(len3_2); }
+      if (*s <= 0xEF) { val = *s & 0x0F; len = 3; fsmGOTO(len3_1); }
+      if (*s == 0xF0) { val = *s & 0x07; len = 4; fsmGOTO(len4_0); }
+      if (*s <= 0xF3) { val = *s & 0x07; len = 4; fsmGOTO(len4_1); }
+      if (*s == 0xF4) { val = *s & 0x07; len = 4; fsmGOTO(len4_2); }
+      fsmGOTO(invalid);
+    } 
+    
+    fsmSTATE(len4_0) {
+      s++; if ( *s < 0x90 || 0xbf < *s) fsmGOTO(invalid);
+      val = (val << 6) | (*s & 0x3F);
+      fsmGOTO(len3_1);
+    }
+    
+    fsmSTATE(len4_1) {
+      s++; if ( *s < 0x80 || 0xbf < *s) fsmGOTO(invalid);
+      val = (val << 6) | (*s & 0x3F);
+      fsmGOTO(len3_1);
+    }
+    
+    fsmSTATE(len4_2) {
+      s++; if ( *s < 0x80 || 0x8f < *s) fsmGOTO(invalid);
+      val = (val << 6) | (*s & 0x3F);
+      fsmGOTO(len3_1);
+    }
+    
+    fsmSTATE(len3_0) {
+      s++; if ( *s < 0xA0 || 0xbf < *s) fsmGOTO(invalid);
+      val = (val << 6) | (*s & 0x3F);
+      fsmGOTO(len2);
+    }
+    
+    fsmSTATE(len3_1) {
+      s++; if ( *s < 0x80 || 0xbf < *s) fsmGOTO(invalid);
+      val = (val << 6) | (*s & 0x3F);
+      fsmGOTO(len2);
+    }
+
+    fsmSTATE(len3_2) {
+      s++; if ( *s < 0x80 || 0x9f < *s) fsmGOTO(invalid);
+      val = (val << 6) | (*s & 0x3F);
+      fsmGOTO(len2);
+    }
+    
+    fsmSTATE(len2) {
+      s++; if ( *s < 0x80 || 0xbf < *s) fsmGOTO(invalid);
+      val = (val << 6) | (*s & 0x3F);
+      fsmGOTO(end);
+    }
+    
+    fsmSTATE(invalid) {val = first; len = 1;}
+    
+    fsmSTATE(end)   { }
   }
-  if (len && ch) *ch = val;
+  if (ch) *ch = val;
   return len;
 }
 
@@ -1216,6 +1327,7 @@ static int32_t utl_pmx_iscapt(char *pat, char *txt)
   
   if ('1' <= *pat && *pat <= '9') {
     capnum = *pat - '0';
+    _logdebug("capt: %d %d",capnum,utl_pmx_capnum);
     if (capnum < utl_pmx_capnum) {
       cap = pmxstart(capnum);
       while (cap < pmxend(capnum) && *cap && (*cap == *txt)) {
@@ -1431,7 +1543,7 @@ static int utl_pmx_class(char **pat_ptr, char **txt_ptr)
                  utl_W((len=utl_pmx_ext(pat+1,txt,len,ch)));
                break;
   
-    default  : utl_pmx_set_paterror(pat);
+    default  : ; //utl_pmx_set_paterror(pat);
   }
   #undef utl_W
   // }}
@@ -1483,6 +1595,7 @@ static char *utl_pmx_alt(char *pat, char **txt_ptr)
   char *ret = utl_emptystring;
   
   while (*pat) {
+    _logdebug("ALT: %s (%d)",pat,utl_pmx_stack_ptr);
     switch (*pat++) {
       case '%': if (*pat) pat++; /* works for utf8 as well */
                 break;
@@ -1495,7 +1608,7 @@ static char *utl_pmx_alt(char *pat, char **txt_ptr)
                   paren--;
                   break;
                 }
-                if (utl_pmx_stack_cnt < 2) {
+                if (utl_pmx_stack_ptr < 2) {
                   utl_pmx_set_paterror(pat);
                   break;
                 }
@@ -1504,16 +1617,20 @@ static char *utl_pmx_alt(char *pat, char **txt_ptr)
                 state = utl_pmx_state_top();
                 inv = state->inv;
                 ret = pat;
-                if (inv) *txt_ptr = pmxstart(state->cap);  /* It's ok, we WANTED to fail */
-                else if (state->n >= state->min_n) {       /* It's ok, we matched enough times */
+                if (inv) {
+                  *txt_ptr = pmxstart(state->cap);  /* It's ok, we WANTED to fail */
+                  utl_pmx_state_pop();
+                  return ret;
+                }
+                if (state->n >= state->min_n) {       /* It's ok, we matched enough times */
                   utl_pmx_capt[state->cap][0] = state->txt;
                   utl_pmx_capt[state->cap][1] = *txt_ptr;
+                  utl_pmx_state_pop();
+                  return ret;
                 }
-                else ret = utl_emptystring;                /* We didn't expect to fail */
+                //else ret = utl_emptystring;                /* We didn't expect to fail */
                 // }}
-
-                utl_pmx_state_pop();
-                return ret;
+                break;
 
       case '<': while (*pat && *pat != '>') pat++;
                 while (*pat == '>') pat++;
@@ -1554,8 +1671,8 @@ static char *utl_pmx_match(char *pat, char *txt)
                  break;
       
       case ')' : pat++;
-                 _logdebug(")->%d",utl_pmx_stack_cnt);
-                 if (utl_pmx_stack_cnt < 2) {
+                 _logdebug(")->%d",utl_pmx_stack_ptr);
+                 if (utl_pmx_stack_ptr < 2) {
                    utl_pmx_set_paterror(pat-1); 
                    break;
                  }
@@ -1590,7 +1707,10 @@ static char *utl_pmx_match(char *pat, char *txt)
 
       default  : if (c1 == 0) len = utl_pmx_nextch(pat, &c1);
                  len = utl_pmx_nextch(txt, &ch);
-                 if (ch != c1) utl_pmx_FAIL;
+                 if (ch != c1) {
+                   _logdebug("FAIL: %d %d",c1,ch);
+                   utl_pmx_FAIL;
+                 }
                  txt += len;
                  pat += len;
                  break;
@@ -1613,7 +1733,7 @@ char *utl_pmx_search(char *pat, char *txt)
 {
   char *ret=NULL;
   
-  utl_pmx_error = utl_emptystring;
+  utl_pmx_error = NULL;
   
        if (strncmp(pat,"<utf>",5) == 0) {pat+=5; utl_pmx_utf8=1;}
   else if (strncmp(pat,"<iso>",5) == 0) {pat+=5; utl_pmx_utf8=0;}

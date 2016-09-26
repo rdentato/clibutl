@@ -75,6 +75,11 @@ extern char *utl_emptystring;
 #define _logopen(f,m)   utl_retptr(NULL)
 #define _logclose()     utl_ret(0)
 
+clock_t utl_log_clk;
+#define logclock      for(int utl_log_clk_stop=0, utl_log_clk = clock();\
+                          utl_log_clk_stop < 1; \
+                          logprintf("CLK  %ld (s/%ld) %s:%d",clock()-utl_log_clk, CLOCKS_PER_SEC,__FILE__,__LINE__),utl_log_clk_stop++)
+
 int   utl_log_printf(char *format, ...);
 FILE *utl_log_open(char *fname, char *mode);
 int   utl_log_close(char *msg);
@@ -82,7 +87,7 @@ int   utl_log_check(int res, char *test, char *file, int32_t line);
 void  utl_log_assert(int res, char *test, char *file, int32_t line);
 
 #endif
-#line 11 "src/utl_mem.h"
+#line 23 "src/utl_mem.h"
 #ifndef UTL_NOMEM
 
 #ifndef memINVALID
@@ -245,7 +250,7 @@ extern char     *utl_pmx_error                   ;
 #define pmxend(n)      (utl_pmx_capt[n][1])
 #define pmxcount()     (utl_pmx_capnum)
 #define pmxlen(n)       utl_pmx_len(n)
-#define pmxerror()     (utl_pmx_error)
+#define pmxerror()     (utl_pmx_error?utl_pmx_error:utl_emptystring)
 #define pmxextend(f)   (void)(utl_pmx_ext = f)
 
 char  *utl_pmx_search(char *pat, char *txt);
@@ -260,6 +265,7 @@ void   utl_pmx_extend(int(*ext)(char *, char *,int, int32_t));
 #define fsm           
 #define fsmGOTO(x)    goto fsm_state_##x
 #define fsmSTATE(x)   fsm_state_##x :
+#define fsmSTART      
 
 #endif
 #line 15 "src/utl_end.h"
