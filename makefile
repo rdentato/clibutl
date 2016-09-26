@@ -26,21 +26,6 @@ DBGFLAGS =
 CFLAGS  = $(PRFFLAGS) $(WRNFLAGS) $(CCFLAGS) -std=c99 -Isrc/
 LNFLAGS = $(PRFFLAGS) -Lsrc/
 
-HDRS = src/utl_hdr.h src/utl_log.h src/utl_mem.h src/utl_vec.h \
-       src/utl_pmx.h src/utl_fsm.h src/utl_end.h
-
-CSRC = src/utl_hdr.c src/utl_log.c src/utl_mem.c src/utl_vec.c \
-       src/utl_pmx.c 
-
-SNGL = src/utl_hdr.h src/utl_log.h src/utl_mem.c src/utl_mem.h \
-       src/utl_vec.h src/utl_pmx.h src/utl_fsm.h src/utl_hdr.c \
-       src/utl_log.c src/utl_vec.c src/utl_pmx.c src/utl_end.h
-
-TESTS = test/t_vec$(_EXE)  test/t_buf$(_EXE)  test/t_mem$(_EXE)  \
-        test/t_mem2$(_EXE) test/t_pmx$(_EXE)  test/t_buf2$(_EXE) \
-        test/t_pmx2$(_EXE) test/t_pmx3$(_EXE) test/t_pmx4$(_EXE) \
-        test/t_logassert$(_EXE)
-
 #              __ __  
 #      ____ _ / // /_ 
 #     / __ `// // /(_)
@@ -54,6 +39,16 @@ all: src dist test
 #      / ___// ___// ___/(_) 
 #     (__  )/ /   / /__ _    
 #    /____//_/    \___/(_)   
+
+HDRS = src/utl_hdr.h src/utl_log.h src/utl_mem.h src/utl_vec.h \
+       src/utl_pmx.h src/utl_fsm.h src/utl_end.h
+
+CSRC = src/utl_hdr.c src/utl_log.c src/utl_mem.c src/utl_vec.c \
+       src/utl_pmx.c 
+
+SNGL = src/utl_hdr.h src/utl_log.h src/utl_mem.c src/utl_mem.h \
+       src/utl_vec.h src/utl_pmx.h src/utl_fsm.h src/utl_hdr.c \
+       src/utl_log.c src/utl_vec.c src/utl_pmx.c src/utl_end.h
 
 src: src/libutl.a src/utl_single.h
 
@@ -90,6 +85,11 @@ dist: src/utl.h src/utl.c src/utl_single.h
 #    / /_ /  __/(__  )/ /_ _   
 #    \__/ \___//____/ \__/(_)
 
+TESTS = test/t_vec$(_EXE)  test/t_buf$(_EXE)  test/t_mem$(_EXE)  \
+        test/t_mem2$(_EXE) test/t_pmx$(_EXE)  test/t_buf2$(_EXE) \
+        test/t_pmx2$(_EXE) test/t_pmx3$(_EXE) test/t_pmx4$(_EXE) \
+        test/t_utf$(_EXE)  test/t_logassert$(_EXE)
+
 test:  $(TESTS)
 
 test/t_vec$(_EXE): src/libutl.a  test/ut_vec.o
@@ -112,6 +112,9 @@ test/t_pmx4$(_EXE): src/libutl.a test/ut_pmx4.o
 
 test/t_mem$(_EXE): src/libutl.a test/ut_mem.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_mem.o -lutl
+  
+test/t_utf$(_EXE): src/libutl.a  test/ut_utf.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_utf.o -lutl
 
 test/t_logassert$(_EXE): src/libutl.a test/ut_logassert.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_logassert.o -lutl
