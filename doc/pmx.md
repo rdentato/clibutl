@@ -136,9 +136,9 @@ delimiters.
   - `{ }`               Curly braces
   - `< >`               Angular braces
   - `« »`               French Guillemot
-  - `&#2329; &#232A;`   Unicode ANGLE BRACKETS 
-  - `&#27E8; &#27E9;`   Unicode MATHEMATICAL ANGLE BRACKETS 
-  - `&#27EA; &#27EB;`   Unicode MATHEMATICAL DOUBLE ANGLE BRACKETS 
+  - `&#x2329; &#x232A;` Unicode ANGLE BRACKETS 
+  - `&#x27E8; &#x27E9;` Unicode MATHEMATICAL ANGLE BRACKETS 
+  - `&#x27EA; &#x27EB;` Unicode MATHEMATICAL DOUBLE ANGLE BRACKETS 
 
   For `<Q>`
   - `" "`               Double quotes
@@ -217,7 +217,7 @@ the encoding to avoid unexpected results. Assuming the text is in UTF-8:
   - `<^n>`' will match the text captured by the sub-expression `n`
 
   Examples:
-  - `(<l>)<^1>' matches a couple of identical lower case characters.
+  - `(<l>)<^1>` matches a couple of identical lower case characters.
 
 ## Recognizers
                 
