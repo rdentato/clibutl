@@ -31,7 +31,7 @@ extern char     *utl_pmx_error                   ;
 #define pmxend(n)      (utl_pmx_capt[n][1])
 #define pmxcount()     (utl_pmx_capnum)
 #define pmxlen(n)       utl_pmx_len(n)
-#define pmxerror()     (utl_pmx_error)
+#define pmxerror()     (utl_pmx_error?utl_pmx_error:utl_emptystring)
 #define pmxextend(f)   (void)(utl_pmx_ext = f)
 
 char  *utl_pmx_search(char *pat, char *txt);
