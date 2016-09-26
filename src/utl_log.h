@@ -33,6 +33,11 @@
 #define _logopen(f,m)   utl_retptr(NULL)
 #define _logclose()     utl_ret(0)
 
+clock_t utl_log_clk;
+#define logclock      for(int utl_log_clk_stop=0, utl_log_clk = clock();\
+                          utl_log_clk_stop < 1; \
+                          logprintf("CLK  %ld (s/%ld) %s:%d",clock()-utl_log_clk, CLOCKS_PER_SEC,__FILE__,__LINE__),utl_log_clk_stop++)
+
 int   utl_log_printf(char *format, ...);
 FILE *utl_log_open(char *fname, char *mode);
 int   utl_log_close(char *msg);
