@@ -1,0 +1,40 @@
+# A simple Literate Programming tool
+
+## Introduction
+  
+
+
+
+
+## Block types
+
+   - `out "filename"`   
+
+
+
+
+
+
+
+## The C file
+
+{{out "lit.c"
+
+#include "lit.h"
+
+int main(int argc, char *argc[])
+{
+  {{Check main options}}
+  {{Parse input files}}
+  {{Generate output files}}
+}
+
+}}
+
+# The header file 
+{{out "lit.h"
+
+#include "utl.h"
+
+
+}}
