@@ -118,7 +118,7 @@ void *utl_retptr(void *x) {return x;}
         /  )
        /  /______   ______
       /  //  __  \ /  __  \
-     /  //  /_/  //  /_/  /
+     /  //  (_/  //  (_/  /
     (__/ \______/ \___   /
                    __/  /
                   (____/
@@ -130,7 +130,7 @@ before the message and a newline `\n` at the end.
 To make things simple, there is only one level of logging and only one log file
 at the time.
 
-### Log messages
+## Log messages
 
   - `int logprintf(char *format, ...);`
      is the main function. On executing:  
@@ -165,7 +165,7 @@ at the time.
     printed on opening the file, this is an easy way to determine how much time
     passed between 
 
-### Testing
+## Testing
 
 A simple way to create unit test (or applying
 [Test Driven Development](https://en.wikipedia.org/wiki/Test-driven_development))
@@ -233,7 +233,7 @@ failures and the number of checks performed.
       2016-09-18 20:47:04 CHK #KO: 2 (of 23)
    ```
    
-### Debugging
+## Debugging
 
 While using a symbolic debugger like `gdb` is the *"right thing to do"*, there
 are times when you need some more traces of the execution of your program to really
@@ -248,7 +248,42 @@ the `NDEBUG` symbol is defined.
 This way you can easily differentiate between normal log messages and messages that
 are there just for debugging purposes.
 
-### Temporarily disable logging
+## Stopwatch
+
+A simple function to measure the time spent in a portion of code:
+
+  - `logclock { ... }`
+     Measure the time needed to execute the portion of code between braces. Uses
+     the `clock()` function whose resolution varies from system to system. On my
+     Windows 10 machine is in milliseconds, in my Linux box is in microseconds.
+
+  For example, this fragment:
+
+   ```C
+     294: k = max;
+     295: logclock {
+     296:   t=in;
+     297:   while (k--) {
+     298:     do {
+     299:       l = utf8_cp(t,&c); t+=l;
+     300:     } while (l>0);
+     301:   }
+     302: }
+   ```
+
+will generate a messages in the log file similar to this one:
+
+   ```
+     2016-09-27 21:22:44 CLK  34 (s/1000) test/ut_utf.c:295
+   ```
+
+which says that the block starting on line 295 of the file "test/ut_utf.c" took 34
+milliseconds to execute.
+
+  This is not a substitute for profiling! It's just a quick way to check if a
+block of code is taking more time than expected.
+
+## Temporarily disable logging
 
 There are times when you don't want some log message to be generated or some check
 to be performed. This is esepcially true for debugging messages that tend to fill
@@ -269,8 +304,8 @@ For cases like this, the following functions are defined:
 that do nothing (`_logcheck()` will always return 1 as if the test passed).
 
 Technically speaking I'm in violation of the C standard here (section 7.1.3):
-identifiers starting with underscore are reserved for use as identifiers
-with file scope.  I've tried many times to get rid of the initial underscore
+"identifiers starting with underscore are reserved for use as identifiers
+with file scope".  I've tried many times to get rid of the initial underscore
 (e.g. by using `X` or `X_`) but i still believe this is the best choice and
 the worst that could happen is that they clash with some other library.
 By the way, this is a risk that still must be taken into consideration for
@@ -285,6 +320,11 @@ any other identifier, so I'm not feeling particularly pressed on changing it.
 static FILE *utl_log_file = NULL;
 static uint32_t utl_log_check_num   = 0;
 static uint32_t utl_log_check_fail  = 0;
+clock_t utl_log_clk;
+char *utl_log_TRC = "TRC";
+char *utl_log_TCK = "TCK";
+char *utl_log_DBG = "DBG";
+
 
 int utl_log_close(char *msg)
 {
@@ -314,7 +354,7 @@ FILE *utl_log_open(char *fname, char *mode)
   return utl_log_file;
 }
 
-int utl_log_printf(char *format, ...)
+int utl_log_printf(char *categ, char *fname, int32_t line, char *format, ...)
 {
   va_list    args;
   char       log_tstr[32];
@@ -328,11 +368,13 @@ int utl_log_printf(char *format, ...)
   if (ret >= 0 && !strftime(log_tstr,32,"%Y-%m-%d %H:%M:%S",log_time_tm)) ret =-1;
   if (ret >= 0) ret = fprintf(utl_log_file,"%s ",log_tstr);
   if (ret >= 0 && fflush(utl_log_file)) ret = -1;
-
-  va_start(args, format);
-  if (ret >= 0) ret = vfprintf(utl_log_file, format, args);
-  va_end(args);
-
+  if (ret >= 0 && categ) ret = fprintf(utl_log_file,"%s ",categ);
+  if (ret >= 0) {
+    va_start(args, format);
+    ret = vfprintf(utl_log_file, format, args);
+    va_end(args);
+  }
+  if (ret >= 0 && fname) ret = fprintf(utl_log_file," %s:%d",fname,line);
   if (ret >= 0 && (fputc('\n',utl_log_file) == EOF)) ret = -1;
   if (ret >= 0 && fflush(utl_log_file)) ret = -1;
   return ret;
@@ -340,7 +382,7 @@ int utl_log_printf(char *format, ...)
 
 int utl_log_check(int res, char *test, char *file, int32_t line)
 {
-  logprintf("CHK %s (%s) %s:%d", (res?"PASS":"FAIL"), test, file, line);
+  utl_log_printf("CHK", file, line,"%s (%s)", (res?"PASS":"FAIL"), test);
   if (!res) utl_log_check_fail++;
   utl_log_check_num++;
   return res;
@@ -843,8 +885,8 @@ int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j)
 **                  __/  /_ /  )
 **          ___  __(_   ___)  /
 **         /  / /  )/  /  /  /  Minimalist
-**        /  /_/  //  (__/  /  C utility 
-**       (____,__/(_____(__/  Library
+**        /  (_/  //  (_ /  /  C utility 
+**       (____,__/(____/(__/  Library
 ** 
 
 ** [[[
@@ -852,7 +894,7 @@ int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j)
 # PMX
          ______   ______ ___  ___ 
         /  __  \ /      \\  \/  /  
-       /  /_/  //  / /  / \    \  
+       /  (_/  //  ) )  / )    (  
       /  _____//__/_/__/ /__/\__\ 
      /  /
     (__/
@@ -935,7 +977,34 @@ exceptions:
   
   - `<3>(ab|xy)` matches "`abxyab`" or "`xyxyxy`" or "`xyabab`" etc..
   
-  there must be no space between `>` and `(`.
+  there must be no spaint isid(char *pat,char *txt, int len, int32_t ch)
+{
+  char *id = txt;
+  char *c = "0123456789_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  
+  if (strchr(c+10,*id)) {
+    do {
+      id++;
+    } while (strchr(c,*id));
+  }
+  return id-txt;
+}
+
+int isprime(char *pat,char *txt, int len, int32_t ch)
+{
+  long int n;
+  char *s=txt;
+  uint8_t p[] = {  2,   3,   5,   7,  11,  13,  17,  19,  23,  29,  31,  37,  41,  43,
+                  47,  53,  59,  61,  67,  71,  73,  79,  83,  89,  97, 101, 103, 107,
+                 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181,
+                 191, 193, 197, 199, 0};
+  
+  n = strtol(txt,&s,10);
+  if (n == 0 || n >= 200) return 0;
+  if (!strchr((char*)p,n)) return 0;
+  logdebug("prime: %p %p %s",txt,s,txt);
+  return (s-txt);             
+}ce between `>` and `(`.
   
   Note that the meaning of `!` depends on the usage:
   - for characters class, it will match a character that is not in that class
@@ -994,10 +1063,11 @@ delimiters.
   - `" "`               Double quotes
   - `' '`               Single quotes
   - `` ` ` ``           Back quotes
-  - `« »`               French Guillemot
+  - `« »`               French double Guillemet
+  - `‹ ›`               French double Guillemet
   - `&#2018; &#2019;    Unicode single quotes 
   - `&#201C; &#201D;    Unicode double quotes 
-  
+   
   Examples:
   
   - `<3d>`         matches 3 digits
@@ -1048,22 +1118,68 @@ in `txt`. If it doesn't match it must return 0. attern is to be matched:
   This short example should (hopefully) clarify better how it works.
   
   ```C
+  
+    #include "utl.h"
+  
+    int isid(char *pat,char *txt, int len, int32_t ch)
+    {
+      char *id = txt;
+      char *c = "0123456789_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+      
+      if (strchr(c+10,*id)) {
+        do {
+          id++;
+        } while (strchr(c,*id));
+      }
+      return id-txt;
+    }
     
-  ```
-  
-  
-  
-  
-  ```
-                  len |--|  
-                       __ ch 
-    "...<:X>..."  "....xx."
-          ^pat         ^txt
-  ```
-  
-  
-  
+    int isprime(char *pat,char *txt, int len, int32_t ch)
+    {
+      long int n;
+      char *s=txt;
+      uint8_t p[] = {
+          2,   3,   5,   7,  11,  13,  17,  19,  23,  29,  31,  37, 41,  43,
+         47,  53,  59,  61,  67,  71,  73,  79,  83,  89,  97, 101, 103, 107,
+        109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181,
+        191, 193, 197, 199, 0
+      };
+      
+      n = strtol(txt,&s,10);
+      if (n == 0 || n >= 200) return 0;
+      if (!strchr((char*)p,n)) return 0;
+      return (s-txt);             
+    }
     
+    int isCV(char *pat,char *txt, int len, int32_t ch)
+    {
+      if (*pat == 'I') return isid(pat,txt,len,ch);
+      if (*pat == 'P') return isprime(pat,txt,len,ch);
+      return 0;
+    }
+
+    char *buf[256];
+    int line_num;
+    int main(int argc, char *argv[])
+    {
+      line_num = 0;
+      // Read a file and print the lines that start with a prime number 
+      // or with an identifier. 
+      while (fgets(buf,256,stdin)) {
+        line_num++;
+        if (pmxsearch("^<*s>(<:P>)",buf)) 
+          printf("LINE %d STARTS WITH A PRIME NUMBER: (%.*s)",pmxlen(1),pmxstart(1));
+        else if (pmxsearch("^<*s>(<:I>)",buf))
+          printf("LINE %d STARTS WITH AN IDENTIFIER: (%.*s)",pmxlen(1),pmxstart(1));
+      }
+    }
+  ```
+  
+  In the example above, matching "a prime number (less than 200)" is something that can't
+be reasonably done without an external function.  
+
+  
+
     
 ## Text encoding
   
@@ -1350,7 +1466,9 @@ void utl_pmx_extend(int(*ext)(char *, char *,int,int32_t))
 static int utl_pmx_get_limits(char *pat, char *pat_end, char *txt,int braced,
                              int32_t *c_beg_ptr, int32_t *c_end_ptr, int32_t *c_esc_ptr)
 {
-  int32_t c_beg='('; int32_t c_end=')'; int32_t c_esc='\0';
+  int32_t c_beg = '(';
+  int32_t c_end = ')';
+  int32_t c_esc = '\0';
   int32_t ch;
   
   _logdebug("BRACE: [%.*s]",pat_end-pat,pat);
@@ -1366,26 +1484,28 @@ static int utl_pmx_get_limits(char *pat, char *pat_end, char *txt,int braced,
     }
   }
   else {  /* Just <B> or <Q>, try to infer the braces */
+    c_beg = '\0';
     (void)utl_pmx_nextch(txt,&ch);
     if (braced) {
-           if (ch == '(')    {c_beg=ch;  c_end=')';}
-      else if (ch == '[')    {c_beg=ch;  c_end=']';}
-      else if (ch == '{')    {c_beg=ch;  c_end='}';}
-      else if (ch == '<')    {c_beg=ch;  c_end='>';}
-      else if (ch == '\xAB') {c_beg=ch;  c_end='\xBB';} /* Unicode and ISO-8859-1 "<<" and ">>" */
-      else if (ch == 0x2329) {c_beg=ch;  c_end=0x232A;} /* Unicode ANGLE BRACKETS */
-      else if (ch == 0x27E8) {c_beg=ch;  c_end=0x27E9;} /* Unicode MATHEMATICAL ANGLE BRACKETS */
-      else if (ch == 0x27EA) {c_beg=ch;  c_end=0x27EB;} /* Unicode MATHEMATICAL DOUBLE ANGLE BRACKETS */
-      else return 0;
+           if (ch == '(')    {c_beg=ch; c_end=')';}
+      else if (ch == '[')    {c_beg=ch; c_end=']';}
+      else if (ch == '{')    {c_beg=ch; c_end='}';}
+      else if (ch == '<')    {c_beg=ch; c_end='>';}
+      else if (ch == 0x2039) {c_beg=ch; c_end=0x203A;} /* Unicode single quotes */
+      else if (ch == 0x27E8) {c_beg=ch; c_end=0x27E9;} /* Unicode MATHEMATICAL ANGLE BRACKETS */
+      else if (ch == 0x27EA) {c_beg=ch; c_end=0x27EB;} /* Unicode MATHEMATICAL DOUBLE ANGLE BRACKETS */
     }
-    else {
+    else { // Quoted string
       c_esc = '\\';
-           if (ch == '"')    {c_beg=ch;  c_end=ch;}
-      else if (ch == '\'')   {c_beg=ch;  c_end=ch;}
-      else if (ch == '`')    {c_beg=ch;  c_end=ch;}
-      else if (ch == '\xAB') {c_beg=ch;  c_end='\xBB';} /* Unicode and ISO-8859-1 "<<" and ">>" */
-      else if (ch == 0x2018) {c_beg=ch;  c_end=0x2019;} /* Unicode single quotes */
-      else if (ch == 0x201C) {c_beg=ch;  c_end=0x201D;} /* Unicode double quotes */
+           if (ch == '"')    {c_beg=ch; c_end=ch;}
+      else if (ch == '\'')   {c_beg=ch; c_end=ch;}
+      else if (ch == '`')    {c_beg=ch; c_end=ch;}
+      else if (ch == 0x2018) {c_beg=ch; c_end=0x2019;} /* Unicode single quotes */
+      else if (ch == 0x201C) {c_beg=ch; c_end=0x201D;} /* Unicode double quotes */
+    }
+    if (c_beg=='\0') {
+           if (ch == '\xAB') {c_beg=ch; c_end='\xBB';} /* Unicode and ISO-8859-1 "<<" and ">>" */
+      else if (ch == 0x2329) {c_beg=ch; c_end=0x232A;} /* Unicode ANGLE BRACKETS */
       else return 0;
     }
   }
@@ -1658,7 +1778,7 @@ static char *utl_pmx_match(char *pat, char *txt)
   utl_pmx_state_push(pat,txt,1,1,0);
   
   while (*pat) {
-    logdebug("match %d [%s] [%s]",pmxcount(),pat,txt);
+    logtrace("match","match %d [%s] [%s]",pmxcount(),pat,txt);
     c1 = 0; 
     switch (*pat) {
       case '(' : pat++;

@@ -51,36 +51,52 @@ void *utl_retptr(void *x);
 extern char *utl_emptystring;
 
 
-#line 12 "src/utl_log.h"
+#line 26 "src/utl_log.h"
 #ifndef UTL_NOLOG
 
-#define logprintf(...)  utl_log_printf(__VA_ARGS__)
-#define logopen(f,m)    utl_log_open(f,m)
-#define logclose()      utl_log_close("LOG STOP")
-                        
-#ifndef NDEBUG          
-#define logcheck(e)     utl_log_check(!!(e),#e,__FILE__,__LINE__)
-#define logassert(e)    utl_log_assert(!!(e),#e,__FILE__,__LINE__)
-#define logdebug        logprintf
-#else                   
-#define logcheck(e)     utl_ret(1)
-#define logassert(e)    ((void)0)
-#define logdebug(...)   utl_ret(0)
-#endif                  
-                        
+#define logprintf(...) utl_log_printf(NULL,NULL,0,__VA_ARGS__)
+#define logopen(f,m)   utl_log_open(f,m)
+#define logclose()     utl_log_close("LOG STOP")
+                       
+#ifndef NDEBUG
+#define logcheck(e)    utl_log_check(!!(e),#e,__FILE__,__LINE__)
+#define logassert(e)   utl_log_assert(!!(e),#e,__FILE__,__LINE__)
+#define logdebug(...)  utl_log_printf(utl_log_DBG,__FILE__,__LINE__,__VA_ARGS__)
+#define logclock       for(int utl_log_clk_stop = 0, utl_log_clk = clock();\
+                           utl_log_clk_stop++ == 0; \
+                           logprintf("CLK  %ld (s/%ld) %s:%d",clock()-utl_log_clk, CLOCKS_PER_SEC,__FILE__,__LINE__))
+#else
+#define logcheck(e)    utl_ret(1)
+#define logassert(e)   ((void)0)
+#define logdebug(...)  utl_ret(0)
+#define logclock
+#define UTL_NOTRACE
+#endif
+
+#ifndef UTL_NOTRACE
+#define logtrace(t,...)      utl_log_printf(utl_log_TRC,__FILE__,__LINE__,__VA_ARGS__)
+#define logchecktrace(t,...) utl_log_printf(utl_log_TCK,__FILE__,__LINE__,__VA_ARGS__)
+#else
+#define logtrace(...)
+#define logchecktrace(...)
+#endif
+
 #define _logprintf(...) utl_ret(0)
 #define _logdebug(...)  utl_ret(0)
 #define _logcheck(...)  utl_ret(1)
 #define _logassert(...) ((void)0)
 #define _logopen(f,m)   utl_retptr(NULL)
 #define _logclose()     utl_ret(0)
+#define _logclock
+#define _logtrace(...)       utl_ret(0)
+#define _logchecktrace(...)  utl_ret(0)
 
-clock_t utl_log_clk;
-#define logclock      for(int utl_log_clk_stop=0, utl_log_clk = clock();\
-                          utl_log_clk_stop < 1; \
-                          logprintf("CLK  %ld (s/%ld) %s:%d",clock()-utl_log_clk, CLOCKS_PER_SEC,__FILE__,__LINE__),utl_log_clk_stop++)
+extern clock_t utl_log_clk;
+extern char *utl_log_TRC;
+extern char *utl_log_TCK;
+extern char *utl_log_DBG;
 
-int   utl_log_printf(char *format, ...);
+int utl_log_printf(char *categ, char *fname, int32_t line, char *format, ...);
 FILE *utl_log_open(char *fname, char *mode);
 int   utl_log_close(char *msg);
 int   utl_log_check(int res, char *test, char *file, int32_t line);
@@ -435,13 +451,18 @@ char *utl_emptystring = "";
 
 int   utl_ret(int x)      {return x;}
 void *utl_retptr(void *x) {return x;}
-#line 183 "src/utl_log.c"
+#line 218 "src/utl_log.c"
 #ifndef UTL_NOLOG
 #ifdef UTL_MAIN
 
 static FILE *utl_log_file = NULL;
 static uint32_t utl_log_check_num   = 0;
 static uint32_t utl_log_check_fail  = 0;
+clock_t utl_log_clk;
+char *utl_log_TRC = "TRC";
+char *utl_log_TCK = "TCK";
+char *utl_log_DBG = "DBG";
+
 
 int utl_log_close(char *msg)
 {
@@ -471,7 +492,7 @@ FILE *utl_log_open(char *fname, char *mode)
   return utl_log_file;
 }
 
-int utl_log_printf(char *format, ...)
+int utl_log_printf(char *categ, char *fname, int32_t line, char *format, ...)
 {
   va_list    args;
   char       log_tstr[32];
@@ -485,11 +506,13 @@ int utl_log_printf(char *format, ...)
   if (ret >= 0 && !strftime(log_tstr,32,"%Y-%m-%d %H:%M:%S",log_time_tm)) ret =-1;
   if (ret >= 0) ret = fprintf(utl_log_file,"%s ",log_tstr);
   if (ret >= 0 && fflush(utl_log_file)) ret = -1;
-
-  va_start(args, format);
-  if (ret >= 0) ret = vfprintf(utl_log_file, format, args);
-  va_end(args);
-
+  if (ret >= 0 && categ) ret = fprintf(utl_log_file,"%s ",categ);
+  if (ret >= 0) {
+    va_start(args, format);
+    ret = vfprintf(utl_log_file, format, args);
+    va_end(args);
+  }
+  if (ret >= 0 && fname) ret = fprintf(utl_log_file," %s:%d",fname,line);
   if (ret >= 0 && (fputc('\n',utl_log_file) == EOF)) ret = -1;
   if (ret >= 0 && fflush(utl_log_file)) ret = -1;
   return ret;
@@ -497,7 +520,7 @@ int utl_log_printf(char *format, ...)
 
 int utl_log_check(int res, char *test, char *file, int32_t line)
 {
-  logprintf("CHK %s (%s) %s:%d", (res?"PASS":"FAIL"), test, file, line);
+  utl_log_printf("CHK", file, line,"%s (%s)", (res?"PASS":"FAIL"), test);
   if (!res) utl_log_check_fail++;
   utl_log_check_num++;
   return res;
@@ -779,7 +802,7 @@ int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j)
 
 #endif
 #endif
-#line 284 "src/utl_pmx.c"
+#line 358 "src/utl_pmx.c"
 #ifndef UTL_NOPMX
 #ifdef UTL_MAIN
 
@@ -1013,7 +1036,9 @@ void utl_pmx_extend(int(*ext)(char *, char *,int,int32_t))
 static int utl_pmx_get_limits(char *pat, char *pat_end, char *txt,int braced,
                              int32_t *c_beg_ptr, int32_t *c_end_ptr, int32_t *c_esc_ptr)
 {
-  int32_t c_beg='('; int32_t c_end=')'; int32_t c_esc='\0';
+  int32_t c_beg = '(';
+  int32_t c_end = ')';
+  int32_t c_esc = '\0';
   int32_t ch;
   
   _logdebug("BRACE: [%.*s]",pat_end-pat,pat);
@@ -1029,26 +1054,28 @@ static int utl_pmx_get_limits(char *pat, char *pat_end, char *txt,int braced,
     }
   }
   else {  /* Just <B> or <Q>, try to infer the braces */
+    c_beg = '\0';
     (void)utl_pmx_nextch(txt,&ch);
     if (braced) {
-           if (ch == '(')    {c_beg=ch;  c_end=')';}
-      else if (ch == '[')    {c_beg=ch;  c_end=']';}
-      else if (ch == '{')    {c_beg=ch;  c_end='}';}
-      else if (ch == '<')    {c_beg=ch;  c_end='>';}
-      else if (ch == '\xAB') {c_beg=ch;  c_end='\xBB';} /* Unicode and ISO-8859-1 "<<" and ">>" */
-      else if (ch == 0x2329) {c_beg=ch;  c_end=0x232A;} /* Unicode ANGLE BRACKETS */
-      else if (ch == 0x27E8) {c_beg=ch;  c_end=0x27E9;} /* Unicode MATHEMATICAL ANGLE BRACKETS */
-      else if (ch == 0x27EA) {c_beg=ch;  c_end=0x27EB;} /* Unicode MATHEMATICAL DOUBLE ANGLE BRACKETS */
-      else return 0;
+           if (ch == '(')    {c_beg=ch; c_end=')';}
+      else if (ch == '[')    {c_beg=ch; c_end=']';}
+      else if (ch == '{')    {c_beg=ch; c_end='}';}
+      else if (ch == '<')    {c_beg=ch; c_end='>';}
+      else if (ch == 0x2039) {c_beg=ch; c_end=0x203A;} /* Unicode single quotes */
+      else if (ch == 0x27E8) {c_beg=ch; c_end=0x27E9;} /* Unicode MATHEMATICAL ANGLE BRACKETS */
+      else if (ch == 0x27EA) {c_beg=ch; c_end=0x27EB;} /* Unicode MATHEMATICAL DOUBLE ANGLE BRACKETS */
     }
-    else {
+    else { // Quoted string
       c_esc = '\\';
-           if (ch == '"')    {c_beg=ch;  c_end=ch;}
-      else if (ch == '\'')   {c_beg=ch;  c_end=ch;}
-      else if (ch == '`')    {c_beg=ch;  c_end=ch;}
-      else if (ch == '\xAB') {c_beg=ch;  c_end='\xBB';} /* Unicode and ISO-8859-1 "<<" and ">>" */
-      else if (ch == 0x2018) {c_beg=ch;  c_end=0x2019;} /* Unicode single quotes */
-      else if (ch == 0x201C) {c_beg=ch;  c_end=0x201D;} /* Unicode double quotes */
+           if (ch == '"')    {c_beg=ch; c_end=ch;}
+      else if (ch == '\'')   {c_beg=ch; c_end=ch;}
+      else if (ch == '`')    {c_beg=ch; c_end=ch;}
+      else if (ch == 0x2018) {c_beg=ch; c_end=0x2019;} /* Unicode single quotes */
+      else if (ch == 0x201C) {c_beg=ch; c_end=0x201D;} /* Unicode double quotes */
+    }
+    if (c_beg=='\0') {
+           if (ch == '\xAB') {c_beg=ch; c_end='\xBB';} /* Unicode and ISO-8859-1 "<<" and ">>" */
+      else if (ch == 0x2329) {c_beg=ch; c_end=0x232A;} /* Unicode ANGLE BRACKETS */
       else return 0;
     }
   }
@@ -1321,7 +1348,7 @@ static char *utl_pmx_match(char *pat, char *txt)
   utl_pmx_state_push(pat,txt,1,1,0);
   
   while (*pat) {
-    logdebug("match %d [%s] [%s]",pmxcount(),pat,txt);
+    logtrace("match","match %d [%s] [%s]",pmxcount(),pat,txt);
     c1 = 0; 
     switch (*pat) {
       case '(' : pat++;
