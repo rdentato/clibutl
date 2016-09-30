@@ -8,8 +8,8 @@
 **                  __/  /_ /  )
 **          ___  __(_   ___)  /
 **         /  / /  )/  /  /  /  Minimalist
-**        /  /_/  //  (__/  /  C utility 
-**       (____,__/(_____(__/  Library
+**        /  (_/  //  (_ /  /  C utility 
+**       (____,__/(____/(__/  Library
 ** 
 
 ** [[[
@@ -17,7 +17,7 @@
 # PMX
          ______   ______ ___  ___ 
         /  __  \ /      \\  \/  /  
-       /  /_/  //  / /  / \    \  
+       /  (_/  //  ) )  / )    (  
       /  _____//__/_/__/ /__/\__\ 
      /  /
     (__/
@@ -100,7 +100,34 @@ exceptions:
   
   - `<3>(ab|xy)` matches "`abxyab`" or "`xyxyxy`" or "`xyabab`" etc..
   
-  there must be no space between `>` and `(`.
+  there must be no spaint isid(char *pat,char *txt, int len, int32_t ch)
+{
+  char *id = txt;
+  char *c = "0123456789_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  
+  if (strchr(c+10,*id)) {
+    do {
+      id++;
+    } while (strchr(c,*id));
+  }
+  return id-txt;
+}
+
+int isprime(char *pat,char *txt, int len, int32_t ch)
+{
+  long int n;
+  char *s=txt;
+  uint8_t p[] = {  2,   3,   5,   7,  11,  13,  17,  19,  23,  29,  31,  37,  41,  43,
+                  47,  53,  59,  61,  67,  71,  73,  79,  83,  89,  97, 101, 103, 107,
+                 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181,
+                 191, 193, 197, 199, 0};
+  
+  n = strtol(txt,&s,10);
+  if (n == 0 || n >= 200) return 0;
+  if (!strchr((char*)p,n)) return 0;
+  logdebug("prime: %p %p %s",txt,s,txt);
+  return (s-txt);             
+}ce between `>` and `(`.
   
   Note that the meaning of `!` depends on the usage:
   - for characters class, it will match a character that is not in that class
@@ -159,10 +186,11 @@ delimiters.
   - `" "`               Double quotes
   - `' '`               Single quotes
   - `` ` ` ``           Back quotes
-  - `« »`               French Guillemot
+  - `« »`               French double Guillemet
+  - `‹ ›`               French double Guillemet
   - `&#2018; &#2019;    Unicode single quotes 
   - `&#201C; &#201D;    Unicode double quotes 
-  
+   
   Examples:
   
   - `<3d>`         matches 3 digits
@@ -213,22 +241,68 @@ in `txt`. If it doesn't match it must return 0. attern is to be matched:
   This short example should (hopefully) clarify better how it works.
   
   ```C
+  
+    #include "utl.h"
+  
+    int isid(char *pat,char *txt, int len, int32_t ch)
+    {
+      char *id = txt;
+      char *c = "0123456789_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+      
+      if (strchr(c+10,*id)) {
+        do {
+          id++;
+        } while (strchr(c,*id));
+      }
+      return id-txt;
+    }
     
-  ```
-  
-  
-  
-  
-  ```
-                  len |--|  
-                       __ ch 
-    "...<:X>..."  "....xx."
-          ^pat         ^txt
-  ```
-  
-  
-  
+    int isprime(char *pat,char *txt, int len, int32_t ch)
+    {
+      long int n;
+      char *s=txt;
+      uint8_t p[] = {
+          2,   3,   5,   7,  11,  13,  17,  19,  23,  29,  31,  37, 41,  43,
+         47,  53,  59,  61,  67,  71,  73,  79,  83,  89,  97, 101, 103, 107,
+        109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181,
+        191, 193, 197, 199, 0
+      };
+      
+      n = strtol(txt,&s,10);
+      if (n == 0 || n >= 200) return 0;
+      if (!strchr((char*)p,n)) return 0;
+      return (s-txt);             
+    }
     
+    int isCV(char *pat,char *txt, int len, int32_t ch)
+    {
+      if (*pat == 'I') return isid(pat,txt,len,ch);
+      if (*pat == 'P') return isprime(pat,txt,len,ch);
+      return 0;
+    }
+
+    char *buf[256];
+    int line_num;
+    int main(int argc, char *argv[])
+    {
+      line_num = 0;
+      // Read a file and print the lines that start with a prime number 
+      // or with an identifier. 
+      while (fgets(buf,256,stdin)) {
+        line_num++;
+        if (pmxsearch("^<*s>(<:P>)",buf)) 
+          printf("LINE %d STARTS WITH A PRIME NUMBER: (%.*s)",pmxlen(1),pmxstart(1));
+        else if (pmxsearch("^<*s>(<:I>)",buf))
+          printf("LINE %d STARTS WITH AN IDENTIFIER: (%.*s)",pmxlen(1),pmxstart(1));
+      }
+    }
+  ```
+  
+  In the example above, matching "a prime number (less than 200)" is something that can't
+be reasonably done without an external function.  
+
+  
+
     
 ## Text encoding
   
@@ -515,7 +589,9 @@ void utl_pmx_extend(int(*ext)(char *, char *,int,int32_t))
 static int utl_pmx_get_limits(char *pat, char *pat_end, char *txt,int braced,
                              int32_t *c_beg_ptr, int32_t *c_end_ptr, int32_t *c_esc_ptr)
 {
-  int32_t c_beg='('; int32_t c_end=')'; int32_t c_esc='\0';
+  int32_t c_beg = '(';
+  int32_t c_end = ')';
+  int32_t c_esc = '\0';
   int32_t ch;
   
   _logdebug("BRACE: [%.*s]",pat_end-pat,pat);
@@ -531,26 +607,28 @@ static int utl_pmx_get_limits(char *pat, char *pat_end, char *txt,int braced,
     }
   }
   else {  /* Just <B> or <Q>, try to infer the braces */
+    c_beg = '\0';
     (void)utl_pmx_nextch(txt,&ch);
     if (braced) {
-           if (ch == '(')    {c_beg=ch;  c_end=')';}
-      else if (ch == '[')    {c_beg=ch;  c_end=']';}
-      else if (ch == '{')    {c_beg=ch;  c_end='}';}
-      else if (ch == '<')    {c_beg=ch;  c_end='>';}
-      else if (ch == '\xAB') {c_beg=ch;  c_end='\xBB';} /* Unicode and ISO-8859-1 "<<" and ">>" */
-      else if (ch == 0x2329) {c_beg=ch;  c_end=0x232A;} /* Unicode ANGLE BRACKETS */
-      else if (ch == 0x27E8) {c_beg=ch;  c_end=0x27E9;} /* Unicode MATHEMATICAL ANGLE BRACKETS */
-      else if (ch == 0x27EA) {c_beg=ch;  c_end=0x27EB;} /* Unicode MATHEMATICAL DOUBLE ANGLE BRACKETS */
-      else return 0;
+           if (ch == '(')    {c_beg=ch; c_end=')';}
+      else if (ch == '[')    {c_beg=ch; c_end=']';}
+      else if (ch == '{')    {c_beg=ch; c_end='}';}
+      else if (ch == '<')    {c_beg=ch; c_end='>';}
+      else if (ch == 0x2039) {c_beg=ch; c_end=0x203A;} /* Unicode single quotes */
+      else if (ch == 0x27E8) {c_beg=ch; c_end=0x27E9;} /* Unicode MATHEMATICAL ANGLE BRACKETS */
+      else if (ch == 0x27EA) {c_beg=ch; c_end=0x27EB;} /* Unicode MATHEMATICAL DOUBLE ANGLE BRACKETS */
     }
-    else {
+    else { // Quoted string
       c_esc = '\\';
-           if (ch == '"')    {c_beg=ch;  c_end=ch;}
-      else if (ch == '\'')   {c_beg=ch;  c_end=ch;}
-      else if (ch == '`')    {c_beg=ch;  c_end=ch;}
-      else if (ch == '\xAB') {c_beg=ch;  c_end='\xBB';} /* Unicode and ISO-8859-1 "<<" and ">>" */
-      else if (ch == 0x2018) {c_beg=ch;  c_end=0x2019;} /* Unicode single quotes */
-      else if (ch == 0x201C) {c_beg=ch;  c_end=0x201D;} /* Unicode double quotes */
+           if (ch == '"')    {c_beg=ch; c_end=ch;}
+      else if (ch == '\'')   {c_beg=ch; c_end=ch;}
+      else if (ch == '`')    {c_beg=ch; c_end=ch;}
+      else if (ch == 0x2018) {c_beg=ch; c_end=0x2019;} /* Unicode single quotes */
+      else if (ch == 0x201C) {c_beg=ch; c_end=0x201D;} /* Unicode double quotes */
+    }
+    if (c_beg=='\0') {
+           if (ch == '\xAB') {c_beg=ch; c_end='\xBB';} /* Unicode and ISO-8859-1 "<<" and ">>" */
+      else if (ch == 0x2329) {c_beg=ch; c_end=0x232A;} /* Unicode ANGLE BRACKETS */
       else return 0;
     }
   }
@@ -823,7 +901,7 @@ static char *utl_pmx_match(char *pat, char *txt)
   utl_pmx_state_push(pat,txt,1,1,0);
   
   while (*pat) {
-    logdebug("match %d [%s] [%s]",pmxcount(),pat,txt);
+    logtrace("match","match %d [%s] [%s]",pmxcount(),pat,txt);
     c1 = 0; 
     switch (*pat) {
       case '(' : pat++;
