@@ -1,34 +1,37 @@
 # A simple Literate Programming tool
 
 ## Introduction
-  
 
+Basic requirements:
 
-
+    - Use MarkDown as typesetting language
+    - Ability to generate multiple files from a single lit file
+    - Ability to generate an identifiers index across multiple project files
+    - Generates HTML output
+    - Generates PDF input (??)
+    - Very 
 
 ## Block types
 
-   - `out "filename"`   
+   - `> "filename" [filetype]`   
+   - `^ block title`
+   - `. block title`
 
 
 
+# The C file
 
+{{> "lit.c"
 
-
-
-## The C file
-
-{{out "lit.c"
-
-#include "lit.h"
-
-int main(int argc, char *argc[])
-{
-  {{Check main options}}
-  {{Parse input files}}
-  {{Generate output files}}
-}
-
+   #include "lit.h"
+   
+   int main(int argc, char *argc[])
+   {
+     {{Get command line options}}
+     {{Parse input files}}
+     {{Generate output files}}
+     {{Update index of identifiers}}
+   }
 }}
 
 # The header file 
