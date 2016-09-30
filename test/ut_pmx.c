@@ -17,8 +17,6 @@ void prtnote(char *s)
 int main(int argc, char *argv[])
 {
   char *s;
-  char *p;
-  char *q;
   
   logopen("l_pmx.log","w");
   
@@ -34,7 +32,7 @@ int main(int argc, char *argv[])
   s=pmxsearch("<utf>田(もa|)","電田説モ");
   logcheck(s);
   
-  s=pmxsearch("(<.>)a","電a");
+  s=pmxsearch("<iso>(<.>)a","電a");
   logcheck(s && pmxlen(1) == 1);
 
   s=pmxsearch("<utf>(<.>)a","電a");
