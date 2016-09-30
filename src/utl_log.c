@@ -20,7 +20,7 @@
         /  )
        /  /______   ______
       /  //  __  \ /  __  \
-     /  //  /_/  //  /_/  /
+     /  //  (_/  //  (_/  /
     (__/ \______/ \___   /
                    __/  /
                   (____/
@@ -32,7 +32,7 @@ before the message and a newline `\n` at the end.
 To make things simple, there is only one level of logging and only one log file
 at the time.
 
-### Log messages
+## Log messages
 
   - `int logprintf(char *format, ...);`
      is the main function. On executing:  
@@ -67,7 +67,7 @@ at the time.
     printed on opening the file, this is an easy way to determine how much time
     passed between 
 
-### Testing
+## Testing
 
 A simple way to create unit test (or applying
 [Test Driven Development](https://en.wikipedia.org/wiki/Test-driven_development))
@@ -135,7 +135,7 @@ failures and the number of checks performed.
       2016-09-18 20:47:04 CHK #KO: 2 (of 23)
    ```
    
-### Debugging
+## Debugging
 
 While using a symbolic debugger like `gdb` is the *"right thing to do"*, there
 are times when you need some more traces of the execution of your program to really
@@ -150,7 +150,42 @@ the `NDEBUG` symbol is defined.
 This way you can easily differentiate between normal log messages and messages that
 are there just for debugging purposes.
 
-### Temporarily disable logging
+## Stopwatch
+
+A simple function to measure the time spent in a portion of code:
+
+  - `logclock { ... }`
+     Measure the time needed to execute the portion of code between braces. Uses
+     the `clock()` function whose resolution varies from system to system. On my
+     Windows 10 machine is in milliseconds, in my Linux box is in microseconds.
+
+  For example, this fragment:
+
+   ```C
+     294: k = max;
+     295: logclock {
+     296:   t=in;
+     297:   while (k--) {
+     298:     do {
+     299:       l = utf8_cp(t,&c); t+=l;
+     300:     } while (l>0);
+     301:   }
+     302: }
+   ```
+
+will generate a messages in the log file similar to this one:
+
+   ```
+     2016-09-27 21:22:44 CLK  34 (s/1000) test/ut_utf.c:295
+   ```
+
+which says that the block starting on line 295 of the file "test/ut_utf.c" took 34
+milliseconds to execute.
+
+  This is not a substitute for profiling! It's just a quick way to check if a
+block of code is taking more time than expected.
+
+## Temporarily disable logging
 
 There are times when you don't want some log message to be generated or some check
 to be performed. This is esepcially true for debugging messages that tend to fill
@@ -171,8 +206,8 @@ For cases like this, the following functions are defined:
 that do nothing (`_logcheck()` will always return 1 as if the test passed).
 
 Technically speaking I'm in violation of the C standard here (section 7.1.3):
-identifiers starting with underscore are reserved for use as identifiers
-with file scope.  I've tried many times to get rid of the initial underscore
+"identifiers starting with underscore are reserved for use as identifiers
+with file scope".  I've tried many times to get rid of the initial underscore
 (e.g. by using `X` or `X_`) but i still believe this is the best choice and
 the worst that could happen is that they clash with some other library.
 By the way, this is a risk that still must be taken into consideration for
@@ -187,6 +222,11 @@ any other identifier, so I'm not feeling particularly pressed on changing it.
 static FILE *utl_log_file = NULL;
 static uint32_t utl_log_check_num   = 0;
 static uint32_t utl_log_check_fail  = 0;
+clock_t utl_log_clk;
+char *utl_log_TRC = "TRC";
+char *utl_log_TCK = "TCK";
+char *utl_log_DBG = "DBG";
+
 
 int utl_log_close(char *msg)
 {
@@ -216,7 +256,7 @@ FILE *utl_log_open(char *fname, char *mode)
   return utl_log_file;
 }
 
-int utl_log_printf(char *format, ...)
+int utl_log_printf(char *categ, char *fname, int32_t line, char *format, ...)
 {
   va_list    args;
   char       log_tstr[32];
@@ -230,11 +270,13 @@ int utl_log_printf(char *format, ...)
   if (ret >= 0 && !strftime(log_tstr,32,"%Y-%m-%d %H:%M:%S",log_time_tm)) ret =-1;
   if (ret >= 0) ret = fprintf(utl_log_file,"%s ",log_tstr);
   if (ret >= 0 && fflush(utl_log_file)) ret = -1;
-
-  va_start(args, format);
-  if (ret >= 0) ret = vfprintf(utl_log_file, format, args);
-  va_end(args);
-
+  if (ret >= 0 && categ) ret = fprintf(utl_log_file,"%s ",categ);
+  if (ret >= 0) {
+    va_start(args, format);
+    ret = vfprintf(utl_log_file, format, args);
+    va_end(args);
+  }
+  if (ret >= 0 && fname) ret = fprintf(utl_log_file," %s:%d",fname,line);
   if (ret >= 0 && (fputc('\n',utl_log_file) == EOF)) ret = -1;
   if (ret >= 0 && fflush(utl_log_file)) ret = -1;
   return ret;
@@ -242,7 +284,7 @@ int utl_log_printf(char *format, ...)
 
 int utl_log_check(int res, char *test, char *file, int32_t line)
 {
-  logprintf("CHK %s (%s) %s:%d", (res?"PASS":"FAIL"), test, file, line);
+  utl_log_printf("CHK", file, line,"%s (%s)", (res?"PASS":"FAIL"), test);
   if (!res) utl_log_check_fail++;
   utl_log_check_num++;
   return res;
