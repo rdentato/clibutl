@@ -1,4 +1,3 @@
-#line 1 "src/utl_hdr.c"
 /* 
 **  (C) 2014 by Remo Dentato (rdentato@gmail.com)
 ** 
@@ -95,7 +94,6 @@ int   utl_ret(int x)      {return x;}
 void *utl_retptr(void *x) {return x;}
 //>>>//
 
-#line 1 "src/utl_log.c"
 /* 
 **  (C) 2016 by Remo Dentato (rdentato@gmail.com)
 ** 
@@ -400,7 +398,6 @@ void utl_log_assert(int res, const char *test, const char *file, int32_t line)
 #endif
 #endif
 //>>>//
-#line 1 "src/utl_mem.c"
 /* 
 **  (C) 2014 by Remo Dentato (rdentato@gmail.com)
 ** 
@@ -589,7 +586,6 @@ size_t utl_mem_used(void) {return utl_mem_allocated;}
 #endif
 #endif
 //>>>//
-#line 1 "src/utl_vec.c"
 /* 
 **  (C) 2016 by Remo Dentato (rdentato@gmail.com)
 ** 
@@ -874,7 +870,6 @@ int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j)
 #endif
 #endif
 //>>>//
-#line 1 "src/utl_pmx.c"
 /* 
 **  (C) 2016 by Remo Dentato (rdentato@gmail.com)
 ** 

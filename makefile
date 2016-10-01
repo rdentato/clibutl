@@ -57,7 +57,8 @@ src/utl.h: src/utl_unc$(_EXE) $(HDRS)
 
 src/utl.c: src/utl.h $(CSRC)
 	$(RM) src/utl.c
-	for f in $(CSRC); do echo "#line 1 \"$$f\"" >> src/utl.c; cat $$f >> src/utl.c; done
+	cat $(CSRC) > src/utl.c
+#	for f in $(CSRC); do echo "#line 1 \"$$f\"" >> src/utl.c; cat $$f >> src/utl.c; done
 
 src/utl_single.h: src/utl_unc$(_EXE) $(SNGL)
 	src/utl_unc $(SNGL) > src/utl_single.h
