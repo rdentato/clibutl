@@ -265,7 +265,7 @@ int utl_log_printf(const char *categ, const char *fname, int32_t line, const cha
   struct tm *log_time_tm;
   
   if (!utl_log_file) utl_log_file = stderr;
-  if (time(&log_time) < 0) ret = -1;
+  if (time(&log_time) == ((time_t)-1)) ret = -1;
   if (ret >= 0 && !(log_time_tm = localtime(&log_time))) ret = -1;
   if (ret >= 0 && !strftime(log_tstr,32,"%Y-%m-%d %H:%M:%S",log_time_tm)) ret =-1;
   if (ret >= 0) ret = fprintf(utl_log_file,"%s ",log_tstr);

@@ -393,7 +393,7 @@ typedef struct {
 utl_pmx_state_s utl_pmx_stack[utl_pmx_MAXCAPT];
 uint8_t utl_pmx_stack_ptr = 0;
 
-static void utl_pmx_state_reset()
+static void utl_pmx_state_reset(void)
 {
   utl_pmx_stack_ptr = 0;
   utl_pmx_capnum = 0;
@@ -421,14 +421,14 @@ static int utl_pmx_state_push(const char *pat, const char *txt, int32_t min_n, i
   return 1;
 }
 
-static int utl_pmx_state_pop()
+static int utl_pmx_state_pop(void)
 {
   if (utl_pmx_stack_ptr == 0) return 0;
   utl_pmx_stack_ptr--;
   return 1;
 }
 
-static utl_pmx_state_s *utl_pmx_state_top()
+static utl_pmx_state_s *utl_pmx_state_top(void)
 {
   if (utl_pmx_stack_ptr == 0) return NULL;
   return utl_pmx_stack + (utl_pmx_stack_ptr-1);
@@ -514,7 +514,7 @@ static int32_t utl_pmx_nextch(const char *t, int32_t *c_ptr)
   int32_t len = 0;
   
   if (utl_pmx_utf8) len = utl_pmx_get_utf8(t, c_ptr);
-  else if ((*c_ptr = (uint8_t)(*t))) len = 1;
+  else if ((*c_ptr = (uint8_t)(*t)) != 0) len = 1;
   
   return len;
 }
