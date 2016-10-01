@@ -12,9 +12,12 @@
 **        /  /_/  //  (__/  /  C utility 
 **       (____,__/(_____(__/  Library
 */    
-
 #ifndef UTL_H
 #define UTL_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,7 +51,7 @@
 int   utl_ret(int x);
 void *utl_retptr(void *x);
 
-extern char *utl_emptystring;
+extern const char *utl_emptystring;
 
 
 #line 26 "src/utl_log.h"
@@ -92,15 +95,15 @@ extern char *utl_emptystring;
 #define _logchecktrace(...)  utl_ret(0)
 
 extern clock_t utl_log_clk;
-extern char *utl_log_TRC;
-extern char *utl_log_TCK;
-extern char *utl_log_DBG;
+extern const char *utl_log_TRC;
+extern const char *utl_log_TCK;
+extern const char *utl_log_DBG;
 
-int utl_log_printf(char *categ, char *fname, int32_t line, char *format, ...);
-FILE *utl_log_open(char *fname, char *mode);
-int   utl_log_close(char *msg);
-int   utl_log_check(int res, char *test, char *file, int32_t line);
-void  utl_log_assert(int res, char *test, char *file, int32_t line);
+int utl_log_printf(const char *categ, const char *fname, int32_t line,const char *format, ...);
+FILE *utl_log_open(const char *fname, const char *mode);
+int   utl_log_close(const char *msg);
+int   utl_log_check(int res, const char *test, const char *file, int32_t line);
+void  utl_log_assert(int res, const char *test, const char *file, int32_t line);
 
 #endif
 #line 23 "src/utl_mem.h"
@@ -113,13 +116,13 @@ void  utl_log_assert(int res, char *test, char *file, int32_t line);
 #define memNULL        1
 #endif
 
-void  *utl_malloc   (size_t size, char *file, int32_t line );
-void  *utl_calloc   (size_t num, size_t size, char *file, int32_t line);
-void  *utl_realloc  (void *ptr, size_t size, char *file, int32_t line);
-void   utl_free     (void *ptr, char *file, int32_t line );
-void  *utl_strdup   (void *ptr, char *file, int32_t line);
+void  *utl_malloc   (size_t size, const char *file, int32_t line );
+void  *utl_calloc   (size_t num, size_t size, const char *file, int32_t line);
+void  *utl_realloc  (void *ptr, size_t size, const char *file, int32_t line);
+void   utl_free     (void *ptr, const char *file, int32_t line );
+void  *utl_strdup   (const char *ptr, const char *file, int32_t line);
                     
-int    utl_check    (void *ptr,char *file, int32_t line);
+int    utl_check    (void *ptr, const char *file, int32_t line);
 size_t utl_mem_used (void);
 
 
@@ -244,8 +247,8 @@ char utl_buf_get(buf_t b, uint32_t n);
 size_t utl_buf_readall(buf_t b, uint32_t i, FILE *f);
 size_t utl_buf_read(buf_t b, uint32_t i, uint32_t n, FILE *f) ;
 char *utl_buf_readln(buf_t b, uint32_t i, FILE *f);
-char *utl_buf_sets(buf_t b, uint32_t i, char *s);
-char *utl_buf_inss(buf_t b, uint32_t i, char *s);
+char *utl_buf_sets(buf_t b, uint32_t i, const char *s);
+char *utl_buf_inss(buf_t b, uint32_t i, const char *s);
 char *utl_buf_insc(buf_t b, uint32_t i, char c);
 int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j);
 
@@ -255,11 +258,11 @@ int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j);
 
 #define utl_pmx_MAXCAPT 16
 
-extern int(*utl_pmx_ext)(char *pat, char *txt, int, int32_t ch);
+extern int(*utl_pmx_ext)(const char *pat, const char *txt, int, int32_t ch);
 
-extern char     *utl_pmx_capt[utl_pmx_MAXCAPT][2];
-extern uint8_t   utl_pmx_capnum                  ;
-extern char     *utl_pmx_error                   ;
+extern const char  *utl_pmx_capt[utl_pmx_MAXCAPT][2];
+extern uint8_t      utl_pmx_capnum                  ;
+extern const char  *utl_pmx_error                   ;
 
 #define pmxsearch(r,t)  utl_pmx_search(r,t)
 #define pmxstart(n)    (utl_pmx_capt[n][0])
@@ -269,9 +272,9 @@ extern char     *utl_pmx_error                   ;
 #define pmxerror()     (utl_pmx_error?utl_pmx_error:utl_emptystring)
 #define pmxextend(f)   (void)(utl_pmx_ext = f)
 
-char  *utl_pmx_search(char *pat, char *txt);
+const char *utl_pmx_search(const char *pat, const char *txt);
 size_t utl_pmx_len(uint8_t n);
-void   utl_pmx_extend(int(*ext)(char *, char *,int, int32_t));
+void   utl_pmx_extend(int(*ext)(const char *, const char *,int, int32_t));
 
 #endif
 #line 91 "src/utl_fsm.h"
@@ -285,6 +288,10 @@ void   utl_pmx_extend(int(*ext)(char *, char *,int, int32_t));
 
 #endif
 #line 15 "src/utl_end.h"
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* UTL_H */
 

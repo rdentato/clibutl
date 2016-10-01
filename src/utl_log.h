@@ -64,15 +64,15 @@
 #define _logchecktrace(...)  utl_ret(0)
 
 extern clock_t utl_log_clk;
-extern char *utl_log_TRC;
-extern char *utl_log_TCK;
-extern char *utl_log_DBG;
+extern const char *utl_log_TRC;
+extern const char *utl_log_TCK;
+extern const char *utl_log_DBG;
 
-int utl_log_printf(char *categ, char *fname, int32_t line, char *format, ...);
-FILE *utl_log_open(char *fname, char *mode);
-int   utl_log_close(char *msg);
-int   utl_log_check(int res, char *test, char *file, int32_t line);
-void  utl_log_assert(int res, char *test, char *file, int32_t line);
+int utl_log_printf(const char *categ, const char *fname, int32_t line,const char *format, ...);
+FILE *utl_log_open(const char *fname, const char *mode);
+int   utl_log_close(const char *msg);
+int   utl_log_check(int res, const char *test, const char *file, int32_t line);
+void  utl_log_assert(int res, const char *test, const char *file, int32_t line);
 
 #endif
 //>>>//

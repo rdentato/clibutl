@@ -1,6 +1,6 @@
 #include "utl.h"
 
-void prtnote(char *s)
+void prtnote(const char *s)
 {
   /* "^(<=A-G>)(<?=b#>)(<?=whqest>)(<*d>)(/<+d>|)" */   
   if (pmxcount() == 0)   logprintf("'%-6s' no note",s);
@@ -15,9 +15,9 @@ void prtnote(char *s)
 
 int main(int argc, char *argv[])
 {
-  char *s;
-  char *p;
-  char *q;
+  const char *s;
+  const char *p;
+  const char *q;
   
   logopen("l_pmx2.log","w");
  

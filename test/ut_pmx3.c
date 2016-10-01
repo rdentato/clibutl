@@ -2,8 +2,8 @@
 
 int main(int argc, char *argv[])
 {
-  char *s;
-  char *p;
+  const char *s;
+  const char *p;
   /*
   char *q;
   */

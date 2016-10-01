@@ -16,7 +16,7 @@ void prtnote(char *s)
 
 int main(int argc, char *argv[])
 {
-  char *s;
+  const char *s;
   
   logopen("l_pmx.log","w");
   

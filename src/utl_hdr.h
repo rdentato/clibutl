@@ -12,9 +12,12 @@
 **        /  /_/  //  (__/  /  C utility 
 **       (____,__/(_____(__/  Library
 */    
-
 #ifndef UTL_H
 #define UTL_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,7 +51,7 @@
 int   utl_ret(int x);
 void *utl_retptr(void *x);
 
-extern char *utl_emptystring;
+extern const char *utl_emptystring;
 
 
 //>>>//

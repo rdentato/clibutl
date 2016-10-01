@@ -28,7 +28,7 @@ static int16_t utl_vec_makeroom(vec_t v,uint32_t n)
   if (n < v->max) return 1;
   new_max = v->max;
   while (new_max <= n) new_max += (new_max / 2);  /*  (new_max *= 1.5) instead of (new_max *= 2) */
-  new_vec = realloc(v->vec, new_max * v->esz);
+  new_vec = (uint8_t *)realloc(v->vec, new_max * v->esz);
   if (!new_vec) return 0;
   v->vec = new_vec;  v->max = new_max;
   return 1;
@@ -80,12 +80,12 @@ vec_t utl_vec_new(uint16_t esz)
   vec_t v = NULL;
   uint32_t sz = sizeof(vec_s)+(esz-sizeof(uint32_t));
   
-  v = malloc(sz);
+  v = (vec_t)malloc(sz);
   if (v) {
     memset(v,0,sz);
     v->esz = esz;
     v->max = vec_MIN_ELEM;
-    v->vec = malloc(v->max * esz);
+    v->vec = (uint8_t *)malloc(v->max * esz);
     vecunsorted(v);
     if (!v->vec) { free(v); v = NULL;}
   }
@@ -131,7 +131,7 @@ void *utl_vec_ins(vec_t v, uint32_t i)
   uint8_t *elm=NULL;
 
   if (i == UINT32_MAX) i = v->cnt;
-  if (utl_vec_makegap(v,i,1)) elm = utl_vec_set(v,i);
+  if (utl_vec_makegap(v,i,1)) elm = (uint8_t *)utl_vec_set(v,i);
   vecunsorted(v);
   return elm;
 }
@@ -232,7 +232,7 @@ char *utl_buf_readln(buf_t b, uint32_t i, FILE *f)
   return buf(b)+n;
 }
 
-char *utl_buf_sets(buf_t b, uint32_t i, char *s)
+char *utl_buf_sets(buf_t b, uint32_t i, const char *s)
 {
   char *r = buf(b)+i;
   while (*s) bufsetc(b,i++,*s++);
@@ -241,7 +241,7 @@ char *utl_buf_sets(buf_t b, uint32_t i, char *s)
   return r;
 }
 
-char *utl_buf_inss(buf_t b, uint32_t i, char *s)
+char *utl_buf_inss(buf_t b, uint32_t i, const char *s)
 {
   uint32_t n;
   char *p;

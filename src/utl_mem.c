@@ -8,13 +8,13 @@
 **                  __/  /_ /  )
 **          ___  __(_   ___)  /
 **         /  / /  )/  /  /  /  Minimalist
-**        /  /_/  //  (__/  /  C utility 
+**        /  (_/  //  (__/  /  C utility 
 **       (____,__/(_____(__/  Library
 **
 
 **      ______   ______  ______ 
 **     /      \ / ___  )/      \
-**    /  / /  //   ___//  / /  /
+**    /  ) )  //   ___//  ) )  /
 **   (__/_/__/ \_____/(__/_/__/ 
 **   
 **   
@@ -34,9 +34,9 @@
 #define memNULL        1
 #endif
 
-static char  *utl_BEG_CHK = "\xBE\xEF\xF0\x0D";
-static char  *utl_END_CHK = "\xDE\xAD\xC0\xDA";
-static char  *utl_CLR_CHK = "\xDE\xFA\xCE\xD0";
+static const char  *utl_BEG_CHK = "\xBE\xEF\xF0\x0D";
+static const char  *utl_END_CHK = "\xDE\xAD\xC0\xDA";
+static const char  *utl_CLR_CHK = "\xDE\xFA\xCE\xD0";
 static size_t utl_mem_allocated;
 
 typedef struct {
@@ -47,7 +47,7 @@ typedef struct {
 
 #define utl_mem(x) ((utl_mem_t *)((char *)(x) -  offsetof(utl_mem_t, blk)))
 
-int utl_check(void *ptr,char *file, int32_t line)
+int utl_check(void *ptr,const char *file, int32_t line)
 {
   utl_mem_t *p;
   
@@ -67,13 +67,13 @@ int utl_check(void *ptr,char *file, int32_t line)
   return memVALID; 
 }
 
-void *utl_malloc(size_t size, char *file, int32_t line )
+void *utl_malloc(size_t size, const char *file, int32_t line )
 {
   utl_mem_t *p;
   
   if (size == 0) logprintf("MEM Requesto for 0 bytes (%lu %s:%d)",
                                                 utl_mem_allocated, file, line);
-  p = malloc(sizeof(utl_mem_t) +size);
+  p = (utl_mem_t *)malloc(sizeof(utl_mem_t) +size);
   if (p == NULL) {
     logprintf("MEM Out of Memory (%lu %s:%d)",utl_mem_allocated, file, line);
     return NULL;
@@ -86,7 +86,7 @@ void *utl_malloc(size_t size, char *file, int32_t line )
   return p->blk;
 }
 
-void *utl_calloc(size_t num, size_t size, char *file, int32_t line)
+void *utl_calloc(size_t num, size_t size, const char *file, int32_t line)
 {
   void *ptr;
   
@@ -96,7 +96,7 @@ void *utl_calloc(size_t num, size_t size, char *file, int32_t line)
   return ptr;
 }
 
-void utl_free(void *ptr, char *file, int32_t line)
+void utl_free(void *ptr, const char *file, int32_t line)
 {
   utl_mem_t *p=NULL;
   
@@ -125,7 +125,7 @@ void utl_free(void *ptr, char *file, int32_t line)
   }
 }
 
-void *utl_realloc(void *ptr, size_t size, char *file, int32_t line)
+void *utl_realloc(void *ptr, size_t size, const char *file, int32_t line)
 {
   utl_mem_t *p;
   
@@ -141,7 +141,7 @@ void *utl_realloc(void *ptr, size_t size, char *file, int32_t line)
                           return utl_malloc(size,file,line);
                         
       case memVALID  : p = utl_mem(ptr); 
-                       p = realloc(p,sizeof(utl_mem_t) + size); 
+                       p = (utl_mem_t *)realloc(p,sizeof(utl_mem_t) + size); 
                        if (p == NULL) {
                          logprintf("MEM Out of Memory (%lu %s:%d)", 
                                           utl_mem_allocated, file, line);
@@ -162,7 +162,7 @@ void *utl_realloc(void *ptr, size_t size, char *file, int32_t line)
   return ptr;
 }
 
-void *utl_strdup(void *ptr, char *file, int32_t line)
+void *utl_strdup(const char *ptr, const char *file, int32_t line)
 {
   char *dest;
   size_t size;
@@ -173,7 +173,7 @@ void *utl_strdup(void *ptr, char *file, int32_t line)
   }
   size = strlen(ptr)+1;
 
-  dest = utl_malloc(size,file,line);
+  dest = (char *)utl_malloc(size,file,line);
   if (dest) memcpy(dest,ptr,size);
   logprintf("MEM strdup %p [%lu] -> %p (%lu %s:%d)", ptr, size, dest, 
                                                 utl_mem_allocated, file, line);

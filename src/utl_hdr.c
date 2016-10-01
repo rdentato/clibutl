@@ -88,7 +88,7 @@ pollute your namespace (and could possibly stop you using
 #define UTL_MAIN
 
 //<<<//
-char *utl_emptystring = "";
+const char *utl_emptystring = "";
 
 int   utl_ret(int x)      {return x;}
 void *utl_retptr(void *x) {return x;}

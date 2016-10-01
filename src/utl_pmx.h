@@ -20,11 +20,11 @@
 
 #define utl_pmx_MAXCAPT 16
 
-extern int(*utl_pmx_ext)(char *pat, char *txt, int, int32_t ch);
+extern int(*utl_pmx_ext)(const char *pat, const char *txt, int, int32_t ch);
 
-extern char     *utl_pmx_capt[utl_pmx_MAXCAPT][2];
-extern uint8_t   utl_pmx_capnum                  ;
-extern char     *utl_pmx_error                   ;
+extern const char  *utl_pmx_capt[utl_pmx_MAXCAPT][2];
+extern uint8_t      utl_pmx_capnum                  ;
+extern const char  *utl_pmx_error                   ;
 
 #define pmxsearch(r,t)  utl_pmx_search(r,t)
 #define pmxstart(n)    (utl_pmx_capt[n][0])
@@ -34,9 +34,9 @@ extern char     *utl_pmx_error                   ;
 #define pmxerror()     (utl_pmx_error?utl_pmx_error:utl_emptystring)
 #define pmxextend(f)   (void)(utl_pmx_ext = f)
 
-char  *utl_pmx_search(char *pat, char *txt);
+const char *utl_pmx_search(const char *pat, const char *txt);
 size_t utl_pmx_len(uint8_t n);
-void   utl_pmx_extend(int(*ext)(char *, char *,int, int32_t));
+void   utl_pmx_extend(int(*ext)(const char *, const char *,int, int32_t));
 
 #endif
 //>>>//

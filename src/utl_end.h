@@ -14,6 +14,10 @@
 */
 //<<<//
 
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* UTL_H */
 
 //>>>//

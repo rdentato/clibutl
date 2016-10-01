@@ -8,14 +8,14 @@
 **                  __/  /_ /  )
 **          ___  __(_   ___)  /
 **         /  / /  )/  /  /  /  Minimalist
-**        /  /_/  //  (__/  /  C utility 
-**       (____,__/(_____(__/  Library
+**        /  (_/  //  (__/  /  C utility 
+**       (____,__/(_____/__/  Library
 **
 
 
 **      ______   ______  ______ 
 **     /      \ / ___  )/      \
-**    /  / /  //   ___//  / /  /
+**    /  ) )  //   ___//  ) )  /
 **   (__/_/__/ \_____/(__/_/__/ 
 **   
 **   
@@ -30,13 +30,13 @@
 #define memNULL        1
 #endif
 
-void  *utl_malloc   (size_t size, char *file, int32_t line );
-void  *utl_calloc   (size_t num, size_t size, char *file, int32_t line);
-void  *utl_realloc  (void *ptr, size_t size, char *file, int32_t line);
-void   utl_free     (void *ptr, char *file, int32_t line );
-void  *utl_strdup   (void *ptr, char *file, int32_t line);
+void  *utl_malloc   (size_t size, const char *file, int32_t line );
+void  *utl_calloc   (size_t num, size_t size, const char *file, int32_t line);
+void  *utl_realloc  (void *ptr, size_t size, const char *file, int32_t line);
+void   utl_free     (void *ptr, const char *file, int32_t line );
+void  *utl_strdup   (const char *ptr, const char *file, int32_t line);
                     
-int    utl_check    (void *ptr,char *file, int32_t line);
+int    utl_check    (void *ptr, const char *file, int32_t line);
 size_t utl_mem_used (void);
 
 

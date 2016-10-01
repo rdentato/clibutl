@@ -1,11 +1,11 @@
 #include "utl.h"
 
-int isvowel(char *pat,char *txt, int len, int32_t ch)
+int isvowel(const char *pat,const char *txt, int len, int32_t ch)
 {
   
-  char *w1 = "AEIOUaeiou";
+  const char *w1 = "AEIOUaeiou";
   /* Unicode code points */
-  char *w2 = "\xC0\xC1\xC2\xC3\xC4\xC5\xC6\xC8\xC9\xCA\xCB\xCC\xCD\xCE\xCF"
+  const char *w2 = "\xC0\xC1\xC2\xC3\xC4\xC5\xC6\xC8\xC9\xCA\xCB\xCC\xCD\xCE\xCF"
              "\xD1\xD2\xD3\xD4\xD5\xD6\xD8\xD9\xDA\xDB\xDC\xE0\xE1\xE2\xE3"
              "\xE4\xE5\xE6\xE8\xE9\xEA\xEB\xEC\xED\xEE\xEF\xF2\xF3\xF4\xF5"
              "\xF6\xF8\xF9\xFA\xFB\xFC";
@@ -18,13 +18,13 @@ int isvowel(char *pat,char *txt, int len, int32_t ch)
   return len;
 }
 
-int iscons(char *pat,char *txt, int len, int32_t ch)
+int iscons(const char *pat,const char *txt, int len, int32_t ch)
 {
   
-  char *w1 = "BCDFGHJKLMNPQRSTVWXYZ" 
+  const char *w1 = "BCDFGHJKLMNPQRSTVWXYZ" 
              "bcdfghjklmnpqrstvwxyz" ;
   /* Unicode code points */
-  char *w2 = "\xC7\xD0\xD1\xDD\xDE\xE7\xF0\xF1\xFD\xFE\xFF";
+  const char *w2 = "\xC7\xD0\xD1\xDD\xDE\xE7\xF0\xF1\xFD\xFE\xFF";
   
   switch (len) {
     case 1 :   if (!strchr(w1,ch)) len = 0;  break;
@@ -34,10 +34,10 @@ int iscons(char *pat,char *txt, int len, int32_t ch)
   return len;
 }
 
-int isid(char *pat,char *txt, int len, int32_t ch)
+int isid(const char *pat,const char *txt, int len, int32_t ch)
 {
-  char *id = txt;
-  char *c = "0123456789_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  const char *id = txt;
+  const char *c = "0123456789_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
   
   if (strchr(c+10,*id)) {
     do {
@@ -47,10 +47,10 @@ int isid(char *pat,char *txt, int len, int32_t ch)
   return id-txt;
 }
 
-int isprime(char *pat,char *txt, int len, int32_t ch)
+int isprime(const char *pat,const char *txt, int len, int32_t ch)
 {
   long int n;
-  char *s=txt;
+  char *s = (char *)txt;
   uint8_t p[] = {  2,   3,   5,   7,  11,  13,  17,  19,  23,  29,  31,  37,  41,  43,
                   47,  53,  59,  61,  67,  71,  73,  79,  83,  89,  97, 101, 103, 107,
                  109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181,
@@ -71,7 +71,7 @@ int isladder(char *pat,char *txt, int len, int32_t ch)
   return 0;
 }
 
-int isCV(char *pat,char *txt, int len, int32_t ch)
+int isCV(const char *pat,const char *txt, int len, int32_t ch)
 {
   if (*pat == 'C') return iscons(pat,txt,len,ch);
   if (*pat == 'V') return isvowel(pat,txt,len,ch);
@@ -83,8 +83,8 @@ int isCV(char *pat,char *txt, int len, int32_t ch)
 
 int main(int argc, char *argv[])
 {
-  char *s;
-  char *p;
+  const char *s;
+  const char *p;
 /*  char *q;
   */
   logopen("l_pmx4.log","w");

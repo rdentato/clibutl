@@ -223,12 +223,12 @@ static FILE *utl_log_file = NULL;
 static uint32_t utl_log_check_num   = 0;
 static uint32_t utl_log_check_fail  = 0;
 clock_t utl_log_clk;
-char *utl_log_TRC = "TRC";
-char *utl_log_TCK = "TCK";
-char *utl_log_DBG = "DBG";
+const char *utl_log_TRC = "TRC";
+const char *utl_log_TCK = "TCK";
+const char *utl_log_DBG = "DBG";
 
 
-int utl_log_close(char *msg)
+int utl_log_close(const char *msg)
 {
   int ret = 0;
   
@@ -243,7 +243,7 @@ int utl_log_close(char *msg)
   return ret;
 }
 
-FILE *utl_log_open(char *fname, char *mode)
+FILE *utl_log_open(const char *fname, const char *mode)
 {
   char md[2];
   md[0] = (mode && *mode == 'w')? 'w' : 'a';
@@ -256,7 +256,7 @@ FILE *utl_log_open(char *fname, char *mode)
   return utl_log_file;
 }
 
-int utl_log_printf(char *categ, char *fname, int32_t line, char *format, ...)
+int utl_log_printf(const char *categ, const char *fname, int32_t line, const char *format, ...)
 {
   va_list    args;
   char       log_tstr[32];
@@ -282,7 +282,7 @@ int utl_log_printf(char *categ, char *fname, int32_t line, char *format, ...)
   return ret;
 }
 
-int utl_log_check(int res, char *test, char *file, int32_t line)
+int utl_log_check(int res, const char *test, const char *file, int32_t line)
 {
   utl_log_printf("CHK", file, line,"%s (%s)", (res?"PASS":"FAIL"), test);
   if (!res) utl_log_check_fail++;
@@ -290,7 +290,7 @@ int utl_log_check(int res, char *test, char *file, int32_t line)
   return res;
 }
 
-void utl_log_assert(int res, char *test, char *file, int32_t line)
+void utl_log_assert(int res, const char *test, const char *file, int32_t line)
 {
   if (!utl_log_check(res,test,file,line)) {
     logprintf("CHK EXITING ON FAIL");

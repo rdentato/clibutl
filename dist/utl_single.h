@@ -12,9 +12,12 @@
 **        /  /_/  //  (__/  /  C utility 
 **       (____,__/(_____(__/  Library
 */    
-
 #ifndef UTL_H
 #define UTL_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,7 +51,7 @@
 int   utl_ret(int x);
 void *utl_retptr(void *x);
 
-extern char *utl_emptystring;
+extern const char *utl_emptystring;
 
 
 #line 26 "src/utl_log.h"
@@ -92,15 +95,15 @@ extern char *utl_emptystring;
 #define _logchecktrace(...)  utl_ret(0)
 
 extern clock_t utl_log_clk;
-extern char *utl_log_TRC;
-extern char *utl_log_TCK;
-extern char *utl_log_DBG;
+extern const char *utl_log_TRC;
+extern const char *utl_log_TCK;
+extern const char *utl_log_DBG;
 
-int utl_log_printf(char *categ, char *fname, int32_t line, char *format, ...);
-FILE *utl_log_open(char *fname, char *mode);
-int   utl_log_close(char *msg);
-int   utl_log_check(int res, char *test, char *file, int32_t line);
-void  utl_log_assert(int res, char *test, char *file, int32_t line);
+int utl_log_printf(const char *categ, const char *fname, int32_t line,const char *format, ...);
+FILE *utl_log_open(const char *fname, const char *mode);
+int   utl_log_close(const char *msg);
+int   utl_log_check(int res, const char *test, const char *file, int32_t line);
+void  utl_log_assert(int res, const char *test, const char *file, int32_t line);
 
 #endif
 #line 26 "src/utl_mem.c"
@@ -114,9 +117,9 @@ void  utl_log_assert(int res, char *test, char *file, int32_t line);
 #define memNULL        1
 #endif
 
-static char  *utl_BEG_CHK = "\xBE\xEF\xF0\x0D";
-static char  *utl_END_CHK = "\xDE\xAD\xC0\xDA";
-static char  *utl_CLR_CHK = "\xDE\xFA\xCE\xD0";
+static const char  *utl_BEG_CHK = "\xBE\xEF\xF0\x0D";
+static const char  *utl_END_CHK = "\xDE\xAD\xC0\xDA";
+static const char  *utl_CLR_CHK = "\xDE\xFA\xCE\xD0";
 static size_t utl_mem_allocated;
 
 typedef struct {
@@ -127,7 +130,7 @@ typedef struct {
 
 #define utl_mem(x) ((utl_mem_t *)((char *)(x) -  offsetof(utl_mem_t, blk)))
 
-int utl_check(void *ptr,char *file, int32_t line)
+int utl_check(void *ptr,const char *file, int32_t line)
 {
   utl_mem_t *p;
   
@@ -147,13 +150,13 @@ int utl_check(void *ptr,char *file, int32_t line)
   return memVALID; 
 }
 
-void *utl_malloc(size_t size, char *file, int32_t line )
+void *utl_malloc(size_t size, const char *file, int32_t line )
 {
   utl_mem_t *p;
   
   if (size == 0) logprintf("MEM Requesto for 0 bytes (%lu %s:%d)",
                                                 utl_mem_allocated, file, line);
-  p = malloc(sizeof(utl_mem_t) +size);
+  p = (utl_mem_t *)malloc(sizeof(utl_mem_t) +size);
   if (p == NULL) {
     logprintf("MEM Out of Memory (%lu %s:%d)",utl_mem_allocated, file, line);
     return NULL;
@@ -166,7 +169,7 @@ void *utl_malloc(size_t size, char *file, int32_t line )
   return p->blk;
 }
 
-void *utl_calloc(size_t num, size_t size, char *file, int32_t line)
+void *utl_calloc(size_t num, size_t size, const char *file, int32_t line)
 {
   void *ptr;
   
@@ -176,7 +179,7 @@ void *utl_calloc(size_t num, size_t size, char *file, int32_t line)
   return ptr;
 }
 
-void utl_free(void *ptr, char *file, int32_t line)
+void utl_free(void *ptr, const char *file, int32_t line)
 {
   utl_mem_t *p=NULL;
   
@@ -205,7 +208,7 @@ void utl_free(void *ptr, char *file, int32_t line)
   }
 }
 
-void *utl_realloc(void *ptr, size_t size, char *file, int32_t line)
+void *utl_realloc(void *ptr, size_t size, const char *file, int32_t line)
 {
   utl_mem_t *p;
   
@@ -221,7 +224,7 @@ void *utl_realloc(void *ptr, size_t size, char *file, int32_t line)
                           return utl_malloc(size,file,line);
                         
       case memVALID  : p = utl_mem(ptr); 
-                       p = realloc(p,sizeof(utl_mem_t) + size); 
+                       p = (utl_mem_t *)realloc(p,sizeof(utl_mem_t) + size); 
                        if (p == NULL) {
                          logprintf("MEM Out of Memory (%lu %s:%d)", 
                                           utl_mem_allocated, file, line);
@@ -242,7 +245,7 @@ void *utl_realloc(void *ptr, size_t size, char *file, int32_t line)
   return ptr;
 }
 
-void *utl_strdup(void *ptr, char *file, int32_t line)
+void *utl_strdup(const char *ptr, const char *file, int32_t line)
 {
   char *dest;
   size_t size;
@@ -253,7 +256,7 @@ void *utl_strdup(void *ptr, char *file, int32_t line)
   }
   size = strlen(ptr)+1;
 
-  dest = utl_malloc(size,file,line);
+  dest = (char *)utl_malloc(size,file,line);
   if (dest) memcpy(dest,ptr,size);
   logprintf("MEM strdup %p [%lu] -> %p (%lu %s:%d)", ptr, size, dest, 
                                                 utl_mem_allocated, file, line);
@@ -275,13 +278,13 @@ size_t utl_mem_used(void) {return utl_mem_allocated;}
 #define memNULL        1
 #endif
 
-void  *utl_malloc   (size_t size, char *file, int32_t line );
-void  *utl_calloc   (size_t num, size_t size, char *file, int32_t line);
-void  *utl_realloc  (void *ptr, size_t size, char *file, int32_t line);
-void   utl_free     (void *ptr, char *file, int32_t line );
-void  *utl_strdup   (void *ptr, char *file, int32_t line);
+void  *utl_malloc   (size_t size, const char *file, int32_t line );
+void  *utl_calloc   (size_t num, size_t size, const char *file, int32_t line);
+void  *utl_realloc  (void *ptr, size_t size, const char *file, int32_t line);
+void   utl_free     (void *ptr, const char *file, int32_t line );
+void  *utl_strdup   (const char *ptr, const char *file, int32_t line);
                     
-int    utl_check    (void *ptr,char *file, int32_t line);
+int    utl_check    (void *ptr, const char *file, int32_t line);
 size_t utl_mem_used (void);
 
 
@@ -406,8 +409,8 @@ char utl_buf_get(buf_t b, uint32_t n);
 size_t utl_buf_readall(buf_t b, uint32_t i, FILE *f);
 size_t utl_buf_read(buf_t b, uint32_t i, uint32_t n, FILE *f) ;
 char *utl_buf_readln(buf_t b, uint32_t i, FILE *f);
-char *utl_buf_sets(buf_t b, uint32_t i, char *s);
-char *utl_buf_inss(buf_t b, uint32_t i, char *s);
+char *utl_buf_sets(buf_t b, uint32_t i, const char *s);
+char *utl_buf_inss(buf_t b, uint32_t i, const char *s);
 char *utl_buf_insc(buf_t b, uint32_t i, char c);
 int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j);
 
@@ -417,11 +420,11 @@ int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j);
 
 #define utl_pmx_MAXCAPT 16
 
-extern int(*utl_pmx_ext)(char *pat, char *txt, int, int32_t ch);
+extern int(*utl_pmx_ext)(const char *pat, const char *txt, int, int32_t ch);
 
-extern char     *utl_pmx_capt[utl_pmx_MAXCAPT][2];
-extern uint8_t   utl_pmx_capnum                  ;
-extern char     *utl_pmx_error                   ;
+extern const char  *utl_pmx_capt[utl_pmx_MAXCAPT][2];
+extern uint8_t      utl_pmx_capnum                  ;
+extern const char  *utl_pmx_error                   ;
 
 #define pmxsearch(r,t)  utl_pmx_search(r,t)
 #define pmxstart(n)    (utl_pmx_capt[n][0])
@@ -431,9 +434,9 @@ extern char     *utl_pmx_error                   ;
 #define pmxerror()     (utl_pmx_error?utl_pmx_error:utl_emptystring)
 #define pmxextend(f)   (void)(utl_pmx_ext = f)
 
-char  *utl_pmx_search(char *pat, char *txt);
+const char *utl_pmx_search(const char *pat, const char *txt);
 size_t utl_pmx_len(uint8_t n);
-void   utl_pmx_extend(int(*ext)(char *, char *,int, int32_t));
+void   utl_pmx_extend(int(*ext)(const char *, const char *,int, int32_t));
 
 #endif
 #line 91 "src/utl_fsm.h"
@@ -447,7 +450,7 @@ void   utl_pmx_extend(int(*ext)(char *, char *,int, int32_t));
 
 #endif
 #line 90 "src/utl_hdr.c"
-char *utl_emptystring = "";
+const char *utl_emptystring = "";
 
 int   utl_ret(int x)      {return x;}
 void *utl_retptr(void *x) {return x;}
@@ -459,12 +462,12 @@ static FILE *utl_log_file = NULL;
 static uint32_t utl_log_check_num   = 0;
 static uint32_t utl_log_check_fail  = 0;
 clock_t utl_log_clk;
-char *utl_log_TRC = "TRC";
-char *utl_log_TCK = "TCK";
-char *utl_log_DBG = "DBG";
+const char *utl_log_TRC = "TRC";
+const char *utl_log_TCK = "TCK";
+const char *utl_log_DBG = "DBG";
 
 
-int utl_log_close(char *msg)
+int utl_log_close(const char *msg)
 {
   int ret = 0;
   
@@ -479,7 +482,7 @@ int utl_log_close(char *msg)
   return ret;
 }
 
-FILE *utl_log_open(char *fname, char *mode)
+FILE *utl_log_open(const char *fname, const char *mode)
 {
   char md[2];
   md[0] = (mode && *mode == 'w')? 'w' : 'a';
@@ -492,7 +495,7 @@ FILE *utl_log_open(char *fname, char *mode)
   return utl_log_file;
 }
 
-int utl_log_printf(char *categ, char *fname, int32_t line, char *format, ...)
+int utl_log_printf(const char *categ, const char *fname, int32_t line, const char *format, ...)
 {
   va_list    args;
   char       log_tstr[32];
@@ -518,7 +521,7 @@ int utl_log_printf(char *categ, char *fname, int32_t line, char *format, ...)
   return ret;
 }
 
-int utl_log_check(int res, char *test, char *file, int32_t line)
+int utl_log_check(int res, const char *test, const char *file, int32_t line)
 {
   utl_log_printf("CHK", file, line,"%s (%s)", (res?"PASS":"FAIL"), test);
   if (!res) utl_log_check_fail++;
@@ -526,7 +529,7 @@ int utl_log_check(int res, char *test, char *file, int32_t line)
   return res;
 }
 
-void utl_log_assert(int res, char *test, char *file, int32_t line)
+void utl_log_assert(int res, const char *test, const char *file, int32_t line)
 {
   if (!utl_log_check(res,test,file,line)) {
     logprintf("CHK EXITING ON FAIL");
@@ -549,7 +552,7 @@ static int16_t utl_vec_makeroom(vec_t v,uint32_t n)
   if (n < v->max) return 1;
   new_max = v->max;
   while (new_max <= n) new_max += (new_max / 2);  /*  (new_max *= 1.5) instead of (new_max *= 2) */
-  new_vec = realloc(v->vec, new_max * v->esz);
+  new_vec = (uint8_t *)realloc(v->vec, new_max * v->esz);
   if (!new_vec) return 0;
   v->vec = new_vec;  v->max = new_max;
   return 1;
@@ -601,12 +604,12 @@ vec_t utl_vec_new(uint16_t esz)
   vec_t v = NULL;
   uint32_t sz = sizeof(vec_s)+(esz-sizeof(uint32_t));
   
-  v = malloc(sz);
+  v = (vec_t)malloc(sz);
   if (v) {
     memset(v,0,sz);
     v->esz = esz;
     v->max = vec_MIN_ELEM;
-    v->vec = malloc(v->max * esz);
+    v->vec = (uint8_t *)malloc(v->max * esz);
     vecunsorted(v);
     if (!v->vec) { free(v); v = NULL;}
   }
@@ -652,7 +655,7 @@ void *utl_vec_ins(vec_t v, uint32_t i)
   uint8_t *elm=NULL;
 
   if (i == UINT32_MAX) i = v->cnt;
-  if (utl_vec_makegap(v,i,1)) elm = utl_vec_set(v,i);
+  if (utl_vec_makegap(v,i,1)) elm = (uint8_t *)utl_vec_set(v,i);
   vecunsorted(v);
   return elm;
 }
@@ -753,7 +756,7 @@ char *utl_buf_readln(buf_t b, uint32_t i, FILE *f)
   return buf(b)+n;
 }
 
-char *utl_buf_sets(buf_t b, uint32_t i, char *s)
+char *utl_buf_sets(buf_t b, uint32_t i, const char *s)
 {
   char *r = buf(b)+i;
   while (*s) bufsetc(b,i++,*s++);
@@ -762,7 +765,7 @@ char *utl_buf_sets(buf_t b, uint32_t i, char *s)
   return r;
 }
 
-char *utl_buf_inss(buf_t b, uint32_t i, char *s)
+char *utl_buf_inss(buf_t b, uint32_t i, const char *s)
 {
   uint32_t n;
   char *p;
@@ -806,11 +809,11 @@ int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j)
 #ifndef UTL_NOPMX
 #ifdef UTL_MAIN
 
-int(*utl_pmx_ext)(char *pat, char *txt, int, int32_t ch) = NULL;
+int(*utl_pmx_ext)(const char *pat, const char *txt, int, int32_t ch) = NULL;
 
-char     *utl_pmx_capt[utl_pmx_MAXCAPT][2] = {{0}} ;
-uint8_t   utl_pmx_capnum                   =   0   ;
-char     *utl_pmx_error                    = NULL  ;
+const char *utl_pmx_capt[utl_pmx_MAXCAPT][2] = {{0}} ;
+uint8_t     utl_pmx_capnum                   =   0   ;
+const char *utl_pmx_error                    = NULL  ;
 
 
 #define utl_pmx_set_paterror(t) do {if (!utl_pmx_error) {utl_pmx_error = t;}} while (0)
@@ -828,8 +831,8 @@ static int utl_pmx_utf8 = 0;
                           } while(0)
 
 typedef struct {
-  char *pat;
-  char *txt;
+  const char *pat;
+  const char *txt;
   int32_t min_n;
   int32_t max_n;
   int32_t n;
@@ -846,7 +849,7 @@ static void utl_pmx_state_reset()
   utl_pmx_capnum = 0;
 }
 
-static int utl_pmx_state_push(char *pat, char *txt, int32_t min_n, int32_t max_n, int16_t inv)
+static int utl_pmx_state_push(const char *pat, const char *txt, int32_t min_n, int32_t max_n, int16_t inv)
 {
   utl_pmx_state_s *state;
   
@@ -883,7 +886,7 @@ static utl_pmx_state_s *utl_pmx_state_top()
 
 size_t utl_pmx_len(uint8_t n) {return pmxend(n)-pmxstart(n);}
 
-static int utl_pmx_get_utf8(char *txt, int32_t *ch)
+static int utl_pmx_get_utf8(const char *txt, int32_t *ch)
 {
   int len;
   uint8_t *s = (uint8_t *)txt;
@@ -956,7 +959,7 @@ static int utl_pmx_get_utf8(char *txt, int32_t *ch)
 }
 
 // Returns the length in bytes of the character or 0 if it is '\0'
-static int32_t utl_pmx_nextch(char *t, int32_t *c_ptr)
+static int32_t utl_pmx_nextch(const char *t, int32_t *c_ptr)
 {
   int32_t len = 0;
   
@@ -966,7 +969,7 @@ static int32_t utl_pmx_nextch(char *t, int32_t *c_ptr)
   return len;
 }
 
-static int32_t utl_pmx_gethex(char *pat, int32_t *c_ptr)
+static int32_t utl_pmx_gethex(const char *pat, int32_t *c_ptr)
 {
   int32_t ch =0;
   int32_t len =0;
@@ -983,7 +986,7 @@ static int32_t utl_pmx_gethex(char *pat, int32_t *c_ptr)
   return len;  
 }
 
-static int utl_pmx_isin(char *pat, char *pat_end, int32_t ch, int32_t (*nxt)(char *, int32_t *))
+static int utl_pmx_isin(const char *pat, const char *pat_end, int32_t ch, int32_t (*nxt)(const char *, int32_t *))
 {
   int32_t c1,c2;
   int32_t len;
@@ -1005,11 +1008,11 @@ static int utl_pmx_isin(char *pat, char *pat_end, int32_t ch, int32_t (*nxt)(cha
 #define utl_pmx_isin_chars(p,e,c) utl_pmx_isin(p,e,c,utl_pmx_nextch)
 #define utl_pmx_isin_codes(p,e,c) utl_pmx_isin(p,e,c,utl_pmx_gethex)
 
-static int32_t utl_pmx_iscapt(char *pat, char *txt)
+static int32_t utl_pmx_iscapt(const char *pat, const char *txt)
 {
   int32_t len = 0;
   uint8_t capnum = 0; 
-  char *cap;
+  const char *cap;
   
   if ('1' <= *pat && *pat <= '9') {
     capnum = *pat - '0';
@@ -1025,7 +1028,7 @@ static int32_t utl_pmx_iscapt(char *pat, char *txt)
   return len;
 }
 
-void utl_pmx_extend(int(*ext)(char *, char *,int,int32_t))
+void utl_pmx_extend(int(*ext)(const char *, const char *, int, int32_t))
 {
   utl_pmx_ext = ext;
 }
@@ -1033,7 +1036,7 @@ void utl_pmx_extend(int(*ext)(char *, char *,int,int32_t))
 #define UTL_PMX_QUOTED 0
 #define UTL_PMX_BRACED 1
 
-static int utl_pmx_get_limits(char *pat, char *pat_end, char *txt,int braced,
+static int utl_pmx_get_limits(const char *pat, const char *pat_end, const char *txt, int braced,
                              int32_t *c_beg_ptr, int32_t *c_end_ptr, int32_t *c_esc_ptr)
 {
   int32_t c_beg = '(';
@@ -1087,10 +1090,10 @@ static int utl_pmx_get_limits(char *pat, char *pat_end, char *txt,int braced,
   return 1;
 }
 
-static int utl_pmx_get_delimited(char *pat, char *txt,int32_t c_beg, int32_t c_end, int32_t c_esc)
+static int utl_pmx_get_delimited(const char *pat, const char *txt,int32_t c_beg, int32_t c_end, int32_t c_esc)
 {
   int n;
-  char *s;
+  const char *s;
   int cnt;
   int32_t ch;
   
@@ -1115,7 +1118,7 @@ static int utl_pmx_get_delimited(char *pat, char *txt,int32_t c_beg, int32_t c_e
   
 }
 
-static int utl_pmx_delimited(char *pat, char *pat_end, char *txt,int braced)
+static int utl_pmx_delimited(const char *pat, const char *pat_end, const char *txt, int braced)
 {
   int32_t c_beg; int32_t c_end; int32_t c_esc;
   if (!utl_pmx_get_limits(pat,pat_end,txt, braced, &c_beg, &c_end, &c_esc)) return 0;
@@ -1123,13 +1126,13 @@ static int utl_pmx_delimited(char *pat, char *pat_end, char *txt,int braced)
 }
 
 
-static int utl_pmx_class(char **pat_ptr, char **txt_ptr)
+static int utl_pmx_class(const char **pat_ptr, const char **txt_ptr)
 {
   int inv = 0;
   
-  char *pat = *pat_ptr;
-  char *txt = *txt_ptr;
-  char *pat_end;
+  const char *pat = *pat_ptr;
+  const char *txt = *txt_ptr;
+  const char *pat_end;
   
   int32_t len   = 0;
   int32_t n     = 0;
@@ -1252,7 +1255,7 @@ static int utl_pmx_class(char **pat_ptr, char **txt_ptr)
   return 1;
 }
 
-static char *utl_pmx_alt_skip(char *pat)
+static const char *utl_pmx_alt_skip(const char *pat)
 {
   int paren=0;
   
@@ -1277,12 +1280,12 @@ static char *utl_pmx_alt_skip(char *pat)
   return pat;
 }
 
-static char *utl_pmx_alt(char *pat, char **txt_ptr)
+static const char *utl_pmx_alt(const char *pat, const char **txt_ptr)
 {
   int paren=0;
   utl_pmx_state_s *state;
   int inv;
-  char *ret = utl_emptystring;
+  const char *ret = utl_emptystring;
   
   while (*pat) {
     _logdebug("ALT: %s (%d)",pat,utl_pmx_stack_ptr);
@@ -1336,7 +1339,7 @@ static char *utl_pmx_alt(char *pat, char **txt_ptr)
   return utl_emptystring;
 }
 
-static char *utl_pmx_match(char *pat, char *txt)
+static const char *utl_pmx_match(const char *pat, const char *txt)
 {
   int32_t len;
   int32_t ch;
@@ -1419,9 +1422,9 @@ static char *utl_pmx_match(char *pat, char *txt)
   return utl_pmx_capt[0][0];
 }
 
-char *utl_pmx_search(char *pat, char *txt)
+const char *utl_pmx_search(const char *pat, const char *txt)
 {
-  char *ret=NULL;
+  const char *ret=NULL;
   
   utl_pmx_error = NULL;
   
@@ -1438,6 +1441,10 @@ char *utl_pmx_search(char *pat, char *txt)
 #endif
 #endif
 #line 15 "src/utl_end.h"
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* UTL_H */
 

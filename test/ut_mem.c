@@ -10,6 +10,10 @@
 #include "utl.h"
 
 
+/* DISCLAIMER malloc() (and friends) are casted just to allow the code to
+   be compiled by a C++ compiler.
+*/
+
 int main (int argc, char *argv[])
 {
   char *ptr_a;
@@ -20,7 +24,7 @@ int main (int argc, char *argv[])
   logopen("l_mem.log","w");
   
  
-  ptr_a = malloc(32); 
+  ptr_a = (char*)malloc(32); 
   logcheck(memVALID == memcheck(ptr_a));
   logcheck(32 == memused());
   
@@ -31,18 +35,18 @@ int main (int argc, char *argv[])
   free(ptr_a);
   logcheck(memVALID != memcheck(ptr_a));
   
-  ptr_a = malloc(0);
+  ptr_a = (char*)malloc(0);
   logcheck(memVALID == memcheck(ptr_a));
   
   free(ptr_a); 
-  ptr_a = calloc(8,4);
+  ptr_a = (char*)calloc(8,4);
   logcheck(memVALID == memcheck(ptr_a) );
   
   for (k=0,valid=0; k<32; k++) valid += ptr_a[k];
   logcheck(0 == valid);
   free(ptr_a); 
   
-  ptr_a = malloc(16);  
+  ptr_a = (char*)malloc(16);  
   logcheck(memVALID == memcheck(ptr_a));
   logcheck(16 == memused());
   

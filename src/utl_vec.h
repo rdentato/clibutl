@@ -110,8 +110,8 @@ char utl_buf_get(buf_t b, uint32_t n);
 size_t utl_buf_readall(buf_t b, uint32_t i, FILE *f);
 size_t utl_buf_read(buf_t b, uint32_t i, uint32_t n, FILE *f) ;
 char *utl_buf_readln(buf_t b, uint32_t i, FILE *f);
-char *utl_buf_sets(buf_t b, uint32_t i, char *s);
-char *utl_buf_inss(buf_t b, uint32_t i, char *s);
+char *utl_buf_sets(buf_t b, uint32_t i, const char *s);
+char *utl_buf_inss(buf_t b, uint32_t i, const char *s);
 char *utl_buf_insc(buf_t b, uint32_t i, char c);
 int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j);
 

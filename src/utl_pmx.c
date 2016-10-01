@@ -359,11 +359,11 @@ the encoding to avoid unexpected results. Assuming the text is in UTF-8:
 #ifndef UTL_NOPMX
 #ifdef UTL_MAIN
 
-int(*utl_pmx_ext)(char *pat, char *txt, int, int32_t ch) = NULL;
+int(*utl_pmx_ext)(const char *pat, const char *txt, int, int32_t ch) = NULL;
 
-char     *utl_pmx_capt[utl_pmx_MAXCAPT][2] = {{0}} ;
-uint8_t   utl_pmx_capnum                   =   0   ;
-char     *utl_pmx_error                    = NULL  ;
+const char *utl_pmx_capt[utl_pmx_MAXCAPT][2] = {{0}} ;
+uint8_t     utl_pmx_capnum                   =   0   ;
+const char *utl_pmx_error                    = NULL  ;
 
 
 #define utl_pmx_set_paterror(t) do {if (!utl_pmx_error) {utl_pmx_error = t;}} while (0)
@@ -381,8 +381,8 @@ static int utl_pmx_utf8 = 0;
                           } while(0)
 
 typedef struct {
-  char *pat;
-  char *txt;
+  const char *pat;
+  const char *txt;
   int32_t min_n;
   int32_t max_n;
   int32_t n;
@@ -399,7 +399,7 @@ static void utl_pmx_state_reset()
   utl_pmx_capnum = 0;
 }
 
-static int utl_pmx_state_push(char *pat, char *txt, int32_t min_n, int32_t max_n, int16_t inv)
+static int utl_pmx_state_push(const char *pat, const char *txt, int32_t min_n, int32_t max_n, int16_t inv)
 {
   utl_pmx_state_s *state;
   
@@ -436,7 +436,7 @@ static utl_pmx_state_s *utl_pmx_state_top()
 
 size_t utl_pmx_len(uint8_t n) {return pmxend(n)-pmxstart(n);}
 
-static int utl_pmx_get_utf8(char *txt, int32_t *ch)
+static int utl_pmx_get_utf8(const char *txt, int32_t *ch)
 {
   int len;
   uint8_t *s = (uint8_t *)txt;
@@ -509,7 +509,7 @@ static int utl_pmx_get_utf8(char *txt, int32_t *ch)
 }
 
 // Returns the length in bytes of the character or 0 if it is '\0'
-static int32_t utl_pmx_nextch(char *t, int32_t *c_ptr)
+static int32_t utl_pmx_nextch(const char *t, int32_t *c_ptr)
 {
   int32_t len = 0;
   
@@ -519,7 +519,7 @@ static int32_t utl_pmx_nextch(char *t, int32_t *c_ptr)
   return len;
 }
 
-static int32_t utl_pmx_gethex(char *pat, int32_t *c_ptr)
+static int32_t utl_pmx_gethex(const char *pat, int32_t *c_ptr)
 {
   int32_t ch =0;
   int32_t len =0;
@@ -536,7 +536,7 @@ static int32_t utl_pmx_gethex(char *pat, int32_t *c_ptr)
   return len;  
 }
 
-static int utl_pmx_isin(char *pat, char *pat_end, int32_t ch, int32_t (*nxt)(char *, int32_t *))
+static int utl_pmx_isin(const char *pat, const char *pat_end, int32_t ch, int32_t (*nxt)(const char *, int32_t *))
 {
   int32_t c1,c2;
   int32_t len;
@@ -558,11 +558,11 @@ static int utl_pmx_isin(char *pat, char *pat_end, int32_t ch, int32_t (*nxt)(cha
 #define utl_pmx_isin_chars(p,e,c) utl_pmx_isin(p,e,c,utl_pmx_nextch)
 #define utl_pmx_isin_codes(p,e,c) utl_pmx_isin(p,e,c,utl_pmx_gethex)
 
-static int32_t utl_pmx_iscapt(char *pat, char *txt)
+static int32_t utl_pmx_iscapt(const char *pat, const char *txt)
 {
   int32_t len = 0;
   uint8_t capnum = 0; 
-  char *cap;
+  const char *cap;
   
   if ('1' <= *pat && *pat <= '9') {
     capnum = *pat - '0';
@@ -578,7 +578,7 @@ static int32_t utl_pmx_iscapt(char *pat, char *txt)
   return len;
 }
 
-void utl_pmx_extend(int(*ext)(char *, char *,int,int32_t))
+void utl_pmx_extend(int(*ext)(const char *, const char *, int, int32_t))
 {
   utl_pmx_ext = ext;
 }
@@ -586,7 +586,7 @@ void utl_pmx_extend(int(*ext)(char *, char *,int,int32_t))
 #define UTL_PMX_QUOTED 0
 #define UTL_PMX_BRACED 1
 
-static int utl_pmx_get_limits(char *pat, char *pat_end, char *txt,int braced,
+static int utl_pmx_get_limits(const char *pat, const char *pat_end, const char *txt, int braced,
                              int32_t *c_beg_ptr, int32_t *c_end_ptr, int32_t *c_esc_ptr)
 {
   int32_t c_beg = '(';
@@ -640,10 +640,10 @@ static int utl_pmx_get_limits(char *pat, char *pat_end, char *txt,int braced,
   return 1;
 }
 
-static int utl_pmx_get_delimited(char *pat, char *txt,int32_t c_beg, int32_t c_end, int32_t c_esc)
+static int utl_pmx_get_delimited(const char *pat, const char *txt,int32_t c_beg, int32_t c_end, int32_t c_esc)
 {
   int n;
-  char *s;
+  const char *s;
   int cnt;
   int32_t ch;
   
@@ -668,7 +668,7 @@ static int utl_pmx_get_delimited(char *pat, char *txt,int32_t c_beg, int32_t c_e
   
 }
 
-static int utl_pmx_delimited(char *pat, char *pat_end, char *txt,int braced)
+static int utl_pmx_delimited(const char *pat, const char *pat_end, const char *txt, int braced)
 {
   int32_t c_beg; int32_t c_end; int32_t c_esc;
   if (!utl_pmx_get_limits(pat,pat_end,txt, braced, &c_beg, &c_end, &c_esc)) return 0;
@@ -676,13 +676,13 @@ static int utl_pmx_delimited(char *pat, char *pat_end, char *txt,int braced)
 }
 
 
-static int utl_pmx_class(char **pat_ptr, char **txt_ptr)
+static int utl_pmx_class(const char **pat_ptr, const char **txt_ptr)
 {
   int inv = 0;
   
-  char *pat = *pat_ptr;
-  char *txt = *txt_ptr;
-  char *pat_end;
+  const char *pat = *pat_ptr;
+  const char *txt = *txt_ptr;
+  const char *pat_end;
   
   int32_t len   = 0;
   int32_t n     = 0;
@@ -805,7 +805,7 @@ static int utl_pmx_class(char **pat_ptr, char **txt_ptr)
   return 1;
 }
 
-static char *utl_pmx_alt_skip(char *pat)
+static const char *utl_pmx_alt_skip(const char *pat)
 {
   int paren=0;
   
@@ -830,12 +830,12 @@ static char *utl_pmx_alt_skip(char *pat)
   return pat;
 }
 
-static char *utl_pmx_alt(char *pat, char **txt_ptr)
+static const char *utl_pmx_alt(const char *pat, const char **txt_ptr)
 {
   int paren=0;
   utl_pmx_state_s *state;
   int inv;
-  char *ret = utl_emptystring;
+  const char *ret = utl_emptystring;
   
   while (*pat) {
     _logdebug("ALT: %s (%d)",pat,utl_pmx_stack_ptr);
@@ -889,7 +889,7 @@ static char *utl_pmx_alt(char *pat, char **txt_ptr)
   return utl_emptystring;
 }
 
-static char *utl_pmx_match(char *pat, char *txt)
+static const char *utl_pmx_match(const char *pat, const char *txt)
 {
   int32_t len;
   int32_t ch;
@@ -972,9 +972,9 @@ static char *utl_pmx_match(char *pat, char *txt)
   return utl_pmx_capt[0][0];
 }
 
-char *utl_pmx_search(char *pat, char *txt)
+const char *utl_pmx_search(const char *pat, const char *txt)
 {
-  char *ret=NULL;
+  const char *ret=NULL;
   
   utl_pmx_error = NULL;
   
