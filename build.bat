@@ -22,7 +22,7 @@
 :: better understanding of how it works and to ensure it is fully compatible with 
 :: your chosen tool it using a different compiler.
 ::
-:: This script builds the header and the C files, compiles all the tests and runs them
+:: This script builds the header and the C files, compiles all the tests and runs them.
 ::
 :: ]]]
 
@@ -77,7 +77,7 @@ set BUILD_C=/c
 goto compile
 
 :PCC64
-echo Compiling with Pelles C (32bit)
+echo Compiling with Pelles C (64bit)
 set BUILD_1=cc /Tamd64-coff /O2 /std:C99
 set BUILD_2=
 set BUILD_O=/o
