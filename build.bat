@@ -22,7 +22,7 @@
 :: better understanding of how it works and to ensure it is fully compatible with 
 :: your chosen tool it using a different compiler.
 ::
-:: This script builds the header and the C files and compiles all the tests
+:: This script builds the header and the C files, compiles all the tests and runs them
 ::
 :: ]]]
 
@@ -36,10 +36,12 @@ if "%1"=="PCC"   goto PCC
 if "%1"=="PCC64" goto PCC64
 
 :usage
-echo Usage: build compiler
-echo   compilers: MSC   = Microsoft C    (VS2015)
-echo              PCC   = Pelles C 32bit (8.0)
-echo              PCC64 = Pelles C 64bit (8.0)
+echo Usage: build opt
+echo   compilers: MSC     Microsoft C    (VS2015)
+echo              PCC     Pelles C 32bit (8.0)
+echo              PCC64   Pelles C 64bit (8.0)
+echo    commands: clean   cleanup
+echo              test    run tests (no build)
 goto theend
 
 :clean
@@ -58,7 +60,7 @@ del /Q /F build.log  2> nul
 goto theend
 
 :MSC
-echo Compiling Microsoft C (cl)
+echo Compiling with Microsoft C/C++ (cl)
 
 set BUILD_1=cl /O2 /nologo
 set BUILD_2=
@@ -76,7 +78,7 @@ goto compile
 
 :PCC64
 echo Compiling with Pelles C (32bit)
-set BUILD_1=cc /x /Tamd64-coff /O2 /std:C99
+set BUILD_1=cc /Tamd64-coff /O2 /std:C99
 set BUILD_2=
 set BUILD_O=/o
 set BUILD_C=/c 
@@ -116,8 +118,10 @@ cd ..
 :test
 cd test
 echo Start tests
-for %%f in (t_*.exe) do %%f
+for %%f in (t_???.exe) do %%f
+for %%f in (t_????.exe) do %%f
 echo ut_logassert.exe is expected to abort and return an error
+t_logassert
 find "#KO:" l_*.log
 
 cd ..
