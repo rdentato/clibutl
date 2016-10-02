@@ -5,3 +5,4 @@ install: true
 compiler:
   - clang
   - gcc
+  - g++
