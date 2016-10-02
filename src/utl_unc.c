@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
   int k;
   FILE *f;
   for (k=1; k<argc; k++) {
-    if ((f=fopen(argv[k],"r"))) {
+    if ((f=fopen(argv[k],"r")) != NULL) {
       ln = 0;
       prt=0;
       while (fgets(buf,BUFSIZE,f)) {

@@ -2,7 +2,7 @@
 #include <math.h>
 
 #define TESTFILE "l_buf.tmp"
-FILE *createtestfile()
+FILE *createtestfile(void)
 {
   FILE *f;
   

@@ -53,7 +53,8 @@ SNGL = src/utl_hdr.h src/utl_log.h src/utl_mem.c src/utl_mem.h \
 src: src/libutl.a src/utl_single.h
 
 src/utl.h: src/utl_unc$(_EXE) $(HDRS)
-	src/utl_unc $(HDRS) > src/utl.h
+	cat $(HDRS) > src/utl.h
+#	src/utl_unc $(HDRS) > src/utl.h
 
 src/utl.c: src/utl.h $(CSRC)
 	$(RM) src/utl.c

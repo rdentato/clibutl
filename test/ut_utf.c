@@ -351,7 +351,7 @@ int main(int argc, char *argv[])
     }
   }
     
- 
+#if 0 
   if (0) {
   const char *t; int l; int32_t c;
   
@@ -364,6 +364,8 @@ int main(int argc, char *argv[])
   } 
   
   }
+#endif 
+
   logclose();
   exit(0);
 }
