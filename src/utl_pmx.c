@@ -744,18 +744,18 @@ static int utl_pmx_class(const char **pat_ptr, const char **txt_ptr)
   // {{ Matches a pattern n times
   #define utl_W(tst) while ((len = utl_pmx_nextch(txt,&ch)) && ((!tst) == inv) && (n<max_n)) {n++; txt+=len;}
   switch (*pat) {
-    case 'a' : utl_W(( ch<0xFF && isalpha(ch) )); break;
-    case 's' : utl_W(( ch<0xFF && isspace(ch) )); break;
-    case 'u' : utl_W(( ch<0xFF && isupper(ch) )); break;
-    case 'l' : utl_W(( ch<0xFF && islower(ch) )); break;
-    case 'd' : utl_W(( ch<0xFF && isdigit(ch) )); break;
-    case 'k' : utl_W(( ch<0xFF && isblank(ch) )); break;
-    case 'x' : utl_W(( ch<0xFF && isxdigit(ch))); break;
-    case 'w' : utl_W(( ch<0xFF && isalnum(ch) )); break;
-    case 'c' : utl_W(( ch<0xFF && iscntrl(ch) )); break;
-    case 'g' : utl_W(( ch<0xFF && isgraph(ch) )); break;
-    case 'p' : utl_W(( ch<0xFF && ispunct(ch) )); break;
-    case 'r' : utl_W(( ch<0xFF && isprint(ch) )); break;
+    case 'a' : utl_W(( ch<=0xFF && isalpha(ch) )); break;
+    case 's' : utl_W(( ch<=0xFF && isspace(ch) )); break;
+    case 'u' : utl_W(( ch<=0xFF && isupper(ch) )); break;
+    case 'l' : utl_W(( ch<=0xFF && islower(ch) )); break;
+    case 'd' : utl_W(( ch<=0xFF && isdigit(ch) )); break;
+    case 'k' : utl_W(( ch<=0xFF && isblank(ch) )); break;
+    case 'x' : utl_W(( ch<=0xFF && isxdigit(ch))); break;
+    case 'w' : utl_W(( ch<=0xFF && isalnum(ch) )); break;
+    case 'c' : utl_W(( ch<=0xFF && iscntrl(ch) )); break;
+    case 'g' : utl_W(( ch<=0xFF && isgraph(ch) )); break;
+    case 'p' : utl_W(( ch<=0xFF && ispunct(ch) )); break;
+    case 'r' : utl_W(( ch<=0xFF && isprint(ch) )); break;
 
     case 'i' : utl_W((ch < 0x80))               ; break;
     
