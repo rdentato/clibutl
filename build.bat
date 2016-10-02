@@ -50,8 +50,12 @@ del /Q /F src\*.obj  2> nul
 del /Q /F src\*.exe  2> nul
 del /Q /F src\utl.c  2> nul
 del /Q /F src\utl.h  2> nul
+del /Q /F src\*.a    2> nul
+del /Q /F src\*.o    2> nul
+del /Q /F src\*.log  2> nul
 del /Q /F test\*.obj 2> nul
-del /Q /F test\*.exe 2> nul
+del /Q /F test\*.o   2> nul
+del /Q /F test\t_* 2> nul
 del /Q /F test\*.log 2> nul
 del /Q /F test\*.tmp 2> nul
 del /Q /F dist\utl.c 2> nul
@@ -96,10 +100,10 @@ copy utl.? ..\dist >>..\build.log
 
 
 
-%BUILD_1% utl_unc.c %BUILD_2% %BUILD_O%utl_unc.exe >> ../build.log
-%BUILD_1% %BUILD_C% utl.c >> ../build.log
-copy utl.obj ..\test >> ../build.log
-copy utl.h ..\test >> ../build.log
+%BUILD_1% utl_unc.c %BUILD_2% %BUILD_O%utl_unc.exe >> ..\build.log
+%BUILD_1% %BUILD_C% utl.c >> ..\build.log
+copy utl.obj ..\test >> ..\build.log
+copy utl.h ..\test >> ..\build.log
 
 cd ..\test
 %BUILD_1% ut_utf.c  %BUILD_2% utl.obj %BUILD_O%t_utf.exe   >> ../build.log

@@ -140,7 +140,7 @@ runtest: test
 #     \___//_/ \___/ \__,_//_/ /_/(_)    
 
 clean:
-	cd src;  $(RM) utl.c utl.h utl_single.h libutl.a *.o *.gc?? utl_unc$(_EXE)
-	cd test; $(RM) t_* *.o *.tmp *.log gmon.out *.gc?? utl.c
+	cd src;  $(RM) utl.c utl.h utl_single.h libutl.a *.o *.obj *.gc?? utl_unc$(_EXE)
+	cd test; $(RM) t_* *.o *.obj *.tmp *.log gmon.out *.gc?? utl.c
 	cd dist; $(RM) utl.h utl.c utl_single.h 
 	$(RM) *.log
