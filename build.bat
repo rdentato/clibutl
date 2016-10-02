@@ -1,16 +1,15 @@
 ::
-::  (C) 2016 by Remo Dentato (rdentato@gmail.com)
+::  (C) by Remo Dentato (rdentato@gmail.com)
 :: 
 :: This software is distributed under the terms of the MIT license:
-::  https://opensource.org/licenses/MIT   
-::     
-::                     ___   __
-::                  __/  /_ /  )
-::          ___  __(_   ___)  /
-::         /  / /  )/  /  /  /  Minimalist
-::        /  (_/  //  (_ /  /  C utility 
-::       (____,__/(_____(__/  Library
-:: 
+::  https://opensource.org/licenses/MIT
+::                        ___   __
+::                     __/  /_ /  )
+::             ___  __(_   ___)  /
+::            /  / /  )/  /  /  /
+::           /  (_/  //  (__/  / 
+::          (____,__/(_____(__/
+::    https://github.com/rdentato/clibutl
 
 :: [[[
 :: # Building `clibutl` on Windows
@@ -94,13 +93,15 @@ goto compile
 
 cd src
 
-type utl_hdr.h utl_log.h utl_mem.h utl_vec.h utl_pmx.h utl_fsm.h utl_end.h > utl.h 2>> ..\build.log
-type utl_hdr.c utl_log.c utl_mem.c utl_vec.c utl_pmx.c > utl.c 2>> ..\build.log
-copy utl.? ..\dist >>..\build.log
-
-
 
 %BUILD_1% utl_unc.c %BUILD_2% %BUILD_O%utl_unc.exe >> ..\build.log
+
+utl_unc utl_hdr.h utl_log.h utl_mem.h utl_vec.h utl_pmx.h utl_fsm.h utl_end.h > utl.h 
+utl_unc utl_hdr.c utl_log.c utl_mem.c utl_vec.c utl_pmx.c > utl.c 
+copy utl.c ..\dist >>..\build.log
+copy utl.h ..\dist >>..\build.log
+
+
 %BUILD_1% %BUILD_C% utl.c >> ..\build.log
 copy utl.obj ..\test >> ..\build.log
 copy utl.h ..\test >> ..\build.log

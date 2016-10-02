@@ -1,23 +1,37 @@
 /* 
-**  (C) 2014 by Remo Dentato (rdentato@gmail.com)
+**  (C) 2009 by Remo Dentato (rdentato@gmail.com)
 ** 
 ** This software is distributed under the terms of the MIT license:
 **  https://opensource.org/licenses/MIT
 **     
-**                     ___   __
-**                  __/  /_ /  )
-**          ___  __(_   ___)  /
-**         /  / /  )/  /  /  /  Minimalist
-**        /  (_/  //  (__/  /  C utility 
-**       (____,__/(_____(__/  Library
+**                        ___   __
+**                     __/  /_ /  )
+**             ___  __(_   ___)  /
+**            /  / /  )/  /  /  /
+**           /  (_/  //  (__/  / 
+**          (____,__/(_____(__/
+**    https://github.com/rdentato/clibutl
 **
-
+[[[
+# Memory trace
 **      ______   ______  ______ 
 **     /      \ / ___  )/      \
 **    /  ) )  //   ___//  ) )  /
 **   (__/_/__/ \_____/(__/_/__/ 
 **   
 **   
+
+## Enabling trace
+   You can trace memory allocation (and deallocation) by
+
+ - `UTL_MEMCHECK` will instrument the dynamic memory functions (`malloc()`, `free()`, ...) 
+   to log their activities and perform additional checks. It also enables logging
+   even if `UTL_NOLOG` is defined.
+   
+ - `NDEBUG` will cause:
+   - Memory checking functions will be disabled (even if `UTL_MEMCHECK`
+     is defined).
+]]]
 */
 
 #define UTL_MEM

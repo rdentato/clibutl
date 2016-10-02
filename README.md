@@ -22,30 +22,20 @@ The point is to avoid having to think about trivial things (again, like
 logging) and directly jump into your problem. 
  
  
-## How to use utl
+## How to use `clibutl`
 
+ All you need is in the `dist` directory:
+
+ - Copy `utl.c` and `utl.h` in a place that is suitable for your project
  - Include the `utl.h` header in your source files.
  - Compile and link `utl.c` with the other files.
 
-Alternatively, you can do without `utl.c` simply by
-compiling one of your source files with the 
-symbol *`UTL_MAIN`* defined (either by definining it 
-before including the header, or via a compiler switch
-like "`-DUTL_MAIN`"). A good candidate is the
-file where your `main()` function is.
 
 ## The *selector* symbols
-
-You may want to exclude entirely a portion of the library because
-it is of no interest for your project. Leaving it would only 
-pollute your namespace (and could possibly stop you using
-`utl.h` altogether).
-
- - `NDEBUG` will cause:
-   - `logdebug()` and `logassert()` to perform no action;
-   - `logcheck()` to perform no action and always return `1`;
-   - Memory checking functions will be disabled (even if `UTL_MEMCHECK`
-     is defined).
+   
+  You may want to entirely exclude a portion of the library because
+it is of no interest for your project. To do so you may define
+one or more of the following symbols:
 
  - `UTL_NOLOG` will make the logging functions `logxxx` unavailble.
  
@@ -54,10 +44,6 @@ pollute your namespace (and could possibly stop you using
  - `UTL_NOPMX` will make the pattern matching functions `pmxyyy` unavailble.
  
  - `UTL_NOVEC` will make the containers functions (`vecxxx`, `stkxxx`, `bufxxx`, ...) unavailble.
-
- - `UTL_MEMCHECK` will instrument the dynamic memory functions (`malloc()`, `free()`, ...) 
-   to log their activities and perform additional checks. It also enables logging
-   even if `UTL_NOLOG` is defined.
 
 ## Documentation
   The `doc` directory contains the full documentation of the library functions

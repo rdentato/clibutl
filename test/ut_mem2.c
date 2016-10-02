@@ -1,9 +1,17 @@
-/* 
+/*
 **  (C) by Remo Dentato (rdentato@gmail.com)
 ** 
-** This sofwtare is distributed under the terms of the BSD license:
-**   http://creativecommons.org/licenses/BSD/
-**   http://opensource.org/licenses/bsd-license.php 
+** This software is distributed under the terms of the MIT license:
+**  https://opensource.org/licenses/MIT
+**     
+**                        ___   __
+**                     __/  /_ /  )
+**             ___  __(_   ___)  /
+**            /  / /  )/  /  /  /
+**           /  (_/  //  (__/  / 
+**          (____,__/(_____(__/
+**    https://github.com/rdentato/clibutl
+**
 */
 
 #define UTL_MEMCHECK

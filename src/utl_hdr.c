@@ -1,16 +1,20 @@
+//<<<//
 /* 
-**  (C) 2014 by Remo Dentato (rdentato@gmail.com)
+**  (C) by Remo Dentato (rdentato@gmail.com)
 ** 
 ** This software is distributed under the terms of the MIT license:
 **  https://opensource.org/licenses/MIT
 **     
-**                     ___   __
-**                  __/  /_ /  )
-**          ___  __(_   ___)  /
-**         /  / /  )/  /  /  /  Minimalist
-**        /  /_/  //  (__/  /  C utility 
-**       (____,__/(_____(__/  Library
-** 
+**                        ___   __
+**                     __/  /_ /  )
+**             ___  __(_   ___)  /
+**            /  / /  )/  /  /  /
+**           /  (_/  //  (__/  / 
+**          (____,__/(_____(__/
+**    https://github.com/rdentato/clibutl
+*/
+//>>>//
+/*
  [[[
 
 # utl
@@ -84,10 +88,10 @@ pollute your namespace (and could possibly stop you using
 ** ]]]
 
 */
+//<<<//
 #include "utl.h"
 #define UTL_MAIN
 
-//<<<//
 const char *utl_emptystring = "";
 
 int   utl_ret(int x)      {return x;}

@@ -1,9 +1,15 @@
-# 
-#  (C) 2016 Remo Dentato (rdentato@gmail.com)
-# 
-# This software is distributed under the terms of the MIT license:
+#   (C) by Remo Dentato (rdentato@gmail.com)
+#  
+#  This software is distributed under the terms of the MIT license:
 #   https://opensource.org/licenses/MIT
-#
+#      
+#                         ___   __
+#                      __/  /_ /  )
+#              ___  __(_   ___)  /
+#             /  / /  )/  /  /  /
+#            /  (_/  //  (__/  / 
+#           (____,__/(_____(__/
+#     https://github.com/rdentato/clibutl
 #
 #  Makefile for Gcc tested on Linux and Msys
 #
@@ -50,19 +56,19 @@ SNGL = src/utl_hdr.h src/utl_log.h src/utl_mem.c src/utl_mem.h \
        src/utl_vec.h src/utl_pmx.h src/utl_fsm.h src/utl_hdr.c \
        src/utl_log.c src/utl_vec.c src/utl_pmx.c src/utl_end.h
 
-src: src/libutl.a src/utl_single.h
+src: src/libutl.a
 
 src/utl.h: src/utl_unc$(_EXE) $(HDRS)
-	cat $(HDRS) > src/utl.h
-#	src/utl_unc $(HDRS) > src/utl.h
+#	cat $(HDRS) > src/utl.h
+	src/utl_unc $(HDRS) > src/utl.h
 
 src/utl.c: src/utl.h $(CSRC)
-	$(RM) src/utl.c
-	cat $(CSRC) > src/utl.c
+#	cat $(CSRC) > src/utl.c
+	src/utl_unc $(CSRC) > src/utl.c
 #	for f in $(CSRC); do echo "#line 1 \"$$f\"" >> src/utl.c; cat $$f >> src/utl.c; done
 
-src/utl_single.h: src/utl_unc$(_EXE) $(SNGL)
-	src/utl_unc $(SNGL) > src/utl_single.h
+#src/utl_single.h: src/utl_unc$(_EXE) $(SNGL)
+#	src/utl_unc $(SNGL) > src/utl_single.h
   
 src/utl_unc$(_EXE): src/utl_unc.o
 	$(CC) -o $@ src/utl_unc.o
@@ -77,8 +83,8 @@ src/libutl.a:  src/utl.o
 #     / /_/ // /(__  )/ /_ _    
 #     \__,_//_//____/ \__/(_)   
 
-dist: src/utl.h src/utl.c src/utl_single.h 
-	$(CP) src/utl.h src/utl.c src/utl_single.h dist
+dist: src/utl.h src/utl.c 
+	$(CP) src/utl.h src/utl.c dist
 
 
 #       __               __    
@@ -88,7 +94,7 @@ dist: src/utl.h src/utl.c src/utl_single.h
 #    \__/ \___//____/ \__/(_)
 
 TESTS = test/t_vec$(_EXE)  test/t_buf$(_EXE)  test/t_mem$(_EXE)  \
-        test/t_mem2$(_EXE) test/t_pmx$(_EXE)  test/t_buf2$(_EXE) \
+        test/t_pmx$(_EXE)  \
         test/t_pmx2$(_EXE) test/t_pmx3$(_EXE) test/t_pmx4$(_EXE) \
         test/t_utf$(_EXE)  test/t_logassert$(_EXE)
 
@@ -122,11 +128,11 @@ test/t_logassert$(_EXE): src/libutl.a test/ut_logassert.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_logassert.o -lutl
 
 # Test using `utl_single.h`
-test/t_mem2$(_EXE): src/utl_single.h  test/ut_mem2.o
-	$(CC) $(LNFLAGS) -o $@ test/ut_mem2.o
-
-test/t_buf2$(_EXE): src/utl_single.h  test/ut_buf2.o
-	$(CC) $(LNFLAGS) -o $@ test/ut_buf2.o
+#test/t_mem2$(_EXE): src/utl_single.h  test/ut_mem2.o
+#	$(CC) $(LNFLAGS) -o $@ test/ut_mem2.o
+#
+#test/t_buf2$(_EXE): src/utl_single.h  test/ut_buf2.o
+#	$(CC) $(LNFLAGS) -o $@ test/ut_buf2.o
 
 runtest: test
 	@echo "'l_logassert.log' is expected to FAIL and generate a coredump" 

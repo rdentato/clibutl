@@ -1,16 +1,17 @@
 /* 
-**  (C) 2016 by Remo Dentato (rdentato@gmail.com)
+**  (C) by Remo Dentato (rdentato@gmail.com)
 ** 
 ** This software is distributed under the terms of the MIT license:
 **  https://opensource.org/licenses/MIT
 **     
-**                     ___   __
-**                  __/  /_ /  )
-**          ___  __(_   ___)  /
-**         /  / /  )/  /  /  /  Minimalist
-**        /  (_/  //  (_ /  /  C utility 
-**       (____,__/(____/(__/  Library
-** 
+**                        ___   __
+**                     __/  /_ /  )
+**             ___  __(_   ___)  /
+**            /  / /  )/  /  /  /
+**           /  (_/  //  (__/  / 
+**          (____,__/(_____(__/
+**    https://github.com/rdentato/clibutl
+
 
 ** [[[
 
@@ -796,6 +797,7 @@ static int utl_pmx_class(const char **pat_ptr, const char **txt_ptr)
   *pat_ptr=pat_end;
   // }}
   
+  /* Not enough matches */
   if (n < min_n) return 0;
   
   // {{ Advance matched text
@@ -871,7 +873,6 @@ static const char *utl_pmx_alt(const char *pat, const char **txt_ptr)
                   utl_pmx_state_pop();
                   return ret;
                 }
-                //else ret = utl_emptystring;                /* We didn't expect to fail */
                 // }}
                 break;
 
@@ -884,6 +885,7 @@ static const char *utl_pmx_alt(const char *pat, const char **txt_ptr)
                   *txt_ptr = pmxstart(state->cap); 
                   return pat;
                 }
+                break;
     }
   }
   return utl_emptystring;

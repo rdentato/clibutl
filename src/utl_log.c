@@ -1,16 +1,17 @@
 /* 
-**  (C) 2016 by Remo Dentato (rdentato@gmail.com)
+**  (C) by Remo Dentato (rdentato@gmail.com)
 ** 
 ** This software is distributed under the terms of the MIT license:
 **  https://opensource.org/licenses/MIT
 **     
-**                     ___   __
-**                  __/  /_ /  )
-**          ___  __(_   ___)  /
-**         /  / /  )/  /  /  /  Minimalist
-**        /  (_/  //  (_ /  /  C utility 
-**       (____,__/(_____(__/  Library
-** 
+**                        ___   __
+**                     __/  /_ /  )
+**             ___  __(_   ___)  /
+**            /  / /  )/  /  /  /
+**           /  (_/  //  (__/  / 
+**          (____,__/(_____(__/
+**    https://github.com/rdentato/clibutl
+**
 
 
 [[[
@@ -128,12 +129,16 @@ information in case of a failure:
       2016-09-03 11:33:01           x: 35.2
    ```
 
-   At the end of the log, the function `logclose()` will print the number of
+  At the end of the log, the function `logclose()` will print the number of
 failures and the number of checks performed.
 
    ```
       2016-09-18 20:47:04 CHK #KO: 2 (of 23)
    ```
+
+  If the symbol `NDEBUG` is defined, `logassert()` will perform no action;
+and `logcheck()` will perform no action and always return `1`;
+
    
 ## Debugging
 
