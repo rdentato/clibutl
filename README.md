@@ -1,7 +1,7 @@
 # utl
 
-This library provides functions that are, hopefully, useful during
-the developemnt phase. 
+  This library provides functions that could, hopefully, speed up the
+developemnt of a C program.
 
 The functions are related to:
 
@@ -11,18 +11,25 @@ The functions are related to:
  - *Containers*
  - *Pattern matching* over string
 
-The objective is to provide simple and reasonably
-easy to use solutions to recurring problems that could be replaced
-by more complex solutions if needed. For instance, the logging
-functions are limited to write on files, for production environment
-they can be replaced by some other logging (e.g. something with
-multiple level of logging or using syslogd, ...).
+They provide simple and reasonably easy to use solutions to recurring
+problems.
 
-The point is to avoid having to think about trivial things (again, like
-logging) and directly jump into your problem. 
+  Even if I made any effort to make them reasonably efficient, I favoured
+ease of use and simplicity above everything else. You may use them during
+development and replaced them later if something more efficient is needed.
+
+  For instance, the containers functions can help you shape the most
+appropriate data structures for your problem. Once done, you can replace
+them with something faster or more compact.
+
+  The point is to avoid having to think about trivial things (like
+logging, for instance) and directly jump into solving your problem. 
  
  
 ## How to use `clibutl`
+
+ The only requirement for clibutl to work is compliancy to C99 standard.
+I've tested it with gcc, clang, g++, Pelles C and Microsoft C/C++
 
  All you need is in the `dist` directory:
 
@@ -30,7 +37,31 @@ logging) and directly jump into your problem.
  - Include the `utl.h` header in your source files.
  - Compile and link `utl.c` with the other files.
 
+ The documentation is in the `doc` directory.
+ 
+## Hot to re-build `clibutl`
 
+  There two building mechanisms supported:
+  
+  - A `makefile` (for Linux and Mingw). Targets are:
+  
+      - `all`     : Compile
+      - `clean`   : Cleanup the directories from build leftovers
+      - `dist`    : Compile and  the distribution directory
+      - `runtest` : Compile and run the tests
+    
+  - A batch script (`build.bat`) for Windows. Accepts the following options:
+  
+      - `clean`   : Cleanup the directories from build leftovers
+      - `test`    : Just run the tests (no compilation)
+      - `MSC`     : Compile and run tests (Microsoft C/C++)
+      - `PCC`     : Compile and run tests (Pelles C 32bit)
+      - `PCC64`   : Compile and run tests (Pelles C 64bit)
+  
+  The "official" development environment for `clibutl` is bash and
+the GNU tool chain (gcc, make, ...). Tested with `gcc` and `clang`.
+
+ 
 ## The *selector* symbols
    
   You may want to entirely exclude a portion of the library because
