@@ -79,7 +79,7 @@ static int16_t utl_vec_delgap(vec_t v, uint32_t i, uint32_t l)
 vec_t utl_vec_new(uint16_t esz)
 {
   vec_t v = NULL;
-  uint32_t sz = sizeof(vec_s)+(esz-sizeof(uint32_t));
+  uint32_t sz = sizeof(vec_s)+(esz-4); // 4 is the size of the elm array
   
   v = (vec_t)malloc(sz);
   if (v) {
@@ -87,6 +87,7 @@ vec_t utl_vec_new(uint16_t esz)
     v->esz = esz;
     v->max = vec_MIN_ELEM;
     v->vec = (uint8_t *)malloc(v->max * esz);
+    v->elm = ((char *)v) + offsetof(vec_s,eld);
     vecunsorted(v);
     if (!v->vec) { free(v); v = NULL;}
   }
@@ -107,9 +108,10 @@ void *utl_vec_get(vec_t v, uint32_t i)
 {
   uint8_t *elm=NULL;
   
+  if (i == vec_MAX_CNT) i = v->cnt -1;
   if (i < v->cnt) {
     elm = v->vec + (i*v->esz);
-    memcpy(&(v->elm),elm,v->esz);
+    memcpy(v->elm,elm,v->esz);
   }
   return elm;
 }
@@ -120,7 +122,7 @@ void *utl_vec_set(vec_t v, uint32_t i)
 
   if (utl_vec_makeroom(v,i)) {
     elm = v->vec + (i*v->esz);
-    memcpy(elm, &(v->elm), v->esz);
+    memcpy(elm, v->elm, v->esz);
     if (i>=v->cnt) v->cnt = i+1;
     vecunsorted(v);
   }
@@ -131,8 +133,9 @@ void *utl_vec_ins(vec_t v, uint32_t i)
 {
   uint8_t *elm=NULL;
 
-  if (i == UINT32_MAX) i = v->cnt;
-  if (utl_vec_makegap(v,i,1)) elm = (uint8_t *)utl_vec_set(v,i);
+  if (i == vec_MAX_CNT) i = v->cnt;
+  if (utl_vec_makegap(v,i,1))
+    elm = (uint8_t *)utl_vec_set(v,i);
   vecunsorted(v);
   return elm;
 }
@@ -174,11 +177,11 @@ void utl_vec_sort(vec_t v, int (*cmp)(void *, void *))
   }
 }
 
-void *utl_vec_search(vec_t v)
+void *utl_vec_search(vec_t v, int x)
 {
   if (v->cmp) {
     utl_vec_sort(v,NULL);
-    return bsearch(&(v->elm),v->vec,v->cnt,v->esz,(int (*)(const void *, const void *))(v->cmp));
+    return bsearch(v->elm,v->vec,v->cnt,v->esz,(int (*)(const void *, const void *))(v->cmp));
   }
   return NULL;
 }
