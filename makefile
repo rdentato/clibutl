@@ -93,39 +93,43 @@ dist: src/utl.h src/utl.c
 #    / /_ /  __/(__  )/ /_ _   
 #    \__/ \___//____/ \__/(_)
 
-TESTS = test/t_vec$(_EXE)  test/t_buf$(_EXE)  test/t_mem$(_EXE)  \
+TESTS = test/x_chk.x test/t_vec$(_EXE)  test/t_buf$(_EXE)  test/t_mem$(_EXE)  \
         test/t_pmx$(_EXE)  \
         test/t_pmx2$(_EXE) test/t_pmx3$(_EXE) test/t_pmx4$(_EXE) \
         test/t_utf$(_EXE)  test/t_logassert$(_EXE)
 
-test:  $(TESTS)
+test:  $(TESTS) 
 
-test/t_vec$(_EXE): src/libutl.a  test/ut_vec.o
-	$(CC) $(LNFLAGS) -o $@ test/ut_vec.o -lutl
+test/x_chk.x: src/utl.h
+	$(RM) test/*.o
+	echo > test/x_chk.x
 
-test/t_buf$(_EXE): src/libutl.a test/ut_buf.o
-	$(CC) $(LNFLAGS) -o $@ test/ut_buf.o -lutl
+test/t_vec$(_EXE): test/x_chk.x src/utl.o  test/ut_vec.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_vec.o src/utl.o
 
-test/t_pmx$(_EXE): src/libutl.a test/ut_pmx.o
-	$(CC) $(LNFLAGS) -o $@ test/ut_pmx.o -lutl
+test/t_buf$(_EXE): test/x_chk.x src/utl.o test/ut_buf.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_buf.o src/utl.o
+
+test/t_pmx$(_EXE): test/x_chk.x src/utl.o test/ut_pmx.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_pmx.o src/utl.o
   
-test/t_pmx2$(_EXE): src/libutl.a test/ut_pmx2.o
-	$(CC) $(LNFLAGS) -o $@ test/ut_pmx2.o -lutl
+test/t_pmx2$(_EXE): test/x_chk.x src/utl.o test/ut_pmx2.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_pmx2.o src/utl.o
 
-test/t_pmx3$(_EXE): src/libutl.a test/ut_pmx3.o
-	$(CC) $(LNFLAGS) -o $@ test/ut_pmx3.o -lutl
+test/t_pmx3$(_EXE): test/x_chk.x src/utl.o test/ut_pmx3.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_pmx3.o src/utl.o
 
-test/t_pmx4$(_EXE): src/libutl.a test/ut_pmx4.o
-	$(CC) $(LNFLAGS) -o $@ test/ut_pmx4.o -lutl
+test/t_pmx4$(_EXE): test/x_chk.x src/utl.o test/ut_pmx4.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_pmx4.o src/utl.o
 
-test/t_mem$(_EXE): src/libutl.a test/ut_mem.o
-	$(CC) $(LNFLAGS) -o $@ test/ut_mem.o -lutl
+test/t_mem$(_EXE): test/x_chk.x src/utl.o test/ut_mem.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_mem.o src/utl.o
   
-test/t_utf$(_EXE): src/libutl.a  test/ut_utf.o
-	$(CC) $(LNFLAGS) -o $@ test/ut_utf.o -lutl
+test/t_utf$(_EXE): test/x_chk.x src/utl.o  test/ut_utf.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_utf.o src/utl.o
 
-test/t_logassert$(_EXE): src/libutl.a test/ut_logassert.o
-	$(CC) $(LNFLAGS) -o $@ test/ut_logassert.o -lutl
+test/t_logassert$(_EXE): test/x_chk.x src/utl.o test/ut_logassert.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_logassert.o src/utl.o
 
 # Test using `utl_single.h`
 #test/t_mem2$(_EXE): src/utl_single.h  test/ut_mem2.o
@@ -147,6 +151,6 @@ runtest: test
 
 clean:
 	cd src;  $(RM) utl.c utl.h utl_single.h libutl.a *.o *.obj *.gc?? utl_unc$(_EXE)
-	cd test; $(RM) t_* *.o *.obj *.tmp *.log gmon.out *.gc?? utl.c
+	cd test; $(RM) t_* *.o *.obj *.tmp *.log gmon.out *.gc?? utl.c x_chk.x
 	cd dist; $(RM) utl.h utl.c utl_single.h 
 	$(RM) *.log
