@@ -19,6 +19,7 @@
 
 #define vec_MIN_ELEM 16
 #define vec_MAX_ELEM (UINT32_MAX-1)
+#define vec_MAX_CNT  UINT32_MAX
 
 typedef struct vec_s {
   uint32_t  fst; 
@@ -28,16 +29,25 @@ typedef struct vec_s {
   uint16_t  esz;  /* each element max size: 64K */
   uint16_t  flg;
   int     (*cmp)(void *, void *);
-  uint8_t  *vec; 
-  uint32_t  elm;
+  uint8_t  *vec;
+  void     *elm; // this will always point to eld
+  uint8_t   eld[4];
 } vec_s, *vec_t;
 
-#define vecset(type,v,i,e)   (void)(*((type *)((char *)(v) + offsetof(vec_s,elm))) = (e), (type *)utl_vec_set(v,i))
-#define vecins(type,v,i,e)   (void)(*((type *)((char *)(v) + offsetof(vec_s,elm))) = (e), (type *)utl_vec_ins(v,i))
+#define vecset(type,v,i,e)   vecDO(type,v,i,e,utl_vec_set)
+#define vecins(type,v,i,e)   vecDO(type,v,i,e,utl_vec_ins)
+#define vecDO(type,v,i,e,x)  do {vec_t v_=v;  *((type *)(v_->elm)) = (e); x(v_,i);} while (0)
 
-#define vecadd(type,v,e)     vecins(type,v,e,UINT32_MAX)
+ 
+#define vecadd(type,v,e)     vecins(type,v,vec_MAX_CNT,e)
+#define vecpush(type,v,e)    vecins(type,v,vec_MAX_CNT,e)
+
+#define vecdrop(v)           do {vec_t v_=v; if (v_->cnt) v_->cnt--;} while (0)
 
 #define vecget(type,v,i)     (type *)utl_vec_get(v,i)
+#define vectop(type,v)       vecget(type,v,vec_MAX_CNT)    
+
+
 #define vec(type,v)          ((type *)((v)->vec))
 
 #define vecnew(type)         utl_vec_new(sizeof(type))
@@ -52,10 +62,11 @@ typedef struct vec_s {
 
 #define vecsort(v,c)           utl_vec_sort(v,c)
 
-#define vecsearch(type,v,e)      (*((type *)(&(v->elm))) = (e), (type *)utl_vec_search(v))
+#define vecsearch(type,v,e)    (type *)utl_vec_search(v, (*((type *)(v->elm)) = (e), 0))  
 
 #define vecSORTED 0x0001
 
+#define vecisempty(v)  ((v)->cnt == 0)
 #define vecissorted(v) ((v)->flg &   vecSORTED)
 #define vecsorted(v)   ((v)->flg |=  vecSORTED)
 #define vecunsorted(v) ((v)->flg &= ~vecSORTED)
@@ -74,19 +85,8 @@ size_t utl_vec_read(vec_t v,uint32_t i, size_t n,FILE *f);
 size_t utl_vec_write(vec_t v, uint32_t i, size_t n, FILE *f);
 
 void utl_vec_sort(vec_t v, int (*cmp)(void *, void *));
-void *utl_vec_search(vec_t v);
+void *utl_vec_search(vec_t v,int x);
 
-#define stk_t                 vec_t
-#define stknew(type)          vecnew(type)
-#define stkfree(v)            vecfree(v)
-#define stkpush(type,v,e)     vecset(type,v,(v)->cnt,e)
-#define stktop(type,v,d)      ((v)->cnt? vecget(type,v,(v)->cnt  ,d) : d)
-#define stkisempty(v)         ((v)->cnt == 0)
-#define stkcount(v)           ((v)->cnt)
-
-#define stkdrop(v)            ((v)->cnt? (v)->cnt-- : 0)
-#define stkdup(v)             utl_stk_dup(v)
-#define stkrot(v)             utl_stk_rot(v)
 
 #define que_t                 vec_t
 
