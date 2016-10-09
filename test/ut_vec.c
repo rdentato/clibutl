@@ -20,9 +20,23 @@ typedef struct point_s {
   float x,y;
 } point_t;
 
+
 int intcmp(void *a, void *b)
 {
   return (*((int *)a) - *((int *)b));
+}
+
+int pntcmp(void *a, void *b)
+{
+  float delta;
+  point_t *a_pnt = a, *b_pnt = b;
+  delta = a_pnt->x - b_pnt->x;
+  if (delta < 0.0) return -1;
+  if (delta > 0.0) return 1;
+  delta = a_pnt->y - b_pnt->y;
+  if (delta < 0.0) return -1;
+  if (delta > 0.0) return 1;
+  return 0;
 }
 
 int main(int argc, char *argv[])
@@ -84,6 +98,11 @@ int main(int argc, char *argv[])
   
   pq = vecget(point_t,v,23);
   logcheck(!pq);
+
+  vecsort(v,pntcmp);
+  
+  pq = vecsearch(point_t,v,p);
+  logcheck(pq);
   
   v = vecfree(v);
   logclose();  
@@ -149,31 +168,29 @@ int main(int argc, char *argv[])
   }
   
   v = vecfree(v);
-  logclose();  
 
-#if 0  
-  #define MAXMAX 100000000
+#if 1  
+  #define MAXMAX 10000000
   int k;
   
-  logopen("l_vec.log","a");
   v = vecnew(uint64_t);
-  logprintf("inserting elements");
-  for (k=0; k<MAXMAX;k++) 
-    vecset(uint64_t,v,k,k);
-  logclose();
-  
-  logopen("l_vec.log","a");
-  v = vecnew(uint64_t);
-  logprintf("inserting elements");
-  vecset(uint64_t,v,MAXMAX-1,0);
-  for (k=0; k<MAXMAX;k++) 
-    vecset(uint64_t,v,k,k);
-  
+  logprintf("inserting %d elements", MAXMAX);
+  logclock {
+    for (k=0; k<MAXMAX;k++) 
+      vecset(uint64_t,v,k,k);
+  }
   vecfree(v);
-  logclose();
+  v = vecnew(uint64_t);
+  logprintf("inserting %d elements", MAXMAX);
+  vecset(uint64_t,v,MAXMAX-1,0);
+  logclock {
+    for (k=0; k<MAXMAX;k++) 
+      vecset(uint64_t,v,k,k);
+  }
+  vecfree(v);
+  
 #endif  
 
-  logopen("l_vec.log","a");
   v = vecnew(int);
   vecset(int,v,0,12);
   vecset(int,v,1,3);
@@ -198,9 +215,10 @@ int main(int argc, char *argv[])
 
   pk = vecsearch(int,v,9);
   logcheck(!pk);
-
   
   vecfree(v);
+
+  
   
   logclose();
 
