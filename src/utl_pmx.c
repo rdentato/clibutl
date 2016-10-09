@@ -862,8 +862,8 @@ static const char *utl_pmx_alt(const char *pat, const char **txt_ptr)
                 state = utl_pmx_state_top();
                 inv = state->inv;
                 ret = pat;
-                if (inv) {
-                  *txt_ptr = pmxstart(state->cap);  /* It's ok, we WANTED to fail */
+                if (inv) { /* It's ok, we WANTED to fail */
+                  *txt_ptr = pmxstart(state->cap);  
                   utl_pmx_state_pop();
                   return ret;
                 }
