@@ -2,14 +2,14 @@
 
 ## Introduction
 
-Basic requirements:
+## Requirements
 
     - Use MarkDown as typesetting language
     - Ability to generate multiple files from a single lit file
     - Ability to generate an identifiers index across multiple project files
     - Generates HTML output
     - Generates PDF input (??)
-    - Very 
+
 
 ## Block types
 
@@ -18,26 +18,33 @@ Basic requirements:
    - `. block title`
 
 
+# Generated files
+## The C file
 
-# The C file
-
-{{> "lit.c"
+:(> "lit.c" C
 
    #include "lit.h"
    
    int main(int argc, char *argc[])
    {
-     {{Get command line options}}
-     {{Parse input files}}
-     {{Generate output files}}
-     {{Update index of identifiers}}
+     /* Get command line options */
+     /* Parse input files */
+     /* Generate output files */
+     /* Update index of identifiers */
    }
-}}
+   
+):
 
-# The header file 
-{{out "lit.h"
+## The header file 
 
-#include "utl.h"
+[[> "lit.h" C
 
+    #include "utl.h"
+ 
+    /* Defines */
+    /* Types */
+    /* Variables */
+    /* Prototypes */
 
-}}
+]]
+
