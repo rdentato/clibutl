@@ -435,7 +435,7 @@ static utl_pmx_state_s *utl_pmx_state_top(void)
   return utl_pmx_stack + (utl_pmx_stack_ptr-1);
 }
 
-size_t utl_pmx_len(uint8_t n) {return pmxend(n)-pmxstart(n);}
+int utl_pmx_len(uint8_t n) {return (int)(pmxend(n)-pmxstart(n));}
 
 static int utl_pmx_get_utf8(const char *txt, int32_t *ch)
 {
@@ -903,7 +903,7 @@ static const char *utl_pmx_match(const char *pat, const char *txt)
   utl_pmx_state_push(pat,txt,1,1,0);
   
   while (*pat) {
-    logtrace("match","match %d [%s] [%s]",pmxcount(),pat,txt);
+    logtrace("match","%d [%s] [%s]",pmxcount(),pat,txt);
     c1 = 0; 
     switch (*pat) {
       case '(' : pat++;
