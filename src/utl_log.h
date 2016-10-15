@@ -76,7 +76,7 @@ FILE *utl_log_open(const char *fname, const char *mode);
 int   utl_log_close(const char *msg);
 int   utl_log_check(int res, const char *test, const char *file, int32_t line);
 void  utl_log_assert(int res, const char *test, const char *file, int32_t line);
-int   utl_log_time();
+int   utl_log_time(void);
 
 #endif
 //>>>//

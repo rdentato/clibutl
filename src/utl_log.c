@@ -257,7 +257,7 @@ FILE *utl_log_open(const char *fname, const char *mode)
   return utl_log_file;
 }
 
-int utl_log_time()
+int utl_log_time(void)
 {
   char       log_tstr[32];
   time_t     log_time;
