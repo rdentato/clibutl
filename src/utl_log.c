@@ -224,13 +224,9 @@ any other identifier, so I'm not feeling particularly pressed on changing it.
 #ifndef UTL_NOLOG
 #ifdef UTL_MAIN
 
-static FILE *utl_log_file = NULL;
+FILE *utl_log_file = NULL;
 static uint32_t utl_log_check_num   = 0;
 static uint32_t utl_log_check_fail  = 0;
-clock_t utl_log_clk;
-const char *utl_log_TRC = "TRC";
-const char *utl_log_TCK = "TCK";
-const char *utl_log_DBG = "DBG";
 
 
 int utl_log_close(const char *msg)
@@ -261,13 +257,12 @@ FILE *utl_log_open(const char *fname, const char *mode)
   return utl_log_file;
 }
 
-int utl_log_printf(const char *categ, const char *fname, int32_t line, const char *format, ...)
+int utl_log_time()
 {
-  va_list    args;
   char       log_tstr[32];
   time_t     log_time;
-  int        ret = 0;
   struct tm *log_time_tm;
+  int        ret = 0;
   
   if (!utl_log_file) utl_log_file = stderr;
   if (time(&log_time) == ((time_t)-1)) ret = -1;
@@ -275,21 +270,17 @@ int utl_log_printf(const char *categ, const char *fname, int32_t line, const cha
   if (ret >= 0 && !strftime(log_tstr,32,"%Y-%m-%d %H:%M:%S",log_time_tm)) ret =-1;
   if (ret >= 0) ret = fprintf(utl_log_file,"%s ",log_tstr);
   if (ret >= 0 && fflush(utl_log_file)) ret = -1;
-  if (ret >= 0 && categ) ret = fprintf(utl_log_file,"%s ",categ);
-  if (ret >= 0) {
-    va_start(args, format);
-    ret = vfprintf(utl_log_file, format, args);
-    va_end(args);
-  }
-  if (ret >= 0 && fname) ret = fprintf(utl_log_file," %s:%d",fname,line);
-  if (ret >= 0 && (fputc('\n',utl_log_file) == EOF)) ret = -1;
-  if (ret >= 0 && fflush(utl_log_file)) ret = -1;
+  
   return ret;
 }
 
 int utl_log_check(int res, const char *test, const char *file, int32_t line)
 {
-  utl_log_printf("CHK", file, line,"%s (%s)", (res?"PASS":"FAIL"), test);
+  int ret = 0;
+  ret = utl_log_time();
+  
+  if (ret >= 0) ret = fprintf(utl_log_file,"CHK %s (%s)? %s:%d\n", (res?"PASS":"FAIL"), test, file, line);
+  if (ret >= 0 && fflush(utl_log_file)) ret = -1;
   if (!res) utl_log_check_fail++;
   utl_log_check_num++;
   return res;
@@ -303,6 +294,7 @@ void utl_log_assert(int res, const char *test, const char *file, int32_t line)
     abort();
   }
 }
+
 
 #endif
 #endif

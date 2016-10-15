@@ -27,17 +27,23 @@
 //<<<//
 #ifndef UTL_NOLOG
 
-#define logprintf(...) utl_log_printf(NULL,NULL,0,__VA_ARGS__)
+#define utl_log_trc(c,t,...)  (void)(utl_log_time(), fprintf(utl_log_file,c" [%s] ",t),\
+                                               fprintf(utl_log_file,__VA_ARGS__), \
+                                               fprintf(utl_log_file," %s:%d\n",__FILE__,__LINE__), \
+                                               fflush(utl_log_file))
+
+#define logprintf(...) (utl_log_time(),fprintf(utl_log_file,__VA_ARGS__), fputc('\n',utl_log_file),fflush(utl_log_file))
 #define logopen(f,m)   utl_log_open(f,m)
 #define logclose()     utl_log_close("LOG STOP")
                        
 #ifndef NDEBUG
 #define logcheck(e)    utl_log_check(!!(e),#e,__FILE__,__LINE__)
 #define logassert(e)   utl_log_assert(!!(e),#e,__FILE__,__LINE__)
-#define logdebug(...)  utl_log_printf(utl_log_DBG,__FILE__,__LINE__,__VA_ARGS__)
-#define logclock       for(int utl_log_clk_stop = 0, utl_log_clk = clock();\
-                           utl_log_clk_stop++ == 0; \
-                           logprintf("CLK  %ld (s/%ld) %s:%d",clock()-utl_log_clk, CLOCKS_PER_SEC,__FILE__,__LINE__))
+#define logdebug(...)  utl_log_trc("TRC","DBG",__VA_ARGS__)
+#define logclock       for(clock_t utl_log_clk = clock();\
+                               utl_log_clk != (clock_t)-1; \
+                                   logprintf("CLK %ld (s/%ld) %s:%d",(clock()-utl_log_clk), (long int)CLOCKS_PER_SEC,__FILE__,(int)__LINE__),\
+                                   utl_log_clk = (clock_t)-1 )
 #else
 #define logcheck(e)    utl_ret(1)
 #define logassert(e)   ((void)0)
@@ -47,8 +53,8 @@
 #endif
 
 #ifndef UTL_NOTRACE
-#define logtrace(t,...)      utl_log_printf(utl_log_TRC,__FILE__,__LINE__,__VA_ARGS__)
-#define logchecktrace(t,...) utl_log_printf(utl_log_TCK,__FILE__,__LINE__,__VA_ARGS__)
+#define logtrace(t,...)       utl_log_trc("TRC",t,__VA_ARGS__)
+#define logtracecheck(t,...)  utl_log_trc("TCK",t,__VA_ARGS__)
 #else
 #define logtrace(...)
 #define logchecktrace(...)
@@ -64,16 +70,13 @@
 #define _logtrace(...)       utl_ret(0)
 #define _logchecktrace(...)  utl_ret(0)
 
-extern clock_t utl_log_clk;
-extern const char *utl_log_TRC;
-extern const char *utl_log_TCK;
-extern const char *utl_log_DBG;
+extern FILE *utl_log_file;
 
-int utl_log_printf(const char *categ, const char *fname, int32_t line,const char *format, ...);
 FILE *utl_log_open(const char *fname, const char *mode);
 int   utl_log_close(const char *msg);
 int   utl_log_check(int res, const char *test, const char *file, int32_t line);
 void  utl_log_assert(int res, const char *test, const char *file, int32_t line);
+int   utl_log_time();
 
 #endif
 //>>>//
