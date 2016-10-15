@@ -116,6 +116,7 @@ cd ..\test
 %BUILD_1% ut_pmx4.c %BUILD_2% utl.obj %BUILD_O%t_pmx4.exe  >> ../build.log      
 %BUILD_1% ut_utf.c  %BUILD_2% utl.obj %BUILD_O%t_utf.exe   >> ../build.log      
 %BUILD_1% ut_vec.c  %BUILD_2% utl.obj %BUILD_O%t_vec.exe   >> ../build.log
+%BUILD_1% ut_trc.c  %BUILD_2% utl.obj %BUILD_O%t_trc.exe   >> ../build.log
 %BUILD_1% ut_logassert.c  %BUILD_2% utl.obj %BUILD_O%t_logassert.exe   >> ../build.log
 del utl.h
 cd ..
