@@ -36,7 +36,7 @@ extern const char  *utl_pmx_error                   ;
 #define pmxextend(f)   (void)(utl_pmx_ext = f)
 
 const char *utl_pmx_search(const char *pat, const char *txt);
-size_t utl_pmx_len(uint8_t n);
+int    utl_pmx_len(uint8_t n);
 void   utl_pmx_extend(int(*ext)(const char *, const char *,int, int32_t));
 
 #endif
