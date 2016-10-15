@@ -38,7 +38,7 @@ LNFLAGS = $(PRFFLAGS) -Lsrc/
 #    / /_/ // // /_   
 #    \__,_//_//_/(_)          
 
-all: src dist test
+all: src dist tst
 
 #                            
 #       _____ _____ _____ _  
@@ -94,11 +94,11 @@ dist: src/utl.h src/utl.c
 #    \__/ \___//____/ \__/(_)
 
 TESTS = test/x_chk.x test/t_vec$(_EXE)  test/t_buf$(_EXE)  test/t_mem$(_EXE)  \
-        test/t_pmx$(_EXE)  \
+        test/t_pmx$(_EXE)  test/t_trc$(_EXE) \
         test/t_pmx2$(_EXE) test/t_pmx3$(_EXE) test/t_pmx4$(_EXE) \
         test/t_utf$(_EXE)  test/t_logassert$(_EXE)
 
-test:  $(TESTS) 
+tst:  $(TESTS) 
 
 test/x_chk.x: src/utl.h
 	$(RM) test/*.o
@@ -128,6 +128,9 @@ test/t_mem$(_EXE): test/x_chk.x src/utl.o test/ut_mem.o
 test/t_utf$(_EXE): test/x_chk.x src/utl.o  test/ut_utf.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_utf.o src/utl.o
 
+test/t_trc$(_EXE): test/x_chk.x src/utl.o  test/ut_trc.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_trc.o src/utl.o
+
 test/t_logassert$(_EXE): test/x_chk.x src/utl.o test/ut_logassert.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_logassert.o src/utl.o
 
@@ -138,7 +141,7 @@ test/t_logassert$(_EXE): test/x_chk.x src/utl.o test/ut_logassert.o
 #test/t_buf2$(_EXE): src/utl_single.h  test/ut_buf2.o
 #	$(CC) $(LNFLAGS) -o $@ test/ut_buf2.o
 
-runtest: test
+runtest: tst
 	@echo "'l_logassert.log' is expected to FAIL and generate a coredump" 
 	@cd test; for f in t_*; do ./$$f ; done ; grep -a "#KO:" l_*.log
 
