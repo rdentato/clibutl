@@ -162,7 +162,7 @@ int main(int argc, char *argv[])
     
     pq = vecget(point_t,v,3);
     if (!logcheck(pq && pq->x == q.x && pq->y == q.y)) {
-      if (pq) logprintf("pq: %p pq->x:%f pq->y:%f",pq, pq->x, pq->y);
+      if (pq) logprintf("pq: %p pq->x:%f pq->y:%f",(void *)pq, pq->x, pq->y);
       else logprintf("pq is NULL");
     }
   }
