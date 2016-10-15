@@ -1,4 +1,4 @@
-#line 1 "src/utl_hdr.h"
+#line 2 "src/utl_hdr.h"
 /* 
 **  (C) by Remo Dentato (rdentato@gmail.com)
 ** 
@@ -56,20 +56,26 @@ void *utl_retptr(void *x);
 extern const char *utl_emptystring;
 
 
-#line 27 "src/utl_log.h"
+#line 28 "src/utl_log.h"
 #ifndef UTL_NOLOG
 
-#define logprintf(...) utl_log_printf(NULL,NULL,0,__VA_ARGS__)
+#define utl_log_trc(c,t,...)  (void)(utl_log_time(), fprintf(utl_log_file,c" [%s] ",t),\
+                                               fprintf(utl_log_file,__VA_ARGS__), \
+                                               fprintf(utl_log_file," %s:%d\n",__FILE__,__LINE__), \
+                                               fflush(utl_log_file))
+
+#define logprintf(...) (utl_log_time(),fprintf(utl_log_file,__VA_ARGS__), fputc('\n',utl_log_file),fflush(utl_log_file))
 #define logopen(f,m)   utl_log_open(f,m)
 #define logclose()     utl_log_close("LOG STOP")
                        
 #ifndef NDEBUG
 #define logcheck(e)    utl_log_check(!!(e),#e,__FILE__,__LINE__)
 #define logassert(e)   utl_log_assert(!!(e),#e,__FILE__,__LINE__)
-#define logdebug(...)  utl_log_printf(utl_log_DBG,__FILE__,__LINE__,__VA_ARGS__)
-#define logclock       for(int utl_log_clk_stop = 0, utl_log_clk = clock();\
-                           utl_log_clk_stop++ == 0; \
-                           logprintf("CLK  %ld (s/%ld) %s:%d",clock()-utl_log_clk, CLOCKS_PER_SEC,__FILE__,__LINE__))
+#define logdebug(...)  utl_log_trc("TRC","DBG",__VA_ARGS__)
+#define logclock       for(clock_t utl_log_clk = clock();\
+                               utl_log_clk != (clock_t)-1; \
+                                   logprintf("CLK %ld (s/%ld) %s:%d",(clock()-utl_log_clk), (long int)CLOCKS_PER_SEC,__FILE__,(int)__LINE__),\
+                                   utl_log_clk = (clock_t)-1 )
 #else
 #define logcheck(e)    utl_ret(1)
 #define logassert(e)   ((void)0)
@@ -79,8 +85,8 @@ extern const char *utl_emptystring;
 #endif
 
 #ifndef UTL_NOTRACE
-#define logtrace(t,...)      utl_log_printf(utl_log_TRC,__FILE__,__LINE__,__VA_ARGS__)
-#define logchecktrace(t,...) utl_log_printf(utl_log_TCK,__FILE__,__LINE__,__VA_ARGS__)
+#define logtrace(t,...)       utl_log_trc("TRC",t,__VA_ARGS__)
+#define logtracecheck(t,...)  utl_log_trc("TCK",t,__VA_ARGS__)
 #else
 #define logtrace(...)
 #define logchecktrace(...)
@@ -96,19 +102,16 @@ extern const char *utl_emptystring;
 #define _logtrace(...)       utl_ret(0)
 #define _logchecktrace(...)  utl_ret(0)
 
-extern clock_t utl_log_clk;
-extern const char *utl_log_TRC;
-extern const char *utl_log_TCK;
-extern const char *utl_log_DBG;
+extern FILE *utl_log_file;
 
-int utl_log_printf(const char *categ, const char *fname, int32_t line,const char *format, ...);
 FILE *utl_log_open(const char *fname, const char *mode);
 int   utl_log_close(const char *msg);
 int   utl_log_check(int res, const char *test, const char *file, int32_t line);
 void  utl_log_assert(int res, const char *test, const char *file, int32_t line);
+int   utl_log_time();
 
 #endif
-#line 23 "src/utl_mem.h"
+#line 24 "src/utl_mem.h"
 #ifndef UTL_NOMEM
 
 #ifndef memINVALID
@@ -152,7 +155,7 @@ size_t utl_mem_used (void);
 
 #endif /* UTL_MEMCHECK */
 #endif /* UTL_NOMEM */
-#line 17 "src/utl_vec.h"
+#line 18 "src/utl_vec.h"
 #ifndef UTL_NOVEC
 
 #define vec_MIN_ELEM 16
@@ -225,16 +228,6 @@ size_t utl_vec_write(vec_t v, uint32_t i, size_t n, FILE *f);
 void utl_vec_sort(vec_t v, int (*cmp)(void *, void *));
 void *utl_vec_search(vec_t v,int x);
 
-#if 0
-
-#define stktop(type,v,d)      ((v)->cnt? vecget(type,v,(v)->cnt  ,d) : d)
-#define stkisempty(v)         ((v)->cnt == 0)
-#define stkcount(v)           ((v)->cnt)
-
-#define stkdrop(v)            ((v)->cnt? (v)->cnt-- : 0)
-#define stkdup(v)             utl_stk_dup(v)
-#define stkrot(v)             utl_stk_rot(v)
-#endif
 
 #define que_t                 vec_t
 
@@ -265,7 +258,7 @@ char *utl_buf_insc(buf_t b, uint32_t i, char c);
 int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j);
 
 #endif 
-#line 19 "src/utl_pmx.h"
+#line 20 "src/utl_pmx.h"
 #ifndef UTL_NOPMX
 
 #define utl_pmx_MAXCAPT 16
@@ -285,11 +278,11 @@ extern const char  *utl_pmx_error                   ;
 #define pmxextend(f)   (void)(utl_pmx_ext = f)
 
 const char *utl_pmx_search(const char *pat, const char *txt);
-size_t utl_pmx_len(uint8_t n);
+int    utl_pmx_len(uint8_t n);
 void   utl_pmx_extend(int(*ext)(const char *, const char *,int, int32_t));
 
 #endif
-#line 104 "src/utl_fsm.h"
+#line 105 "src/utl_fsm.h"
 
 #ifndef UTL_NOFSM
 
@@ -299,7 +292,7 @@ void   utl_pmx_extend(int(*ext)(const char *, const char *,int, int32_t));
 #define fsmSTART      
 
 #endif
-#line 16 "src/utl_end.h"
+#line 17 "src/utl_end.h"
 
 #ifdef __cplusplus
 }

@@ -1,4 +1,4 @@
-#line 1 "src/utl_hdr.c"
+#line 2 "src/utl_hdr.c"
 /* 
 **  (C) by Remo Dentato (rdentato@gmail.com)
 ** 
@@ -13,7 +13,7 @@
 **          (____,__/(_____(__/
 **    https://github.com/rdentato/clibutl
 */
-#line 91 "src/utl_hdr.c"
+#line 92 "src/utl_hdr.c"
 #include "utl.h"
 #define UTL_MAIN
 
@@ -21,17 +21,13 @@ const char *utl_emptystring = "";
 
 int   utl_ret(int x)      {return x;}
 void *utl_retptr(void *x) {return x;}
-#line 223 "src/utl_log.c"
+#line 224 "src/utl_log.c"
 #ifndef UTL_NOLOG
 #ifdef UTL_MAIN
 
-static FILE *utl_log_file = NULL;
+FILE *utl_log_file = NULL;
 static uint32_t utl_log_check_num   = 0;
 static uint32_t utl_log_check_fail  = 0;
-clock_t utl_log_clk;
-const char *utl_log_TRC = "TRC";
-const char *utl_log_TCK = "TCK";
-const char *utl_log_DBG = "DBG";
 
 
 int utl_log_close(const char *msg)
@@ -62,13 +58,12 @@ FILE *utl_log_open(const char *fname, const char *mode)
   return utl_log_file;
 }
 
-int utl_log_printf(const char *categ, const char *fname, int32_t line, const char *format, ...)
+int utl_log_time()
 {
-  va_list    args;
   char       log_tstr[32];
   time_t     log_time;
-  int        ret = 0;
   struct tm *log_time_tm;
+  int        ret = 0;
   
   if (!utl_log_file) utl_log_file = stderr;
   if (time(&log_time) == ((time_t)-1)) ret = -1;
@@ -76,21 +71,17 @@ int utl_log_printf(const char *categ, const char *fname, int32_t line, const cha
   if (ret >= 0 && !strftime(log_tstr,32,"%Y-%m-%d %H:%M:%S",log_time_tm)) ret =-1;
   if (ret >= 0) ret = fprintf(utl_log_file,"%s ",log_tstr);
   if (ret >= 0 && fflush(utl_log_file)) ret = -1;
-  if (ret >= 0 && categ) ret = fprintf(utl_log_file,"%s ",categ);
-  if (ret >= 0) {
-    va_start(args, format);
-    ret = vfprintf(utl_log_file, format, args);
-    va_end(args);
-  }
-  if (ret >= 0 && fname) ret = fprintf(utl_log_file," %s:%d",fname,line);
-  if (ret >= 0 && (fputc('\n',utl_log_file) == EOF)) ret = -1;
-  if (ret >= 0 && fflush(utl_log_file)) ret = -1;
+  
   return ret;
 }
 
 int utl_log_check(int res, const char *test, const char *file, int32_t line)
 {
-  utl_log_printf("CHK", file, line,"%s (%s)", (res?"PASS":"FAIL"), test);
+  int ret = 0;
+  ret = utl_log_time();
+  
+  if (ret >= 0) ret = fprintf(utl_log_file,"CHK %s (%s)? %s:%d\n", (res?"PASS":"FAIL"), test, file, line);
+  if (ret >= 0 && fflush(utl_log_file)) ret = -1;
   if (!res) utl_log_check_fail++;
   utl_log_check_num++;
   return res;
@@ -105,9 +96,10 @@ void utl_log_assert(int res, const char *test, const char *file, int32_t line)
   }
 }
 
+
 #endif
 #endif
-#line 40 "src/utl_mem.c"
+#line 41 "src/utl_mem.c"
 #ifndef UTL_NOMEM
 #ifdef UTL_MAIN
 
@@ -138,16 +130,16 @@ int utl_check(void *ptr,const char *file, int32_t line)
   if (ptr == NULL) return memNULL;
   p = utl_mem(ptr);
   if (memcmp(p->chk,utl_BEG_CHK,4)) { 
-    logprintf("MEM Invalid or double freed %p (%lu %s:%d)",p->blk,
-                                               utl_mem_allocated, file, line);     
+    logprintf("TRC [MEM] Invalid or double freed %p (%lu) %s:%d",p->blk,
+                                               (unsigned long)utl_mem_allocated, file, line);     
     return memINVALID; 
   }
   if (memcmp(p->blk+p->size,utl_END_CHK,4)) {
-    logprintf("MEM Boundary overflow %p [%lu] (%lu %s:%d)",
-                              p->blk, p->size, utl_mem_allocated, file, line); 
+    logprintf("TRC [MEM] Boundary overflow %p [%lu] (%lu) %s:%d",
+                              p->blk, (unsigned long)p->size, (unsigned long)utl_mem_allocated, file, line); 
     return memOVERFLOW;
   }
-  logprintf("MEM Valid pointer %p (%lu %s:%d)",ptr, utl_mem_allocated, file, line); 
+  logprintf("TRC [MEM] Valid pointer %p (%lu) %s:%d",ptr, (unsigned long)utl_mem_allocated, file, line); 
   return memVALID; 
 }
 
@@ -155,18 +147,18 @@ void *utl_malloc(size_t size, const char *file, int32_t line )
 {
   utl_mem_t *p;
   
-  if (size == 0) logprintf("MEM Requesto for 0 bytes (%lu %s:%d)",
-                                                utl_mem_allocated, file, line);
+  if (size == 0) logprintf("TRC [MEM] Request for 0 bytes (%lu) %s:%d",
+                                                (unsigned long)utl_mem_allocated, file, line);
   p = (utl_mem_t *)malloc(sizeof(utl_mem_t) +size);
   if (p == NULL) {
-    logprintf("MEM Out of Memory (%lu %s:%d)",utl_mem_allocated, file, line);
+    logprintf("TRC [MEM] Out of Memory (%lu) %s:%d",(unsigned long)utl_mem_allocated, file, line);
     return NULL;
   }
   p->size = size;
   memcpy(p->chk,utl_BEG_CHK,4);
   memcpy(p->blk+p->size,utl_END_CHK,4);
   utl_mem_allocated += size;
-  logprintf("MEM Allocated %p [%lu] (%lu %s:%d)",p->blk,size,utl_mem_allocated,file,line);
+  logprintf("TRC [MEM] Allocated %p [%lu] (%lu) %s:%d",p->blk,(unsigned long)size,(unsigned long)utl_mem_allocated,file,line);
   return p->blk;
 }
 
@@ -185,26 +177,26 @@ void utl_free(void *ptr, const char *file, int32_t line)
   utl_mem_t *p=NULL;
   
   switch (utl_check(ptr,file,line)) {
-    case memNULL  :    logprintf("MEM free NULL (%lu %s:%d)", 
-                                                utl_mem_allocated, file, line);
+    case memNULL  :    logprintf("TRC [MEM] free NULL (%lu) %s:%d", 
+                                                (unsigned long)utl_mem_allocated, file, line);
                        break;
                           
-    case memOVERFLOW : logprintf( "MEM Freeing an overflown block  (%lu %s:%d)", 
-                                                           utl_mem_allocated, file, line);
+    case memOVERFLOW : logprintf("TRC [MEM] Freeing an overflown block  (%lu) %s:%d", 
+                                                           (unsigned long)utl_mem_allocated, file, line);
     case memVALID :    p = utl_mem(ptr); 
                        memcpy(p->chk,utl_CLR_CHK,4);
                        utl_mem_allocated -= p->size;
                        if (p->size == 0)
-                         logprintf("MEM Freeing a block of 0 bytes (%lu %s:%d)", 
-                                             utl_mem_allocated, file, line);
+                         logprintf("TRC [MEM] Freeing a block of 0 bytes (%lu) %s:%d", 
+                                             (unsigned long)utl_mem_allocated, file, line);
 
-                       logprintf("MEM free %p [%lu] (%lu %s %d)", ptr, 
-                                 p?p->size:0,utl_mem_allocated, file, line);
+                       logprintf("TRC [MEM] free %p [%lu] (%lu) %s:%d", ptr, 
+                                 (unsigned long)(p?p->size:0),(unsigned long)utl_mem_allocated, file, line);
                        free(p);
                        break;
                           
-    case memINVALID :  logprintf("MEM free an invalid pointer! (%lu %s:%d)", 
-                                                utl_mem_allocated, file, line);
+    case memINVALID :  logprintf("TRC [MEM] free an invalid pointer! (%lu) %s:%d", 
+                                                (unsigned long)utl_mem_allocated, file, line);
                        break;
   }
 }
@@ -214,28 +206,28 @@ void *utl_realloc(void *ptr, size_t size, const char *file, int32_t line)
   utl_mem_t *p;
   
   if (size == 0) {
-    logprintf("MEM realloc() used as free() %p -> [0] (%lu %s:%d)",
-                                                      ptr,utl_mem_allocated, file, line);
+    logprintf("TRC [MEM] realloc() used as free() %p -> [0] (%lu) %s:%d",
+                                                      ptr,(unsigned long)utl_mem_allocated, file, line);
     utl_free(ptr,file,line); 
   } 
   else {
     switch (utl_check(ptr,file,line)) {
-      case memNULL   : logprintf("MEM realloc() used as malloc() (%lu %s:%d)", 
-                                             utl_mem_allocated, file, line);
+      case memNULL   : logprintf("TRC [MEM] realloc() used as malloc() (%lu) %s:%d", 
+                                             (unsigned long)utl_mem_allocated, file, line);
                           return utl_malloc(size,file,line);
                         
       case memVALID  : p = utl_mem(ptr); 
                        p = (utl_mem_t *)realloc(p,sizeof(utl_mem_t) + size); 
                        if (p == NULL) {
-                         logprintf("MEM Out of Memory (%lu %s:%d)", 
-                                          utl_mem_allocated, file, line);
+                         logprintf("TRC [MEM] Out of Memory (%lu) %s:%d", 
+                                          (unsigned long)utl_mem_allocated, file, line);
                          return NULL;
                        }
                        utl_mem_allocated -= p->size;
                        utl_mem_allocated += size; 
-                       logprintf("MEM realloc %p [%lu] -> %p [%lu] (%lu %s:%d)", 
-                                       ptr, p->size, p->blk, size, 
-                                       utl_mem_allocated, file, line);
+                       logprintf("TRC [MEM] realloc %p [%lu] -> %p [%lu] (%lu) %s:%d", 
+                                       ptr, (unsigned long)p->size, p->blk, (unsigned long)size, 
+                                       (unsigned long)utl_mem_allocated, file, line);
                        p->size = size;
                        memcpy(p->chk,utl_BEG_CHK,4);
                        memcpy(p->blk+p->size,utl_END_CHK,4);
@@ -252,15 +244,15 @@ void *utl_strdup(const char *ptr, const char *file, int32_t line)
   size_t size;
   
   if (ptr == NULL) {
-    logprintf("MEM strdup NULL (%lu %s:%d)", utl_mem_allocated, file, line);
+    logprintf("TRC [MEM] strdup NULL (%lu) %s:%d", (unsigned long)utl_mem_allocated, file, line);
     return NULL;
   }
   size = strlen(ptr)+1;
 
   dest = (char *)utl_malloc(size,file,line);
   if (dest) memcpy(dest,ptr,size);
-  logprintf("MEM strdup %p [%lu] -> %p (%lu %s:%d)", ptr, size, dest, 
-                                                utl_mem_allocated, file, line);
+  logprintf("TRC [MEM] strdup %p [%lu] -> %p (%lu) %s:%d", ptr, (unsigned long)size, dest, 
+                                                (unsigned long)utl_mem_allocated, file, line);
   return dest;
 }
 #undef utl_mem
@@ -269,7 +261,7 @@ size_t utl_mem_used(void) {return utl_mem_allocated;}
 
 #endif
 #endif
-#line 20 "src/utl_vec.c"
+#line 21 "src/utl_vec.c"
 #ifndef UTL_NOVEC
 #ifdef UTL_MAIN
 
@@ -537,7 +529,7 @@ int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j)
 
 #endif
 #endif
-#line 359 "src/utl_pmx.c"
+#line 360 "src/utl_pmx.c"
 #ifndef UTL_NOPMX
 #ifdef UTL_MAIN
 
@@ -616,7 +608,7 @@ static utl_pmx_state_s *utl_pmx_state_top(void)
   return utl_pmx_stack + (utl_pmx_stack_ptr-1);
 }
 
-size_t utl_pmx_len(uint8_t n) {return pmxend(n)-pmxstart(n);}
+int utl_pmx_len(uint8_t n) {return (int)(pmxend(n)-pmxstart(n));}
 
 static int utl_pmx_get_utf8(const char *txt, int32_t *ch)
 {
@@ -1084,7 +1076,7 @@ static const char *utl_pmx_match(const char *pat, const char *txt)
   utl_pmx_state_push(pat,txt,1,1,0);
   
   while (*pat) {
-    logtrace("match","match %d [%s] [%s]",pmxcount(),pat,txt);
+    logtrace("match","%d [%s] [%s]",pmxcount(),pat,txt);
     c1 = 0; 
     switch (*pat) {
       case '(' : pat++;
