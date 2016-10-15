@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
   logcheck(s==p+6);
 
   s = pmxsearch("<!=e>r",p);
-  if (!logcheck(s && s==p+7)) logprintf("matched at %lu",s-p);
+  if (!logcheck(s && s==p+7)) logprintf("matched at %lu",(unsigned long)(s-p));
  
   
   p = "x    tar";
