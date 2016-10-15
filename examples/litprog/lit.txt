@@ -1,7 +1,15 @@
 # A simple Literate Programming tool
 
 ## Introduction
+  A *literate programming* tools enable programmers to layout a source file according
+the order that is more natural for explaining what that code does.
 
+  The principle is that concepts that are logically related should be described close
+to each other. This is often not the case as programmers are forced to write code in 
+the order that is most convenient for the compiler.
+
+  A classical example is the use of headers files in C. To accomplish 
+  
 ## Requirements
 
     - Use MarkDown as typesetting language
@@ -15,10 +23,13 @@
 
    - `> "filename" [filetype]`   
    - `^ block title`
-   - `. block title`
+   - `v block title`
 
 
 # Generated files
+
+  Since the tasks is rather simple, all the files will be described in this document.
+  
 ## The C file
 
 :(> "lit.c" C
@@ -27,24 +38,53 @@
    
    int main(int argc, char *argc[])
    {
-     /* Get command line options */
-     /* Parse input files */
-     /* Generate output files */
-     /* Update index of identifiers */
+     :( Get command line options    ):
+     :( Parse input files           ):
+     :( Generate output files       ):
+     :( Update index of identifiers ):
    }
    
 ):
 
 ## The header file 
 
-[[> "lit.h" C
+:(> "lit.h" C
 
     #include "utl.h"
  
-    /* Defines */
-    /* Types */
-    /* Variables */
-    /* Prototypes */
+    :( Types      ):
+    :( Defines    ):
+    :( Variables  ):
+    :( Prototypes ):
 
-]]
+):
 
+## The Makefile
+
+:(> makefile mk
+
+_EXE=.exe
+ifeq "$(COMSPEC)" ""
+_EXE=
+endif
+
+lit$(_EXE): lit.o
+  $(CC) -o lit$(_EXE) lit.o
+  
+):
+
+# Parsing input files
+
+:(v Parse input files
+    char *f;
+    for (char *fname = files[0]; fname; fname++) {
+      f = fopen(fname,"r");
+      if (f) {
+        :( Find targets ):
+        fseek(f,SEEK_SET,0);
+        :( Replace blocks ):
+        fclose(f):
+      }
+      else logprintf("ERR ");
+    }   
+):
