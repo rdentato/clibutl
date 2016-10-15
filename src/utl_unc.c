@@ -18,7 +18,7 @@
 #include <string.h>
 
 #define BUFSIZE 1024
-char buf[BUFSIZE];
+static char buf[BUFSIZE];
 int main(int argc, char *argv[])
 {
   int prt=0;
@@ -27,8 +27,8 @@ int main(int argc, char *argv[])
   FILE *f;
   for (k=1; k<argc; k++) {
     if ((f=fopen(argv[k],"r")) != NULL) {
-      ln = 0;
-      prt=0;
+      ln = 1;
+      prt= 0;
       while (fgets(buf,BUFSIZE,f)) {
         ln++;
         if (strncmp(buf,"//>>>//",7) == 0) prt = 0;
