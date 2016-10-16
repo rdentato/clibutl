@@ -1,5 +1,5 @@
 # utl
-
+[![Build Status](https://github.com/rdentato/clibutl)](https://github.com/rdentato/clibutl)
   This library provides functions that could, hopefully, speed up the
 developemnt of a C program.
 
