@@ -1,4 +1,4 @@
-# utl
+# utl [![Build Status](https://travis-ci.org/rdentato/clibutl.svg?branch=master)](https://travis-ci.org/rdentato/clibutl)
 
   This library provides functions that could, hopefully, speed up the
 developemnt of a C program.
