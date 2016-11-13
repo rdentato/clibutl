@@ -188,7 +188,7 @@ delimiters.
   - `' '`               Single quotes
   - `` ` ` ``           Back quotes
   - `« »`               French double Guillemet
-  - `‹ ›`               French double Guillemet
+  - `‹ ›`               French single Guillemet
   - `&#2018; &#2019;    Unicode single quotes 
   - `&#201C; &#201D;    Unicode double quotes 
    
@@ -903,7 +903,7 @@ static const char *utl_pmx_match(const char *pat, const char *txt)
   utl_pmx_state_push(pat,txt,1,1,0);
   
   while (*pat) {
-    logtrace("match","%d [%s] [%s]",pmxcount(),pat,txt);
+    _logdebug("[MATCH] %d [%s] [%s]",pmxcount(),pat,txt);
     c1 = 0; 
     switch (*pat) {
       case '(' : pat++;
@@ -974,7 +974,7 @@ static const char *utl_pmx_match(const char *pat, const char *txt)
   return utl_pmx_capt[0][0];
 }
 
-const char *utl_pmx_search(const char *pat, const char *txt)
+const char *utl_pmx_search(const char *pat, const char *txt, int fromstart)
 {
   const char *ret=NULL;
   
@@ -984,12 +984,13 @@ const char *utl_pmx_search(const char *pat, const char *txt)
   else if (strncmp(pat,"<iso>",5) == 0) {pat+=5; utl_pmx_utf8=0;}
     
   if (*pat == '^')  ret = utl_pmx_match(pat+1,txt);
-  else while (!(ret = utl_pmx_match(pat,txt)) && *txt) {
+  else while (!(ret = utl_pmx_match(pat,txt)) && *txt && !fromstart) {
          txt += utl_pmx_utf8 ? utl_pmx_get_utf8(txt, NULL) : 1;
        }
   _logdebug("ret: %p",ret);
   return ret;
 }
+
 #endif
 #endif
 //>>>//
