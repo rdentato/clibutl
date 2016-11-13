@@ -21,14 +21,16 @@ const char *utl_emptystring = "";
 
 int   utl_ret(int x)      {return x;}
 void *utl_retptr(void *x) {return x;}
-#line 224 "src/utl_log.c"
+#line 271 "src/utl_log.c"
 #ifndef UTL_NOLOG
 #ifdef UTL_MAIN
 
 FILE *utl_log_file = NULL;
-static uint32_t utl_log_check_num   = 0;
-static uint32_t utl_log_check_fail  = 0;
+uint32_t utl_log_check_num   = 0;
+uint32_t utl_log_check_fail  = 0;
+char utl_log_buf[UTL_LOG_BUF_SIZE];
 
+char *utl_log_watch[1] = {""};
 
 int utl_log_close(const char *msg)
 {
@@ -47,9 +49,10 @@ int utl_log_close(const char *msg)
 
 FILE *utl_log_open(const char *fname, const char *mode)
 {
-  char md[2];
+  char md[4];
   md[0] = (mode && *mode == 'w')? 'w' : 'a';
-  md[1] = '\0';
+  md[1] = '+';
+  md[2] = '\0';
   utl_log_close(NULL);
   utl_log_file = fopen(fname,md);
   logprintf("LOG START");
@@ -58,7 +61,7 @@ FILE *utl_log_open(const char *fname, const char *mode)
   return utl_log_file;
 }
 
-int utl_log_time()
+int utl_log_time(void)
 {
   char       log_tstr[32];
   time_t     log_time;
@@ -96,6 +99,44 @@ void utl_log_assert(int res, const char *test, const char *file, int32_t line)
   }
 }
 
+void utl_log_trc_check(char *buf, char *watch[], const char *file, int32_t line)
+{ 
+  int k=0;
+  char *p;
+  int expected = 0;
+  int res = 0;
+  _logprintf("XXX %s",buf);
+  for (k=0; k<UTL_LOG_WATCH_SIZE; k++) {
+    if (watch[k]) {
+      p = watch[k];
+      if (p[0] == '\0') break;
+      expected = !((p[0] == '<') && (p[1] == 'n') && (p[2] == 'o') && (p[3] == 't') && (p[4] == '>'));
+      if (!expected) p+=5;
+    	res = pmxsearch(p,buf) != NULL;
+      if (res) {
+        utl_log_check(expected,watch[k],file,line);
+        if (expected) watch[k] = NULL;
+      }
+    }
+  }
+}
+
+void utl_log_trc_check_last(char *watch[], const char *file, int32_t line)
+{ 
+  /* The  only tests in `watch[]` should be the ones with `<not>` at the beginning */
+  int k;
+  int expected = 0;
+  char *p;
+  
+  for (k=0; k<UTL_LOG_WATCH_SIZE;k++) {
+    if (watch[k]) {
+      p = watch[k];
+      if (p[0] == '\0') break;
+      expected = !((p[0] == '<') && (p[1] == 'n') && (p[2] == 'o') && (p[3] == 't') && (p[4] == '>'));
+      utl_log_check(!expected,watch[k],file,line);
+    }
+  }
+}
 
 #endif
 #endif
@@ -130,16 +171,16 @@ int utl_check(void *ptr,const char *file, int32_t line)
   if (ptr == NULL) return memNULL;
   p = utl_mem(ptr);
   if (memcmp(p->chk,utl_BEG_CHK,4)) { 
-    logprintf("TRC [MEM] Invalid or double freed %p (%lu) %s:%d",p->blk,
+    logprintf("TRC Invalid or double freed %p (%lu) %s:%d",p->blk,
                                                (unsigned long)utl_mem_allocated, file, line);     
     return memINVALID; 
   }
   if (memcmp(p->blk+p->size,utl_END_CHK,4)) {
-    logprintf("TRC [MEM] Boundary overflow %p [%lu] (%lu) %s:%d",
+    logprintf("TRC Boundary overflow %p [%lu] (%lu) %s:%d",
                               p->blk, (unsigned long)p->size, (unsigned long)utl_mem_allocated, file, line); 
     return memOVERFLOW;
   }
-  logprintf("TRC [MEM] Valid pointer %p (%lu) %s:%d",ptr, (unsigned long)utl_mem_allocated, file, line); 
+  logprintf("TRC Valid pointer %p (%lu) %s:%d",ptr, (unsigned long)utl_mem_allocated, file, line); 
   return memVALID; 
 }
 
@@ -147,18 +188,18 @@ void *utl_malloc(size_t size, const char *file, int32_t line )
 {
   utl_mem_t *p;
   
-  if (size == 0) logprintf("TRC [MEM] Request for 0 bytes (%lu) %s:%d",
+  if (size == 0) logprintf("TRC Request for 0 bytes (%lu) %s:%d",
                                                 (unsigned long)utl_mem_allocated, file, line);
   p = (utl_mem_t *)malloc(sizeof(utl_mem_t) +size);
   if (p == NULL) {
-    logprintf("TRC [MEM] Out of Memory (%lu) %s:%d",(unsigned long)utl_mem_allocated, file, line);
+    logprintf("TRC Out of Memory (%lu) %s:%d",(unsigned long)utl_mem_allocated, file, line);
     return NULL;
   }
   p->size = size;
   memcpy(p->chk,utl_BEG_CHK,4);
   memcpy(p->blk+p->size,utl_END_CHK,4);
   utl_mem_allocated += size;
-  logprintf("TRC [MEM] Allocated %p [%lu] (%lu) %s:%d",p->blk,(unsigned long)size,(unsigned long)utl_mem_allocated,file,line);
+  logprintf("TRC Allocated %p [%lu] (%lu) %s:%d",p->blk,(unsigned long)size,(unsigned long)utl_mem_allocated,file,line);
   return p->blk;
 }
 
@@ -177,25 +218,25 @@ void utl_free(void *ptr, const char *file, int32_t line)
   utl_mem_t *p=NULL;
   
   switch (utl_check(ptr,file,line)) {
-    case memNULL  :    logprintf("TRC [MEM] free NULL (%lu) %s:%d", 
+    case memNULL  :    logprintf("TRC free NULL (%lu) %s:%d", 
                                                 (unsigned long)utl_mem_allocated, file, line);
                        break;
                           
-    case memOVERFLOW : logprintf("TRC [MEM] Freeing an overflown block  (%lu) %s:%d", 
+    case memOVERFLOW : logprintf("TRC Freeing an overflown block  (%lu) %s:%d", 
                                                            (unsigned long)utl_mem_allocated, file, line);
     case memVALID :    p = utl_mem(ptr); 
                        memcpy(p->chk,utl_CLR_CHK,4);
                        utl_mem_allocated -= p->size;
                        if (p->size == 0)
-                         logprintf("TRC [MEM] Freeing a block of 0 bytes (%lu) %s:%d", 
+                         logprintf("TRC Freeing a block of 0 bytes (%lu) %s:%d", 
                                              (unsigned long)utl_mem_allocated, file, line);
 
-                       logprintf("TRC [MEM] free %p [%lu] (%lu) %s:%d", ptr, 
+                       logprintf("TRC free %p [%lu] (%lu) %s:%d", ptr, 
                                  (unsigned long)(p?p->size:0),(unsigned long)utl_mem_allocated, file, line);
                        free(p);
                        break;
                           
-    case memINVALID :  logprintf("TRC [MEM] free an invalid pointer! (%lu) %s:%d", 
+    case memINVALID :  logprintf("TRC free an invalid pointer! (%lu) %s:%d", 
                                                 (unsigned long)utl_mem_allocated, file, line);
                        break;
   }
@@ -206,26 +247,26 @@ void *utl_realloc(void *ptr, size_t size, const char *file, int32_t line)
   utl_mem_t *p;
   
   if (size == 0) {
-    logprintf("TRC [MEM] realloc() used as free() %p -> [0] (%lu) %s:%d",
+    logprintf("TRC realloc() used as free() %p -> [0] (%lu) %s:%d",
                                                       ptr,(unsigned long)utl_mem_allocated, file, line);
     utl_free(ptr,file,line); 
   } 
   else {
     switch (utl_check(ptr,file,line)) {
-      case memNULL   : logprintf("TRC [MEM] realloc() used as malloc() (%lu) %s:%d", 
+      case memNULL   : logprintf("TRC realloc() used as malloc() (%lu) %s:%d", 
                                              (unsigned long)utl_mem_allocated, file, line);
                           return utl_malloc(size,file,line);
                         
       case memVALID  : p = utl_mem(ptr); 
                        p = (utl_mem_t *)realloc(p,sizeof(utl_mem_t) + size); 
                        if (p == NULL) {
-                         logprintf("TRC [MEM] Out of Memory (%lu) %s:%d", 
+                         logprintf("TRC Out of Memory (%lu) %s:%d", 
                                           (unsigned long)utl_mem_allocated, file, line);
                          return NULL;
                        }
                        utl_mem_allocated -= p->size;
                        utl_mem_allocated += size; 
-                       logprintf("TRC [MEM] realloc %p [%lu] -> %p [%lu] (%lu) %s:%d", 
+                       logprintf("TRC realloc %p [%lu] -> %p [%lu] (%lu) %s:%d", 
                                        ptr, (unsigned long)p->size, p->blk, (unsigned long)size, 
                                        (unsigned long)utl_mem_allocated, file, line);
                        p->size = size;
@@ -244,14 +285,14 @@ void *utl_strdup(const char *ptr, const char *file, int32_t line)
   size_t size;
   
   if (ptr == NULL) {
-    logprintf("TRC [MEM] strdup NULL (%lu) %s:%d", (unsigned long)utl_mem_allocated, file, line);
+    logprintf("TRC strdup NULL (%lu) %s:%d", (unsigned long)utl_mem_allocated, file, line);
     return NULL;
   }
   size = strlen(ptr)+1;
 
   dest = (char *)utl_malloc(size,file,line);
   if (dest) memcpy(dest,ptr,size);
-  logprintf("TRC [MEM] strdup %p [%lu] -> %p (%lu) %s:%d", ptr, (unsigned long)size, dest, 
+  logprintf("TRC strdup %p [%lu] -> %p (%lu) %s:%d", ptr, (unsigned long)size, dest, 
                                                 (unsigned long)utl_mem_allocated, file, line);
   return dest;
 }
@@ -308,7 +349,7 @@ static int16_t utl_vec_delgap(vec_t v, uint32_t i, uint32_t l)
   **    |  |    |    |             |  |    |    
   **    0  i   i+l   cnt           0  i    cnt-l  
   */
-  _logdebug("DELGAP: %d %d",i,l);
+  _logtrace("DELGAP: %d %d",i,l);
   if (i < v->cnt) {
     if (i+l >= v->cnt) v->cnt = i; /* Just drop last elements */
     else {
@@ -517,9 +558,9 @@ char *utl_buf_insc(buf_t b, uint32_t i, char c)
 int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j)
 {
   int16_t r;
-  _logdebug("len:%d",b->cnt);
+  _logtrace("len:%d",b->cnt);
   r = utl_vec_delgap(b, i, j-i+1);
-  _logdebug("len:%d",b->cnt);
+  _logtrace("len:%d",b->cnt);
   if (r) {
     bufsetc(b,b->cnt,'\0');
     b->cnt--;
@@ -617,7 +658,7 @@ static int utl_pmx_get_utf8(const char *txt, int32_t *ch)
   uint8_t first = *s;
   int32_t val;
   
-  _logdebug("About to get UTF8: %s in %p",txt,ch);  
+  _logprintf("About to get UTF8: %s in %p",txt,ch);  
   fsm {
     fsmSTART {
       if (*s <= 0xC1) { val = *s; len = (*s > 0); fsmGOTO(end);    }
@@ -740,7 +781,7 @@ static int32_t utl_pmx_iscapt(const char *pat, const char *txt)
   
   if ('1' <= *pat && *pat <= '9') {
     capnum = *pat - '0';
-    _logdebug("capt: %d %d",capnum,utl_pmx_capnum);
+    _logprintf("capt: %d %d",capnum,utl_pmx_capnum);
     if (capnum < utl_pmx_capnum) {
       cap = pmxstart(capnum);
       while (cap < pmxend(capnum) && *cap && (*cap == *txt)) {
@@ -768,7 +809,7 @@ static int utl_pmx_get_limits(const char *pat, const char *pat_end, const char *
   int32_t c_esc = '\0';
   int32_t ch;
   
-  _logdebug("BRACE: [%.*s]",pat_end-pat,pat);
+  _logprintf("BRACE: [%.*s]",pat_end-pat,pat);
   
   if (pat < pat_end) { /* <B()\> <Q""\>*/
     pat += utl_pmx_nextch(pat,&c_esc);
@@ -806,7 +847,7 @@ static int utl_pmx_get_limits(const char *pat, const char *pat_end, const char *
       else return 0;
     }
   }
-  _logdebug("open:'%d' close:'%d' esc:'%d'",c_beg,c_end,c_esc);
+  _logprintf("open:'%d' close:'%d' esc:'%d'",c_beg,c_end,c_esc);
   
   *c_beg_ptr = c_beg;
   *c_end_ptr = c_end;
@@ -829,7 +870,7 @@ static int utl_pmx_get_delimited(const char *pat, const char *txt,int32_t c_beg,
     s += n;
     n = utl_pmx_nextch(s,&ch);
     if (ch == '\0') return 0;
-    _logdebug("BRACE: '%c' cnt:%d",ch,cnt);
+    _logprintf("BRACE: '%c' cnt:%d",ch,cnt);
     
          if (ch == c_end) { if (cnt == 0) return (s+n)-txt;  else cnt--; }
     else if (ch == c_beg) { cnt++;                                       }
@@ -864,7 +905,7 @@ static int utl_pmx_class(const char **pat_ptr, const char **txt_ptr)
   int32_t max_n = 0;
   int32_t ch;
   
-  _logdebug("class:[%s][%s]",pat,txt);
+  _logprintf("class:[%s][%s]",pat,txt);
                 
   pat++;  /* skip the '<' */
   
@@ -1013,7 +1054,7 @@ static const char *utl_pmx_alt(const char *pat, const char **txt_ptr)
   const char *ret = utl_emptystring;
   
   while (*pat) {
-    _logdebug("ALT: %s (%d)",pat,utl_pmx_stack_ptr);
+    _logprintf("ALT: %s (%d)",pat,utl_pmx_stack_ptr);
     switch (*pat++) {
       case '%': if (*pat) pat++; /* works for utf8 as well */
                 break;
@@ -1076,7 +1117,7 @@ static const char *utl_pmx_match(const char *pat, const char *txt)
   utl_pmx_state_push(pat,txt,1,1,0);
   
   while (*pat) {
-    logtrace("match","%d [%s] [%s]",pmxcount(),pat,txt);
+    _logprintf("[MATCH] %d [%s] [%s]",pmxcount(),pat,txt);
     c1 = 0; 
     switch (*pat) {
       case '(' : pat++;
@@ -1089,7 +1130,7 @@ static const char *utl_pmx_match(const char *pat, const char *txt)
                  break;
       
       case ')' : pat++;
-                 _logdebug(")->%d",utl_pmx_stack_ptr);
+                 _logprintf(")->%d",utl_pmx_stack_ptr);
                  if (utl_pmx_stack_ptr < 2) {
                    utl_pmx_set_paterror(pat-1); 
                    break;
@@ -1105,7 +1146,7 @@ static const char *utl_pmx_match(const char *pat, const char *txt)
                  
                  utl_pmx_capt[state->cap][1] = txt;  
                  state->n++;
-                 _logdebug("match #%d min:%d max:%d",state->n,state->min_n, state->max_n);
+                 _logprintf("match #%d min:%d max:%d",state->n,state->min_n, state->max_n);
                  
                  if (state->n < state->max_n) { 
                    utl_pmx_capt[state->cap][0] = txt;
@@ -1126,7 +1167,7 @@ static const char *utl_pmx_match(const char *pat, const char *txt)
       default  : if (c1 == 0) len = utl_pmx_nextch(pat, &c1);
                  len = utl_pmx_nextch(txt, &ch);
                  if (ch != c1) {
-                   _logdebug("FAIL: %d %d",c1,ch);
+                   _logprintf("FAIL: %d %d",c1,ch);
                    utl_pmx_FAIL;
                  }
                  txt += len;
@@ -1143,11 +1184,11 @@ static const char *utl_pmx_match(const char *pat, const char *txt)
   for (len = utl_pmx_capnum; len < utl_pmx_MAXCAPT; len++) {
     utl_pmx_capt[len][0] = utl_pmx_capt[len][1] = NULL;
   }
-  _logdebug("res: %p - %p",utl_pmx_capt[0][0],utl_pmx_capt[0][1]);
+  _logprintf("res: %p - %p",utl_pmx_capt[0][0],utl_pmx_capt[0][1]);
   return utl_pmx_capt[0][0];
 }
 
-const char *utl_pmx_search(const char *pat, const char *txt)
+const char *utl_pmx_search(const char *pat, const char *txt, int fromstart)
 {
   const char *ret=NULL;
   
@@ -1157,11 +1198,12 @@ const char *utl_pmx_search(const char *pat, const char *txt)
   else if (strncmp(pat,"<iso>",5) == 0) {pat+=5; utl_pmx_utf8=0;}
     
   if (*pat == '^')  ret = utl_pmx_match(pat+1,txt);
-  else while (!(ret = utl_pmx_match(pat,txt)) && *txt) {
+  else while (!(ret = utl_pmx_match(pat,txt)) && *txt && !fromstart) {
          txt += utl_pmx_utf8 ? utl_pmx_get_utf8(txt, NULL) : 1;
        }
-  _logdebug("ret: %p",ret);
+  _logprintf("ret: %p",ret);
   return ret;
 }
+
 #endif
 #endif
