@@ -69,7 +69,8 @@
 #define logcheck(e)    utl_ret(1)
 #define logassert(e)   
 #define logclock
-#define logdebug       
+#define logdebug(...)
+#define logtracewatch  
 #define UTL_NOTRACE
 #endif
 
@@ -86,6 +87,8 @@
 #define _logclose()         utl_ret(0)
 #define _logclock
 #define _logtrace(...)  
+#define _logdebug(...)       
+#define _logtracewatch
 
 extern FILE *utl_log_file;
 extern uint32_t utl_log_check_num;
