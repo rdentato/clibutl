@@ -57,8 +57,6 @@ del /Q /F test\*.o   2> nul
 del /Q /F test\t_* 2> nul
 del /Q /F test\*.log 2> nul
 del /Q /F test\*.tmp 2> nul
-del /Q /F dist\utl.c 2> nul
-del /Q /F dist\utl.h 2> nul
 del /Q /F build.log  2> nul
 goto theend
 
@@ -92,7 +90,6 @@ goto compile
 :: Create the utl.h and utl.c files
 
 cd src
-
 
 %BUILD_1% utl_unc.c %BUILD_2% %BUILD_O%utl_unc.exe >> ..\build.log
 

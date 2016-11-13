@@ -155,5 +155,4 @@ runtest: tst
 clean:
 	cd src;  $(RM) utl.c utl.h utl_single.h libutl.a *.o *.obj *.gc?? utl_unc$(_EXE)
 	cd test; $(RM) t_* *.o *.obj *.tmp *.log gmon.out *.gc?? utl.c x_chk.x
-	cd dist; $(RM) utl.h utl.c utl_single.h 
 	$(RM) *.log
