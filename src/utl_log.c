@@ -287,7 +287,7 @@ int utl_log_close(const char *msg)
     utl_log_check_fail = 0;
     utl_log_check_num = 0;
   }
-  if (msg) logprintf(msg);
+  if (msg) logprintf("%s",msg);
   if (utl_log_file && utl_log_file != stderr) ret = fclose(utl_log_file);
   utl_log_file = NULL;
   return ret;
