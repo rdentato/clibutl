@@ -35,7 +35,7 @@ at the time.
 
 ## Log messages
 
-  - `int logprintf(char *format, ...);`
+  - `void logprintf(char *format, ...);`
      is the main function. On executing:  
      
      ```C  
@@ -68,11 +68,31 @@ at the time.
     printed on opening the file, this is an easy way to determine how much time
     passed between 
 
-## Testing
+## Tracing
 
-A simple way to create unit test (or applying
-[Test Driven Development](https://en.wikipedia.org/wiki/Test-driven_development))
-is to use the following functions:
+  While using a symbolic debugger like `gdb` is the *"right thing to do"*, there
+are times when you need some more traces of the execution of your program to really
+get what is going on (and catch that damned bug!). Insted of using `printf()` or
+`logprintf()` (which you can always do, of course) you can use the 
+
+  - `void logtrace(char *format, ...);`
+  
+function that works as the `logprintf()` function but will produce lines like:
+
+    ...
+      2016-11-05 14:08:57 TRC Freeing a block of 0 bytes (0) test/ut_mem.c:49
+    ...
+	
+  The `TRC` tag identiy tracing messages from others logged information.
+  
+  Tracing can also be used to setup unit tests as described in the next section.
+  
+  If the `UTLNOTRACE` or `NDEBUG` are defined, tracing will be disabled. 
+ 
+	
+## Unit Testing
+
+A simple way to create unit test is to use the following functions:
 
   - `int logcheck(int test);`
     evaluates the test expression (whose result must be non-zero if the test passed
@@ -94,9 +114,9 @@ For eaxmple, the following code:
 will print, assuming `x=35.2` and `y=3.0`:
 
    ```
-     2016-09-03 11:33:01 CHK FAIL (x > 100.) spacing.c 34
-     2016-09-03 11:33:01 CHK PASS (y > 0.) spacing.c 35
-     2016-09-03 11:33:01 CHK PASS (x/y > 0.33) spacing.c 36
+     2016-09-03 11:33:01 CHK FAIL (x > 100.) spacing.c:34
+     2016-09-03 11:33:01 CHK PASS (y > 0.) spacing.c:35
+     2016-09-03 11:33:01 CHK PASS (x/y > 0.33) spacing.c:36
    ```
 
 If, instead, we had `x=145.7` and `y=0.0`, we would have had:
@@ -107,7 +127,7 @@ If, instead, we had `x=145.7` and `y=0.0`, we would have had:
      2016-09-03 11:33:01 CHK EXITING ON FAIL
    ```
     
-and the program would have been terminated with exit code 1 to  prevent the
+and the program would have been terminated calling `abort()`  1 to  prevent the
 division by zero to happen on the next line.
 
 The fact that `logcheck()` returns the result of the test can be used to get more
@@ -115,6 +135,7 @@ information in case of a failure:
 
    ```C
      y = get_number_from(inner_space);
+	 x = 135.2;
      if (!logcheck(x > 100.)) {
        logprintf("          x: %.1f",x);
      }
@@ -125,8 +146,8 @@ information in case of a failure:
    will result in:
     
    ```
-      2016-09-03 11:33:01 CHK FAIL (x > 100.) spacing.c 34
-      2016-09-03 11:33:01           x: 35.2
+      2016-09-03 11:33:01 CHK FAIL (x > 100.)? spacing.c:34
+      2016-09-03 11:33:01           x: 135.2
    ```
 
   At the end of the log, the function `logclose()` will print the number of
@@ -139,22 +160,48 @@ failures and the number of checks performed.
   If the symbol `NDEBUG` is defined, `logassert()` will perform no action;
 and `logcheck()` will perform no action and always return `1`;
 
-   
-## Debugging
+  You can also monitor if a specific tracing messages appears (or not) when
+executing a block of code:
 
-While using a symbolic debugger like `gdb` is the *"right thing to do"*, there
-are times when you need some more traces of the execution of your program to really
-get what is going on (and catch that damned bug!). Insted of using `printf()` or
-`logprintf()` (which you can always do, of course) you can use the 
+  - `logtracewatch(char *pat1, char *pat2, ...) { ... }`
 
-  - `int logdebug(char *format, ...);`
+  The patterns are `pmx` expressions.
+
+  For example, in:
   
-function that behaves exactly as the `logprintf()` function but will do nothing if
-the `NDEBUG` symbol is defined.
+   ```C
+     34: logwatch ("closed:","<not>unable to open:") {
+     35:   f = carefulopen("existingfile");
+     36:   carefulparse(f);
+     37:   carefulclose(f);
+     38: }
+     39: logwatch ("parse: null file pointer","unable to open:") {
+     40:   f = carefulopen("notexistingfile");
+     41:   carefulparse(f);
+     42:   carefulclose(f);
+     43: }
+   ```
+    
+we have set up the three functions so that they emit different messages. The first
+test checks that when an existing file is used, everything is ok. The second test
+checks that when the file can't be opened the functions behave properly.
 
-This way you can easily differentiate between normal log messages and messages that
-are there just for debugging purposes.
+  Using `logcheck` and `logtracewatch` one can define tests that use two very
+different approaches:
 
+   - `logcheck` is a way to reason about the expect results of a function.
+     This allows for tests that directly checks the state of the program after a
+	 function is executed.
+     The drawback is that if a function is restructured, an entire set of tests may
+	 become invalid and will need to be rewritten. For example a function that returned
+	 an `unsigned int` may now return a `double`.
+  
+   - `logtracewatch` allows to indirectly verify the behaviour of a function without
+     having to know about the inner details. This creates tests that are more resilient
+	 to refactoring but might.
+	 
+  I borrowed this concept of 
+  
 ## Stopwatch
 
 A simple function to measure the time spent in a portion of code:
@@ -225,9 +272,11 @@ any other identifier, so I'm not feeling particularly pressed on changing it.
 #ifdef UTL_MAIN
 
 FILE *utl_log_file = NULL;
-static uint32_t utl_log_check_num   = 0;
-static uint32_t utl_log_check_fail  = 0;
+uint32_t utl_log_check_num   = 0;
+uint32_t utl_log_check_fail  = 0;
+char utl_log_buf[UTL_LOG_BUF_SIZE];
 
+char *utl_log_watch[1] = {""};
 
 int utl_log_close(const char *msg)
 {
@@ -246,9 +295,10 @@ int utl_log_close(const char *msg)
 
 FILE *utl_log_open(const char *fname, const char *mode)
 {
-  char md[2];
+  char md[4];
   md[0] = (mode && *mode == 'w')? 'w' : 'a';
-  md[1] = '\0';
+  md[1] = '+';
+  md[2] = '\0';
   utl_log_close(NULL);
   utl_log_file = fopen(fname,md);
   logprintf("LOG START");
@@ -295,6 +345,44 @@ void utl_log_assert(int res, const char *test, const char *file, int32_t line)
   }
 }
 
+void utl_log_trc_check(char *buf, char *watch[], const char *file, int32_t line)
+{ 
+  int k=0;
+  char *p;
+  int expected = 0;
+  int res = 0;
+  _logprintf("XXX %s",buf);
+  for (k=0; k<UTL_LOG_WATCH_SIZE; k++) {
+    if (watch[k]) {
+      p = watch[k];
+      if (p[0] == '\0') break;
+      expected = !((p[0] == '<') && (p[1] == 'n') && (p[2] == 'o') && (p[3] == 't') && (p[4] == '>'));
+      if (!expected) p+=5;
+    	res = pmxsearch(p,buf) != NULL;
+      if (res) {
+        utl_log_check(expected,watch[k],file,line);
+        if (expected) watch[k] = NULL;
+      }
+    }
+  }
+}
+
+void utl_log_trc_check_last(char *watch[], const char *file, int32_t line)
+{ 
+  /* The  only tests in `watch[]` should be the ones with `<not>` at the beginning */
+  int k;
+  int expected = 0;
+  char *p;
+  
+  for (k=0; k<UTL_LOG_WATCH_SIZE;k++) {
+    if (watch[k]) {
+      p = watch[k];
+      if (p[0] == '\0') break;
+      expected = !((p[0] == '<') && (p[1] == 'n') && (p[2] == 'o') && (p[3] == 't') && (p[4] == '>'));
+      utl_log_check(!expected,watch[k],file,line);
+    }
+  }
+}
 
 #endif
 #endif
