@@ -8,7 +8,12 @@ the order that is more natural for explaining what that code does.
 to each other. This is often not the case as programmers are forced to write code in 
 the order that is most convenient for the compiler.
 
-  A classical example is the use of headers files in C. To accomplish 
+  A classical example is the use of headers files in C. Variables and types are defined
+in the header file, while the operation on them are defined in a C source file.  This
+implies that those who want to understand how things work, have to jump from a file to
+the other.
+
+  The key concept is the _chunk_
   
 ## Requirements
 
@@ -80,11 +85,13 @@ lit$(_EXE): lit.o
     for (char *fname = files[0]; fname; fname++) {
       f = fopen(fname,"r");
       if (f) {
-        :( Find targets ):
-        fseek(f,SEEK_SET,0);
+        :( Find blocks and targets ):
+        fseek(f,SEEK_SET,0); 
         :( Replace blocks ):
         fclose(f):
       }
       else logprintf("ERR ");
     }   
 ):
+
+
