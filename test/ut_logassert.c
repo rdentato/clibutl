@@ -20,7 +20,9 @@ int main(int argc, char *argv[])
 {
   logopen("l_logassert.log","w");
   
+  utl_log_check_fail--; /* DIRTY TRICK */
   logassert(5>10);
+  utl_log_check_fail=0; /* SHOULD NEVER HAPPEN */
   logassert(utl_ret(0));
   logcheck(3/utl_ret(0) == 0);
   logclose();

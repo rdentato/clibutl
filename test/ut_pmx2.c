@@ -177,7 +177,7 @@ int main(int argc, char *argv[])
  
   s=pmxsearch("<iso>(a|(b c)|(d))","d");
   logcheck(s);
-  logdebug("matched: %d (%.*s) (%.*s) (%.*s) (%.*s)",pmxcount(),pmxlen(0),pmxstart(0),pmxlen(1),pmxstart(1),pmxlen(2),pmxstart(2),pmxlen(3),pmxstart(3));
+  logtrace("matched: %d (%.*s) (%.*s) (%.*s) (%.*s)",pmxcount(),pmxlen(0),pmxstart(0),pmxlen(1),pmxstart(1),pmxlen(2),pmxstart(2),pmxlen(3),pmxstart(3));
 
   s=pmxsearch("(a|b|c|d)","d");
   if (logcheck(s)) {logprintf("matched: %.*s",pmxlen(0),pmxstart(0)); }
