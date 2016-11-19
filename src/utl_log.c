@@ -50,8 +50,7 @@ at the time.
        2016-09-03 11:33:01 Warp speed to 4.
        2016-09-03 11:33:01 Moving on now. 
      ```
-     On success it will return the number of characters written; on error
-     it will return -1. 
+      
      
   - `FILE *logopen(char *fname, char *mode);`
     sets the logging file (i.e. the 
@@ -65,9 +64,7 @@ at the time.
     
   - `void logclose(void);`
     Closes the current log files and revert back to `stderr`. Before closing it,
-    the message `"LOG STOP"` is printed. Together with the `"LOG START"` message
-    printed on opening the file, this is an easy way to determine how much time
-    passed between 
+    the message `"LOG STOP"` is printed. 
 
 ## Tracing & debugging
 
@@ -81,7 +78,7 @@ with `NDEBUG` defined:
   - `void logdebug(char *format, ...);`
 
   Using `logdebug()` is recommended when, during developement, one wants to better
-understand why that damned funtion is not working how expected.
+understand why a specific function is not working as expected.
 
   In more complex situations, where more functions work together and one wants to 
 check that their interaction is working fine, using `logtrace()` could be a better 
@@ -214,7 +211,8 @@ different approaches:
      having to know about the inner details. This creates tests that are more resilient
 	 to refactoring but might.
 	 
-  I borrowed this concept of 
+  I borrowed this concept of *tracing test* from an interesting blog article by
+[Kartik Agaram](http://akkartik.name/post/tracing-tests).
   
 ## Stopwatch
 
