@@ -1,14 +1,15 @@
 # Logging
 
-         __
-        /  )
-       /  /______   ______
-      /  //  __  \ /  __  \
-     /  //  /_/  //  /_/  /
-    (__/ \______/ \___   /
-                   __/  /
-                  (____/
-
+   ```
+            __
+           /  )
+          /  /______   ______
+         /  //  __  \ /  __  \
+        /  //  (_/  //  (_/  /
+       (__/ \______/ \___   /
+                      __/  /
+                     (____/
+   ```
 
 Logging functions are just wrappers around the `fprintf()` function.
 They print a message on a file (by default `stderr`) adding a timestamp
@@ -16,9 +17,9 @@ before the message and a newline `\n` at the end.
 To make things simple, there is only one level of logging and only one log file
 at the time.
 
-### Log messages
+## Log messages
 
-  - `int logprintf(char *format, ...);`
+  - `void logprintf(char *format, ...);`
      is the main function. On executing:  
      
      ```C  
@@ -51,11 +52,44 @@ at the time.
     printed on opening the file, this is an easy way to determine how much time
     passed between 
 
-### Testing
+## Tracing & debugging
 
-A simple way to create unit test (or applying
-[Test Driven Development](https://en.wikipedia.org/wiki/Test-driven_development))
-is to use the following functions:
+  While using a symbolic debugger like `gdb` is the *"right thing to do"*, there
+are times when you need some more traces of the execution of your program to really
+get what is going on (and catch that damned bug!). 
+
+  The simplest way would be to use the `logdebug()` that will disappear if compiled 
+with `NDEBUG` defined:
+
+  - `void logdebug(char *format, ...);`
+
+  Using `logdebug()` is recommended when, during developement, one wants to better
+understand why that damned funtion is not working how expected.
+
+  In more complex situations, where more functions work together and one wants to 
+check that their interaction is working fine, using `logtrace()` could be a better 
+option. It works with the `logtracewatch()` function (see next section) to help
+checking everything works as expected.
+
+  - `void logtrace(char *format, ...);`
+  
+function that works as the `logprintf()` function but will produce lines like:
+
+    ...
+      2016-11-05 14:08:57 TRC Freeing a block of 0 bytes (0) test/ut_mem.c:49
+    ...
+	
+  The `TRC` tag identify tracing messages, the `DBG` tag identify the debugging
+messages. This can be useful to filter a log file (for example with `grep` or 
+`sed`) in search of speficic messages.
+  
+  If `NDEBUG` is defined while compiling, tracing and debugging will be disabled.
+  if `UTLNOTRACE` is defined, only tracing messages are disabled.
+
+	
+## Unit Testing
+
+A simple way to create unit test is to use the following functions:
 
   - `int logcheck(int test);`
     evaluates the test expression (whose result must be non-zero if the test passed
@@ -77,9 +111,9 @@ For eaxmple, the following code:
 will print, assuming `x=35.2` and `y=3.0`:
 
    ```
-     2016-09-03 11:33:01 CHK FAIL (x > 100.) spacing.c 34
-     2016-09-03 11:33:01 CHK PASS (y > 0.) spacing.c 35
-     2016-09-03 11:33:01 CHK PASS (x/y > 0.33) spacing.c 36
+     2016-09-03 11:33:01 CHK FAIL (x > 100.) spacing.c:34
+     2016-09-03 11:33:01 CHK PASS (y > 0.) spacing.c:35
+     2016-09-03 11:33:01 CHK PASS (x/y > 0.33) spacing.c:36
    ```
 
 If, instead, we had `x=145.7` and `y=0.0`, we would have had:
@@ -90,7 +124,7 @@ If, instead, we had `x=145.7` and `y=0.0`, we would have had:
      2016-09-03 11:33:01 CHK EXITING ON FAIL
    ```
     
-and the program would have been terminated with exit code 1 to  prevent the
+and the program would have been terminated calling `abort()`  1 to  prevent the
 division by zero to happen on the next line.
 
 The fact that `logcheck()` returns the result of the test can be used to get more
@@ -98,6 +132,7 @@ information in case of a failure:
 
    ```C
      y = get_number_from(inner_space);
+	 x = 135.2;
      if (!logcheck(x > 100.)) {
        logprintf("          x: %.1f",x);
      }
@@ -108,29 +143,98 @@ information in case of a failure:
    will result in:
     
    ```
-      2016-09-03 11:33:01 CHK FAIL (x > 100.) spacing.c 34
-      2016-09-03 11:33:01           x: 35.2
+      2016-09-03 11:33:01 CHK FAIL (x > 100.)? spacing.c:34
+      2016-09-03 11:33:01           x: 135.2
    ```
 
-   At the end of the log, the function `logclose()` will print the number of
+  At the end of the log, the function `logclose()` will print the number of
 failures and the number of checks performed.
-   
-### Debugging
 
-While using a symbolic debugger like `gdb` is the *"right thing to do"*, there
-are times when you need some more traces of the execution of your program to really
-get what is going on (and catch that damned bug!). Insted of using `printf()` or
-`logprintf()` (which you can always do, of course) you can use the 
+   ```
+      2016-09-18 20:47:04 CHK #KO: 2 (of 23)
+   ```
 
-  - `int logdebug(char *format, ...);`
+  If the symbol `NDEBUG` is defined, `logassert()` will perform no action;
+and `logcheck()` will perform no action and always return `1`;
+
+  You can also monitor if a specific tracing messages appears (or not) when
+executing a block of code:
+
+  - `logtracewatch(char *pat1, char *pat2, ...) { ... }`
+
+  The patterns are `pmx` expressions.
+
+  For example, in:
   
-function that behaves exactly as the `logprintf()` function but will do nothing if
-the `NDEBUG` symbol is defined.
+   ```C
+     34: logwatch ("closed:","<not>unable to open:") {
+     35:   f = carefulopen("existingfile");
+     36:   carefulparse(f);
+     37:   carefulclose(f);
+     38: }
+     39: logwatch ("parse: null file pointer","unable to open:") {
+     40:   f = carefulopen("notexistingfile");
+     41:   carefulparse(f);
+     42:   carefulclose(f);
+     43: }
+   ```
+    
+we have set up the three functions so that they emit different messages. The first
+test checks that when an existing file is used, everything is ok. The second test
+checks that when the file can't be opened the functions behave properly.
 
-This way you can easily differentiate between normal log messages and messages that
-are there just for debugging purposes.
+  Using `logcheck` and `logtracewatch` one can define tests that use two very
+different approaches:
 
-### Temporarily disable logging
+   - `logcheck` is a way to reason about the expect results of a function.
+     This allows for tests that directly checks the state of the program after a
+	 function is executed.
+     The drawback is that if a function is restructured, an entire set of tests may
+	 become invalid and will need to be rewritten. For example a function that returned
+	 an `unsigned int` may now return a `double`.
+  
+   - `logtracewatch` allows to indirectly verify the behaviour of a function without
+     having to know about the inner details. This creates tests that are more resilient
+	 to refactoring but might.
+	 
+  I borrowed this concept of 
+  
+## Stopwatch
+
+A simple function to measure the time spent in a portion of code:
+
+  - `logclock { ... }`
+     Measure the time needed to execute the portion of code between braces. Uses
+     the `clock()` function whose resolution varies from system to system. On my
+     Windows 10 machine is in milliseconds, in my Linux box is in microseconds.
+
+  For example, this fragment:
+
+   ```C
+     294: k = max;
+     295: logclock {
+     296:   t=in;
+     297:   while (k--) {
+     298:     do {
+     299:       l = utf8_cp(t,&c); t+=l;
+     300:     } while (l>0);
+     301:   }
+     302: }
+   ```
+
+will generate a messages in the log file similar to this one:
+
+   ```
+     2016-09-27 21:22:44 CLK  34 (s/1000) test/ut_utf.c:295
+   ```
+
+which says that the block starting on line 295 of the file "test/ut_utf.c" took 34
+milliseconds to execute.
+
+  This is not a substitute for profiling! It's just a quick way to check if a
+block of code is taking more time than expected.
+
+## Temporarily disable logging
 
 There are times when you don't want some log message to be generated or some check
 to be performed. This is esepcially true for debugging messages that tend to fill
@@ -141,19 +245,23 @@ them again afterward and it would be a waste to have to write them again.
 
 For cases like this, the following functions are defined:
 
-   - `int   _logprintf(char *format, ...);`
-   - `int   _logdebug(char *format, ...);`
+   - `void  _logprintf(char *format, ...);`
+   - `void  _logdebug(char *format, ...);`
+   - `void  _logtrace(char *format, ...);`
+  -  '      _logtracewatch(char *pat1, char *pat2, ...) { ... }`
    - `int   _logcheck(int test);`
    - `void  _logassert(int test);`
    - `FILE *_logopen(char *fname, char *mode);`
    - `void  _logclose(void);`
+   - `      _logclock {...}`
 
 that do nothing (`_logcheck()` will always return 1 as if the test passed).
 
 Technically speaking I'm in violation of the C standard here (section 7.1.3):
-identifiers starting with underscore are reserved for use as identifiers
-with file scope.  I've tried many times to get rid of the initial underscore
+"identifiers starting with underscore are reserved for use as identifiers
+with file scope".  I've tried many times to get rid of the initial underscore
 (e.g. by using `X` or `X_`) but i still believe this is the best choice and
 the worst that could happen is that they clash with some other library.
 By the way, this is a risk that still must be taken into consideration for
 any other identifier, so I'm not feeling particularly pressed on changing it.
+ 
