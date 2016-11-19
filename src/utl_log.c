@@ -17,15 +17,16 @@
 [[[
 # Logging
 
-         __
-        /  )
-       /  /______   ______
-      /  //  __  \ /  __  \
-     /  //  (_/  //  (_/  /
-    (__/ \______/ \___   /
-                   __/  /
-                  (____/
-
+   ```
+            __
+           /  )
+          /  /______   ______
+         /  //  __  \ /  __  \
+        /  //  (_/  //  (_/  /
+       (__/ \______/ \___   /
+                      __/  /
+                     (____/
+   ```
 
 Logging functions are just wrappers around the `fprintf()` function.
 They print a message on a file (by default `stderr`) adding a timestamp
@@ -68,12 +69,24 @@ at the time.
     printed on opening the file, this is an easy way to determine how much time
     passed between 
 
-## Tracing
+## Tracing & debugging
 
   While using a symbolic debugger like `gdb` is the *"right thing to do"*, there
 are times when you need some more traces of the execution of your program to really
-get what is going on (and catch that damned bug!). Insted of using `printf()` or
-`logprintf()` (which you can always do, of course) you can use the 
+get what is going on (and catch that damned bug!). 
+
+  The simplest way would be to use the `logdebug()` that will disappear if compiled 
+with `NDEBUG` defined:
+
+  - `void logdebug(char *format, ...);`
+
+  Using `logdebug()` is recommended when, during developement, one wants to better
+understand why that damned funtion is not working how expected.
+
+  In more complex situations, where more functions work together and one wants to 
+check that their interaction is working fine, using `logtrace()` could be a better 
+option. It works with the `logtracewatch()` function (see next section) to help
+checking everything works as expected.
 
   - `void logtrace(char *format, ...);`
   
@@ -83,12 +96,13 @@ function that works as the `logprintf()` function but will produce lines like:
       2016-11-05 14:08:57 TRC Freeing a block of 0 bytes (0) test/ut_mem.c:49
     ...
 	
-  The `TRC` tag identiy tracing messages from others logged information.
+  The `TRC` tag identify tracing messages, the `DBG` tag identify the debugging
+messages. This can be useful to filter a log file (for example with `grep` or 
+`sed`) in search of speficic messages.
   
-  Tracing can also be used to setup unit tests as described in the next section.
-  
-  If the `UTLNOTRACE` or `NDEBUG` are defined, tracing will be disabled. 
- 
+  If `NDEBUG` is defined while compiling, tracing and debugging will be disabled.
+  if `UTLNOTRACE` is defined, only tracing messages are disabled.
+
 	
 ## Unit Testing
 
@@ -248,12 +262,15 @@ them again afterward and it would be a waste to have to write them again.
 
 For cases like this, the following functions are defined:
 
-   - `int   _logprintf(char *format, ...);`
-   - `int   _logdebug(char *format, ...);`
+   - `void  _logprintf(char *format, ...);`
+   - `void  _logdebug(char *format, ...);`
+   - `void  _logtrace(char *format, ...);`
+  -  '      _logtracewatch(char *pat1, char *pat2, ...) { ... }`
    - `int   _logcheck(int test);`
    - `void  _logassert(int test);`
    - `FILE *_logopen(char *fname, char *mode);`
    - `void  _logclose(void);`
+   - `      _logclock {...}`
 
 that do nothing (`_logcheck()` will always return 1 as if the test passed).
 
