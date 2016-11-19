@@ -63,7 +63,7 @@
                                utl_log_clk != (clock_t)-1; \
                                    utl_log_prt("CLK %ld/%ld sec. %s:%d",(clock()-utl_log_clk), (long int)CLOCKS_PER_SEC,__FILE__,__LINE__),\
                                    utl_log_clk = (clock_t)-1 )
-#define logdebug       utl_log_trc("DBG ",__VA_ARGS__)
+#define logdebug(...)  utl_log_trc("DBG ",__VA_ARGS__)
 
 #else
 #define logcheck(e)    utl_ret(1)
