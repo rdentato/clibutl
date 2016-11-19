@@ -33,8 +33,6 @@ at the time.
        2016-09-03 11:33:01 Warp speed to 4.
        2016-09-03 11:33:01 Moving on now. 
      ```
-     On success it will return the number of characters written; on error
-     it will return -1. 
      
   - `FILE *logopen(char *fname, char *mode);`
     sets the logging file (i.e. the 
