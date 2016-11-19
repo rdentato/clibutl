@@ -61,7 +61,7 @@ with `NDEBUG` defined:
   - `void logdebug(char *format, ...);`
 
   Using `logdebug()` is recommended when, during developement, one wants to better
-understand why a specific function is not working as expected.
+understand why that a specific funtion is not working how expected.
 
   In more complex situations, where more functions work together and one wants to 
 check that their interaction is working fine, using `logtrace()` could be a better 
