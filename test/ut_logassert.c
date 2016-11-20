@@ -21,6 +21,7 @@ int main(int argc, char *argv[])
   logopen("l_logassert.log","w");
   
   utl_log_check_fail--; /* DIRTY TRICK */
+  logprintf("The following CHK  is supposed to FAIL! (and will not be counted)");
   logassert(5>10);
   utl_log_check_fail=0; /* SHOULD NEVER HAPPEN */
   logassert(utl_ret(0));
