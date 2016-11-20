@@ -289,7 +289,6 @@ any other identifier, so I'm not feeling particularly pressed on changing it.
 FILE *utl_log_file = NULL;
 uint32_t utl_log_check_num   = 0;
 uint32_t utl_log_check_fail  = 0;
-char utl_log_buf[UTL_LOG_BUF_SIZE];
 
 char *utl_log_watch[1] = {""};
 
