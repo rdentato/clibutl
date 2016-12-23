@@ -1,7 +1,9 @@
-
+# Create a standalone program f
+#
+#
 
 if {$argc < 1} {
-  puts "cookit exename"
+  puts "cookit cookit.tcl exename"
   exit
 }
 
