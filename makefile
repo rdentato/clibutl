@@ -142,7 +142,7 @@ test/t_logassert$(_EXE): test/x_chk.x src/utl.o test/ut_logassert.o
 #	$(CC) $(LNFLAGS) -o $@ test/ut_buf2.o
 
 runtest: tst
-	@echo "'l_logassert.log' is expected to FAIL and generate a coredump" 
+	@echo "'l_logassert.log' is expected to generate a coredump" 
 	@cd test; for f in t_*; do ./$$f ; done ; grep -a "#KO:" l_*.log
 
 
