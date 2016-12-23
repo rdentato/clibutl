@@ -3,12 +3,13 @@
 # 
 
 package require Tk
-
 set topdir [info nameofexecutable]
 set exename [file tail $topdir]
 if { $exename == "cookit.exe" || $exename == "cookit64.run" || $exename == "cookit.run"} {
   set topdir [file dirname $argv0]
-}
+} elseif {$exename == "wish"} {
+  set topdir [file dirname [info script]]
+} 
 
 set tracefname ""
 set traceline 0
