@@ -21,14 +21,13 @@ const char *utl_emptystring = "";
 
 int   utl_ret(int x)      {return x;}
 void *utl_retptr(void *x) {return x;}
-#line 271 "src/utl_log.c"
+#line 286 "src/utl_log.c"
 #ifndef UTL_NOLOG
 #ifdef UTL_MAIN
 
 FILE *utl_log_file = NULL;
 uint32_t utl_log_check_num   = 0;
 uint32_t utl_log_check_fail  = 0;
-char utl_log_buf[UTL_LOG_BUF_SIZE];
 
 char *utl_log_watch[1] = {""};
 
@@ -41,7 +40,7 @@ int utl_log_close(const char *msg)
     utl_log_check_fail = 0;
     utl_log_check_num = 0;
   }
-  if (msg) logprintf(msg);
+  if (msg) logprintf("%s",msg);
   if (utl_log_file && utl_log_file != stderr) ret = fclose(utl_log_file);
   utl_log_file = NULL;
   return ret;
@@ -71,7 +70,7 @@ int utl_log_time(void)
   if (!utl_log_file) utl_log_file = stderr;
   if (time(&log_time) == ((time_t)-1)) ret = -1;
   if (ret >= 0 && !(log_time_tm = localtime(&log_time))) ret = -1;
-  if (ret >= 0 && !strftime(log_tstr,32,"%Y-%m-%d %H:%M:%S",log_time_tm)) ret =-1;
+  if (ret >= 0 && !strftime(log_tstr,32,"%Y-%m-%d\xA0%H:%M:%S",log_time_tm)) ret =-1;
   if (ret >= 0) ret = fprintf(utl_log_file,"%s ",log_tstr);
   if (ret >= 0 && fflush(utl_log_file)) ret = -1;
   
@@ -349,7 +348,7 @@ static int16_t utl_vec_delgap(vec_t v, uint32_t i, uint32_t l)
   **    |  |    |    |             |  |    |    
   **    0  i   i+l   cnt           0  i    cnt-l  
   */
-  _logtrace("DELGAP: %d %d",i,l);
+  _logdebug("DELGAP: %d %d",i,l);
   if (i < v->cnt) {
     if (i+l >= v->cnt) v->cnt = i; /* Just drop last elements */
     else {
@@ -558,9 +557,9 @@ char *utl_buf_insc(buf_t b, uint32_t i, char c)
 int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j)
 {
   int16_t r;
-  _logtrace("len:%d",b->cnt);
+  _logdebug("len:%d",b->cnt);
   r = utl_vec_delgap(b, i, j-i+1);
-  _logtrace("len:%d",b->cnt);
+  _logdebug("len:%d",b->cnt);
   if (r) {
     bufsetc(b,b->cnt,'\0');
     b->cnt--;
@@ -658,7 +657,7 @@ static int utl_pmx_get_utf8(const char *txt, int32_t *ch)
   uint8_t first = *s;
   int32_t val;
   
-  _logprintf("About to get UTF8: %s in %p",txt,ch);  
+  _logdebug("About to get UTF8: %s in %p",txt,ch);  
   fsm {
     fsmSTART {
       if (*s <= 0xC1) { val = *s; len = (*s > 0); fsmGOTO(end);    }
@@ -781,7 +780,7 @@ static int32_t utl_pmx_iscapt(const char *pat, const char *txt)
   
   if ('1' <= *pat && *pat <= '9') {
     capnum = *pat - '0';
-    _logprintf("capt: %d %d",capnum,utl_pmx_capnum);
+    _logdebug("capt: %d %d",capnum,utl_pmx_capnum);
     if (capnum < utl_pmx_capnum) {
       cap = pmxstart(capnum);
       while (cap < pmxend(capnum) && *cap && (*cap == *txt)) {
@@ -809,7 +808,7 @@ static int utl_pmx_get_limits(const char *pat, const char *pat_end, const char *
   int32_t c_esc = '\0';
   int32_t ch;
   
-  _logprintf("BRACE: [%.*s]",pat_end-pat,pat);
+  _logdebug("BRACE: [%.*s]",pat_end-pat,pat);
   
   if (pat < pat_end) { /* <B()\> <Q""\>*/
     pat += utl_pmx_nextch(pat,&c_esc);
@@ -847,7 +846,7 @@ static int utl_pmx_get_limits(const char *pat, const char *pat_end, const char *
       else return 0;
     }
   }
-  _logprintf("open:'%d' close:'%d' esc:'%d'",c_beg,c_end,c_esc);
+  _logdebug("open:'%d' close:'%d' esc:'%d'",c_beg,c_end,c_esc);
   
   *c_beg_ptr = c_beg;
   *c_end_ptr = c_end;
@@ -870,7 +869,7 @@ static int utl_pmx_get_delimited(const char *pat, const char *txt,int32_t c_beg,
     s += n;
     n = utl_pmx_nextch(s,&ch);
     if (ch == '\0') return 0;
-    _logprintf("BRACE: '%c' cnt:%d",ch,cnt);
+    _logdebug("BRACE: '%c' cnt:%d",ch,cnt);
     
          if (ch == c_end) { if (cnt == 0) return (s+n)-txt;  else cnt--; }
     else if (ch == c_beg) { cnt++;                                       }
@@ -905,7 +904,7 @@ static int utl_pmx_class(const char **pat_ptr, const char **txt_ptr)
   int32_t max_n = 0;
   int32_t ch;
   
-  _logprintf("class:[%s][%s]",pat,txt);
+  _logdebug("class:[%s][%s]",pat,txt);
                 
   pat++;  /* skip the '<' */
   
@@ -1054,7 +1053,7 @@ static const char *utl_pmx_alt(const char *pat, const char **txt_ptr)
   const char *ret = utl_emptystring;
   
   while (*pat) {
-    _logprintf("ALT: %s (%d)",pat,utl_pmx_stack_ptr);
+    _logdebug("ALT: %s (%d)",pat,utl_pmx_stack_ptr);
     switch (*pat++) {
       case '%': if (*pat) pat++; /* works for utf8 as well */
                 break;
@@ -1117,7 +1116,7 @@ static const char *utl_pmx_match(const char *pat, const char *txt)
   utl_pmx_state_push(pat,txt,1,1,0);
   
   while (*pat) {
-    _logprintf("[MATCH] %d [%s] [%s]",pmxcount(),pat,txt);
+    _logdebug("[MATCH] %d [%s] [%s]",pmxcount(),pat,txt);
     c1 = 0; 
     switch (*pat) {
       case '(' : pat++;
@@ -1130,7 +1129,7 @@ static const char *utl_pmx_match(const char *pat, const char *txt)
                  break;
       
       case ')' : pat++;
-                 _logprintf(")->%d",utl_pmx_stack_ptr);
+                 _logdebug(")->%d",utl_pmx_stack_ptr);
                  if (utl_pmx_stack_ptr < 2) {
                    utl_pmx_set_paterror(pat-1); 
                    break;
@@ -1146,7 +1145,7 @@ static const char *utl_pmx_match(const char *pat, const char *txt)
                  
                  utl_pmx_capt[state->cap][1] = txt;  
                  state->n++;
-                 _logprintf("match #%d min:%d max:%d",state->n,state->min_n, state->max_n);
+                 _logdebug("match #%d min:%d max:%d",state->n,state->min_n, state->max_n);
                  
                  if (state->n < state->max_n) { 
                    utl_pmx_capt[state->cap][0] = txt;
@@ -1167,7 +1166,7 @@ static const char *utl_pmx_match(const char *pat, const char *txt)
       default  : if (c1 == 0) len = utl_pmx_nextch(pat, &c1);
                  len = utl_pmx_nextch(txt, &ch);
                  if (ch != c1) {
-                   _logprintf("FAIL: %d %d",c1,ch);
+                   _logdebug("FAIL: %d %d",c1,ch);
                    utl_pmx_FAIL;
                  }
                  txt += len;
@@ -1184,7 +1183,7 @@ static const char *utl_pmx_match(const char *pat, const char *txt)
   for (len = utl_pmx_capnum; len < utl_pmx_MAXCAPT; len++) {
     utl_pmx_capt[len][0] = utl_pmx_capt[len][1] = NULL;
   }
-  _logprintf("res: %p - %p",utl_pmx_capt[0][0],utl_pmx_capt[0][1]);
+  _logdebug("res: %p - %p",utl_pmx_capt[0][0],utl_pmx_capt[0][1]);
   return utl_pmx_capt[0][0];
 }
 
@@ -1201,7 +1200,7 @@ const char *utl_pmx_search(const char *pat, const char *txt, int fromstart)
   else while (!(ret = utl_pmx_match(pat,txt)) && *txt && !fromstart) {
          txt += utl_pmx_utf8 ? utl_pmx_get_utf8(txt, NULL) : 1;
        }
-  _logprintf("ret: %p",ret);
+  _logdebug("ret: %p",ret);
   return ret;
 }
 

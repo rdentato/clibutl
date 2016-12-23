@@ -63,21 +63,20 @@ extern const char *utl_emptystring;
 #define UTL_LOG_WATCH_SIZE 16
 
 #define utl_log_trc(c,...)  do { \
+                              char utl_log_buf[UTL_LOG_BUF_SIZE];\
                               utl_log_time();\
                               fputs(c,utl_log_file);\
                               snprintf(utl_log_buf,UTL_LOG_BUF_SIZE,__VA_ARGS__);\
                               fputs(utl_log_buf,utl_log_file);\
-                              fprintf(utl_log_file," %s:%d\n",__FILE__,__LINE__);\
+                              fprintf(utl_log_file," %s:%d\xA0\n",__FILE__,__LINE__);\
                               utl_log_trc_check(utl_log_buf,utl_log_watch,__FILE__,__LINE__);\
                               fflush(utl_log_file);\
                             } while(0)
-                              
-//                              
-//
 
 #define logtracewatch(...)  for (char *utl_log_watch[UTL_LOG_WATCH_SIZE] = {__VA_ARGS__,""}; \
-                                                      utl_log_watch[0] != NULL; \
-                                                      utl_log_watch[0] = NULL, utl_log_trc_check_last(utl_log_watch,__FILE__,__LINE__))
+                                 (utl_log_watch[0] != NULL) ? utl_log_prt("TRC WATCH START %s:%d",__FILE__,__LINE__), 1 : 0; \
+                                 utl_log_trc_check_last(utl_log_watch,__FILE__,__LINE__),\
+                                      utl_log_prt("TRC WATCH END %s:%d",__FILE__,__LINE__),utl_log_watch[0] = NULL)
 							 
 #define utl_log_prt(...) (utl_log_time(), \
                           fprintf(utl_log_file,__VA_ARGS__),\
@@ -95,13 +94,14 @@ extern const char *utl_emptystring;
                                utl_log_clk != (clock_t)-1; \
                                    utl_log_prt("CLK %ld/%ld sec. %s:%d",(clock()-utl_log_clk), (long int)CLOCKS_PER_SEC,__FILE__,__LINE__),\
                                    utl_log_clk = (clock_t)-1 )
-#define logdebug       logprintf
+#define logdebug(...)  utl_log_trc("DBG ",__VA_ARGS__)
 
 #else
 #define logcheck(e)    utl_ret(1)
 #define logassert(e)   
 #define logclock
-#define logdebug       
+#define logdebug(...)
+#define logtracewatch  
 #define UTL_NOTRACE
 #endif
 
@@ -118,12 +118,13 @@ extern const char *utl_emptystring;
 #define _logclose()         utl_ret(0)
 #define _logclock
 #define _logtrace(...)  
+#define _logdebug(...)       
+#define _logtracewatch
 
 extern FILE *utl_log_file;
 extern uint32_t utl_log_check_num;
 extern uint32_t utl_log_check_fail;
 extern char *utl_log_watch[];
-extern char utl_log_buf[UTL_LOG_BUF_SIZE];
 
 FILE *utl_log_open(const char *fname, const char *mode);
 int   utl_log_close(const char *msg);
