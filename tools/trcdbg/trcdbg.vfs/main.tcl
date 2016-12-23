@@ -2,14 +2,19 @@
 # 
 # 
 
+package require Tk
+
 set topdir [info nameofexecutable]
 set exename [file tail $topdir]
-if { $exename == "cookit.exe" || $exename == "cookit"} {
+if { $exename == "cookit.exe" || $exename == "cookit64.run" || $exename == "cookit.run"} {
   set topdir [file dirname $argv0]
 }
 
 set tracefname ""
-set curtraceline 0
+set traceline 0
+set sourcefname ""
+set sourceline 0
+set basename ""
 
 proc build_gui {} {
   global topdir
@@ -58,8 +63,8 @@ proc build_gui {} {
   ttk::button .cmds.load -image $load_ico -command open_trace
   ttk::label .cmds.spc1 -text " "
   ttk::button .cmds.first -image $first_ico -command {set_trace_line 1}
-  ttk::button .cmds.prev  -image $prev_ico  -command {set_trace_line [expr $curtraceline - 1]}
-  ttk::button .cmds.next  -image $next_ico  -command {set_trace_line [expr $curtraceline + 1]}
+  ttk::button .cmds.prev  -image $prev_ico  -command {set_trace_line [expr $traceline - 1]}
+  ttk::button .cmds.next  -image $next_ico  -command {set_trace_line [expr $traceline + 1]}
   ttk::label .cmds.spc2 -text " "
   
   ttk::button .cmds.quit -image $quit_ico -command exit
@@ -80,19 +85,79 @@ proc build_gui {} {
   grid rowconfigure . 1 -weight 1
   
   bind .panes.trace.txt <ButtonPress> trace_click
-  bind .panes.trace.txt <KeyPress>  break
-  bind .panes.source.txt <KeyPress>  break
+  bind .                 <KeyPress> {keypress %K; break}
+  bind .panes.trace.txt  <KeyPress> {keypress %K; break}
+  bind .panes.source.txt <KeyPress> {keypress %K; break}
+}
+
+proc keypress {k}  {
+  global traceline
+  if {$k eq "Up" || $k eq "Left" } {
+    set_trace_line [expr $traceline - 1]
+  } elseif {$k eq "Down" || $k eq "Right" } {
+    set_trace_line [expr $traceline + 1]
+  } elseif {$k eq "Home"} {
+    set_trace_line 1
+  } else {
+    #tk_messageBox -message $k
+  }
+  return false
 }
 
 proc set_trace_line {ln} {
-  global curtraceline 
+  global traceline 
   set w .panes.trace.txt
   if {$ln > 0 && $ln < [$w count -lines 1.0 end]} {
     $w tag delete curln
     $w tag add curln $ln.0 $ln.end
     $w tag configure  curln  -foreground yellow  -background blue
     $w see $ln.0
-    set curtraceline $ln
+    set traceline $ln
+    set txtln [$w get -displaychars $ln.0 $ln.end]
+    if {[regexp {^\d{4}.*\t:([^:]+):(\d+)\t$} $txtln x srcfn srcln]} {
+      set_source_line $srcfn $srcln
+    }
+  }
+}
+
+proc set_source_line {fname ln} {
+  global sourcefname
+  global sourceline
+  global basename
+  
+  set w .panes.source.txt
+  if {$fname ne $sourcefname } {
+    set sourcefname $fname
+    .panes.source.txt delete 0.0 end
+    
+    if {![file exists $fname]} {
+      set fname "$basename/../$fname"
+      if {![file exists $fname]} {
+        set fname "$basename/[file tail $fname]"
+        if {![file exists $fname]} {
+          set fname ""
+        }
+      }
+    }
+    #tk_messageBox -message $fname\n$ln
+    if {$fname ne ""} {
+      set fl [open $fname]
+      set data [read $fl]
+      close $fl
+      .panes.source.txt insert 0.0 [encoding convertfrom utf-8 $data]
+    } else {
+      set sourcefname ""
+      set sourceline 0
+      set ln 0
+    }
+    .panes.source  configure -text "Source: $sourcefname" 
+  }
+  if {$ln != $sourceline} {
+    $w tag delete curln
+    $w tag add curln $ln.0 $ln.end
+    $w tag configure  curln  -foreground yellow  -background blue
+    $w see $ln.0
+    set sourceline $ln
   }
 }
 
@@ -104,6 +169,8 @@ proc trace_click {} {
 
 proc open_trace {} {
   global tracefname
+  global basename
+
   
   set types {
     {{Log Files}     {.log}        }
@@ -111,9 +178,11 @@ proc open_trace {} {
     {{Text Files}    {.txt}        }
     {{All Files}     *             }
   }
-  set tracefname [tk_getOpenFile -filetypes $types]
+  set fname [tk_getOpenFile -filetypes $types]
 
-  if {$tracefname ne ""} {
+  if {$fname ne ""} {
+    set tracefname $fname
+    set basename [file dirname $fname]
     set fl [open $tracefname]
     set data [read $fl]
     close $fl
@@ -121,9 +190,13 @@ proc open_trace {} {
     .panes.trace  configure -text "Trace: [file tail $tracefname]" 
     .panes.trace.txt delete 0.0 end
     .panes.trace.txt insert 0.0 [encoding convertfrom utf-8 $data]
-    
+
+    .panes.source  configure -text "Source: " 
+    .panes.source.txt delete 0.0 end
+    set sourcefname ""
+    set sourceline 0
   }
-   set_trace_line 1
+  set_trace_line 1
 }
 
 build_gui
