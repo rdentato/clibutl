@@ -343,7 +343,7 @@ int utl_log_check(int res, const char *test, const char *file, int32_t line)
   int ret = 0;
   ret = utl_log_time();
   
-  if (ret >= 0) ret = fprintf(utl_log_file,"CHK %s (%s)? %s:%d\n", (res?"PASS":"FAIL"), test, file, line);
+  if (ret >= 0) ret = fprintf(utl_log_file,"CHK %s (%s)? %s:%d\x09\n", (res?"PASS":"FAIL"), test, file, line);
   if (ret >= 0 && fflush(utl_log_file)) ret = -1;
   if (!res) utl_log_check_fail++;
   utl_log_check_num++;
