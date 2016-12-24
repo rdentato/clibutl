@@ -169,10 +169,13 @@ size_t utl_vec_write(vec_t v, uint32_t i, size_t n, FILE *f)
 
 void utl_vec_sort(vec_t v, int (*cmp)(void *, void *))
 {
-  if (vecissorted(v)) return;
-  if (cmp) v->cmp = cmp;
-  if (v->cmp) {
-    if (v->cnt > 1) qsort(v->vec,v->cnt,v->esz,(int (*)(const void *, const void *))(v->cmp));  
+  if (cmp && cmp != v->cmp) {
+    v->cmp = cmp;
+    vecunsorted(v);
+  }
+  if (!vecissorted(v) && v->cmp) {
+    if (v->cnt > 1)
+      qsort(v->vec,v->cnt,v->esz,(int (*)(const void *, const void *))(v->cmp));  
     vecsorted(v);
   }
 }
@@ -188,7 +191,7 @@ void *utl_vec_search(vec_t v, int x)
 
 char utl_buf_get(buf_t b, uint32_t n)
 {
-  char *s = vecget(char,b,n);
+  char *s = vecget(b,n);
   return s?*s:'\0';
 }
 
