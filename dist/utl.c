@@ -70,7 +70,7 @@ int utl_log_time(void)
   if (!utl_log_file) utl_log_file = stderr;
   if (time(&log_time) == ((time_t)-1)) ret = -1;
   if (ret >= 0 && !(log_time_tm = localtime(&log_time))) ret = -1;
-  if (ret >= 0 && !strftime(log_tstr,32,"%Y-%m-%d\xA0%H:%M:%S",log_time_tm)) ret =-1;
+  if (ret >= 0 && !strftime(log_tstr,32,"%Y-%m-%d %H:%M:%S",log_time_tm)) ret =-1;
   if (ret >= 0) ret = fprintf(utl_log_file,"%s ",log_tstr);
   if (ret >= 0 && fflush(utl_log_file)) ret = -1;
   
@@ -82,7 +82,7 @@ int utl_log_check(int res, const char *test, const char *file, int32_t line)
   int ret = 0;
   ret = utl_log_time();
   
-  if (ret >= 0) ret = fprintf(utl_log_file,"CHK %s (%s)? %s:%d\n", (res?"PASS":"FAIL"), test, file, line);
+  if (ret >= 0) ret = fprintf(utl_log_file,"CHK %s (%s)?\x09:%s:%d\x09\n", (res?"PASS":"FAIL"), test, file, line);
   if (ret >= 0 && fflush(utl_log_file)) ret = -1;
   if (!res) utl_log_check_fail++;
   utl_log_check_num++;
@@ -170,16 +170,16 @@ int utl_check(void *ptr,const char *file, int32_t line)
   if (ptr == NULL) return memNULL;
   p = utl_mem(ptr);
   if (memcmp(p->chk,utl_BEG_CHK,4)) { 
-    logprintf("TRC Invalid or double freed %p (%lu) %s:%d",p->blk,
+    logprintf("TRC Invalid or double freed %p (%lu)\x09:%s:%d\x09",p->blk,
                                                (unsigned long)utl_mem_allocated, file, line);     
     return memINVALID; 
   }
   if (memcmp(p->blk+p->size,utl_END_CHK,4)) {
-    logprintf("TRC Boundary overflow %p [%lu] (%lu) %s:%d",
+    logprintf("TRC Boundary overflow %p [%lu] (%lu)\x09:%s:%d\x09",
                               p->blk, (unsigned long)p->size, (unsigned long)utl_mem_allocated, file, line); 
     return memOVERFLOW;
   }
-  logprintf("TRC Valid pointer %p (%lu) %s:%d",ptr, (unsigned long)utl_mem_allocated, file, line); 
+  logprintf("TRC Valid pointer %p (%lu)\x09:%s:%d\x09",ptr, (unsigned long)utl_mem_allocated, file, line); 
   return memVALID; 
 }
 
@@ -187,18 +187,18 @@ void *utl_malloc(size_t size, const char *file, int32_t line )
 {
   utl_mem_t *p;
   
-  if (size == 0) logprintf("TRC Request for 0 bytes (%lu) %s:%d",
+  if (size == 0) logprintf("TRC Request for 0 bytes (%lu)\x09:%s:%d\x09",
                                                 (unsigned long)utl_mem_allocated, file, line);
   p = (utl_mem_t *)malloc(sizeof(utl_mem_t) +size);
   if (p == NULL) {
-    logprintf("TRC Out of Memory (%lu) %s:%d",(unsigned long)utl_mem_allocated, file, line);
+    logprintf("TRC Out of Memory (%lu)\x09:%s:%d\x09",(unsigned long)utl_mem_allocated, file, line);
     return NULL;
   }
   p->size = size;
   memcpy(p->chk,utl_BEG_CHK,4);
   memcpy(p->blk+p->size,utl_END_CHK,4);
   utl_mem_allocated += size;
-  logprintf("TRC Allocated %p [%lu] (%lu) %s:%d",p->blk,(unsigned long)size,(unsigned long)utl_mem_allocated,file,line);
+  logprintf("TRC Allocated %p [%lu] (%lu)\x09:%s:%d\x09",p->blk,(unsigned long)size,(unsigned long)utl_mem_allocated,file,line);
   return p->blk;
 }
 
@@ -217,25 +217,25 @@ void utl_free(void *ptr, const char *file, int32_t line)
   utl_mem_t *p=NULL;
   
   switch (utl_check(ptr,file,line)) {
-    case memNULL  :    logprintf("TRC free NULL (%lu) %s:%d", 
+    case memNULL  :    logprintf("TRC free NULL (%lu)\x09:%s:%d\x09", 
                                                 (unsigned long)utl_mem_allocated, file, line);
                        break;
                           
-    case memOVERFLOW : logprintf("TRC Freeing an overflown block  (%lu) %s:%d", 
+    case memOVERFLOW : logprintf("TRC Freeing an overflown block  (%lu)\x09:%s:%d\x09", 
                                                            (unsigned long)utl_mem_allocated, file, line);
     case memVALID :    p = utl_mem(ptr); 
                        memcpy(p->chk,utl_CLR_CHK,4);
                        utl_mem_allocated -= p->size;
                        if (p->size == 0)
-                         logprintf("TRC Freeing a block of 0 bytes (%lu) %s:%d", 
+                         logprintf("TRC Freeing a block of 0 bytes (%lu)\x09:%s:%d\x09", 
                                              (unsigned long)utl_mem_allocated, file, line);
 
-                       logprintf("TRC free %p [%lu] (%lu) %s:%d", ptr, 
+                       logprintf("TRC free %p [%lu] (%lu)\x09:%s:%d\x09", ptr, 
                                  (unsigned long)(p?p->size:0),(unsigned long)utl_mem_allocated, file, line);
                        free(p);
                        break;
                           
-    case memINVALID :  logprintf("TRC free an invalid pointer! (%lu) %s:%d", 
+    case memINVALID :  logprintf("TRC free an invalid pointer! (%lu)\x09:%s:%d\x09", 
                                                 (unsigned long)utl_mem_allocated, file, line);
                        break;
   }
@@ -246,26 +246,26 @@ void *utl_realloc(void *ptr, size_t size, const char *file, int32_t line)
   utl_mem_t *p;
   
   if (size == 0) {
-    logprintf("TRC realloc() used as free() %p -> [0] (%lu) %s:%d",
+    logprintf("TRC realloc() used as free() %p -> [0] (%lu)\x09:%s:%d\x09",
                                                       ptr,(unsigned long)utl_mem_allocated, file, line);
     utl_free(ptr,file,line); 
   } 
   else {
     switch (utl_check(ptr,file,line)) {
-      case memNULL   : logprintf("TRC realloc() used as malloc() (%lu) %s:%d", 
+      case memNULL   : logprintf("TRC realloc() used as malloc() (%lu)\x09:%s:%d\x09", 
                                              (unsigned long)utl_mem_allocated, file, line);
                           return utl_malloc(size,file,line);
                         
       case memVALID  : p = utl_mem(ptr); 
                        p = (utl_mem_t *)realloc(p,sizeof(utl_mem_t) + size); 
                        if (p == NULL) {
-                         logprintf("TRC Out of Memory (%lu) %s:%d", 
+                         logprintf("TRC Out of Memory (%lu)\x09:%s:%d\x09", 
                                           (unsigned long)utl_mem_allocated, file, line);
                          return NULL;
                        }
                        utl_mem_allocated -= p->size;
                        utl_mem_allocated += size; 
-                       logprintf("TRC realloc %p [%lu] -> %p [%lu] (%lu) %s:%d", 
+                       logprintf("TRC realloc %p [%lu] -> %p [%lu] (%lu)\x09:%s:%d\x09", 
                                        ptr, (unsigned long)p->size, p->blk, (unsigned long)size, 
                                        (unsigned long)utl_mem_allocated, file, line);
                        p->size = size;
@@ -284,14 +284,14 @@ void *utl_strdup(const char *ptr, const char *file, int32_t line)
   size_t size;
   
   if (ptr == NULL) {
-    logprintf("TRC strdup NULL (%lu) %s:%d", (unsigned long)utl_mem_allocated, file, line);
+    logprintf("TRC strdup NULL (%lu)\x09:%s:%d\x09", (unsigned long)utl_mem_allocated, file, line);
     return NULL;
   }
   size = strlen(ptr)+1;
 
   dest = (char *)utl_malloc(size,file,line);
   if (dest) memcpy(dest,ptr,size);
-  logprintf("TRC strdup %p [%lu] -> %p (%lu) %s:%d", ptr, (unsigned long)size, dest, 
+  logprintf("TRC strdup %p [%lu] -> %p (%lu)\x09:%s:%d\x09", ptr, (unsigned long)size, dest, 
                                                 (unsigned long)utl_mem_allocated, file, line);
   return dest;
 }
@@ -304,6 +304,8 @@ size_t utl_mem_used(void) {return utl_mem_allocated;}
 #line 21 "src/utl_vec.c"
 #ifndef UTL_NOVEC
 #ifdef UTL_MAIN
+
+int utl_vec_nullcmp(void *a, void *b){return 0;}
 
 static int16_t utl_vec_makeroom(vec_t v,uint32_t n)
 {
@@ -322,7 +324,7 @@ static int16_t utl_vec_makeroom(vec_t v,uint32_t n)
 static int16_t utl_vec_makegap(vec_t v, uint32_t i, uint32_t l)
 {
  
-  if (!utl_vec_makeroom(v,i+l+1)) return 0;
+  if (!utl_vec_makeroom(v,v->cnt + l)) return 0;
   
   /*
   **                    __l__
@@ -407,7 +409,7 @@ void *utl_vec_set(vec_t v, uint32_t i)
   if (utl_vec_makeroom(v,i)) {
     elm = v->vec + (i*v->esz);
     memcpy(elm, v->elm, v->esz);
-    if (i>=v->cnt) v->cnt = i+1;
+    if (i >= v->cnt) v->cnt = i+1;
     vecunsorted(v);
   }
   return elm;
@@ -422,6 +424,38 @@ void *utl_vec_ins(vec_t v, uint32_t i)
     elm = (uint8_t *)utl_vec_set(v,i);
   vecunsorted(v);
   return elm;
+}
+
+static void *utl_vec_add_sorted(vec_t v)
+{
+  uint8_t *elm=NULL;
+  int32_t mid,lo,hi;
+  int ret;
+  
+  vecsort(v); 
+  lo = 0; hi = v->cnt-1;
+  while (lo <= hi) {
+    mid = lo + (hi-lo)/2;
+    elm = v->vec + mid * v->esz;
+    ret = v->cmp(v->elm,elm);
+    if (ret == 0) {
+      memcpy(elm, v->elm, v->esz);
+      return elm;
+    } 
+    if (ret < 0) hi = mid-1;
+    else         lo = mid+1;
+  }
+  // Not found. `lo` points to the first element greater than the one to add
+  // (or just past the last element)
+  //logtrace("add: %d at %d size: %d max:%d",*((int *)v->elm),lo,v->cnt,v->max);
+  return utl_vec_ins(v,lo);
+}
+
+void *utl_vec_add(vec_t v, uint32_t i) {
+  if (v->cnt > 0) {
+    if (v->cmp) return utl_vec_add_sorted(v);
+  }
+  return utl_vec_set(v,v->cnt);
 }
 
 int16_t utl_vec_del(vec_t v, uint32_t i)
@@ -453,10 +487,16 @@ size_t utl_vec_write(vec_t v, uint32_t i, size_t n, FILE *f)
 
 void utl_vec_sort(vec_t v, int (*cmp)(void *, void *))
 {
-  if (vecissorted(v)) return;
-  if (cmp) v->cmp = cmp;
-  if (v->cmp) {
-    if (v->cnt > 1) qsort(v->vec,v->cnt,v->esz,(int (*)(const void *, const void *))(v->cmp));  
+  if (cmp != utl_vec_nullcmp && cmp != v->cmp) {
+    v->cmp = cmp;
+    vecunsorted(v);
+  }
+  if (v->cmp == NULL) {
+    vecunsorted(v);
+  }
+  else if (!vecissorted(v)) {
+    if (v->cnt > 1)
+      qsort(v->vec,v->cnt,v->esz,(int (*)(const void *, const void *))(v->cmp));  
     vecsorted(v);
   }
 }
@@ -464,11 +504,15 @@ void utl_vec_sort(vec_t v, int (*cmp)(void *, void *))
 void *utl_vec_search(vec_t v, int x)
 {
   if (v->cmp) {
-    utl_vec_sort(v,NULL);
+    vecsort(v);
     return bsearch(v->elm,v->vec,v->cnt,v->esz,(int (*)(const void *, const void *))(v->cmp));
   }
   return NULL;
 }
+
+
+
+/* ** BUF ********************* */
 
 char utl_buf_get(buf_t b, uint32_t n)
 {
@@ -569,7 +613,7 @@ int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j)
 
 #endif
 #endif
-#line 360 "src/utl_pmx.c"
+#line 376 "src/utl_pmx.c"
 #ifndef UTL_NOPMX
 #ifdef UTL_MAIN
 
@@ -583,6 +627,7 @@ const char *utl_pmx_error                    = NULL  ;
 #define utl_pmx_set_paterror(t) do {if (!utl_pmx_error) {utl_pmx_error = t;}} while (0)
 
 static int utl_pmx_utf8 = 0;
+static int utl_pmx_case = 1; // assume case sensitive
 
 #define utl_pmx_FAIL       goto fail
 
@@ -601,7 +646,7 @@ typedef struct {
   int32_t max_n;
   int32_t n;
   int16_t inv;
-  int16_t cap;
+  int16_t cap; 
 } utl_pmx_state_s;
 
 utl_pmx_state_s utl_pmx_stack[utl_pmx_MAXCAPT];
@@ -890,6 +935,93 @@ static int utl_pmx_delimited(const char *pat, const char *pat_end, const char *t
 }
 
 
+/*
+  Dealing with text encoding is a complex business. The most basic
+issue for pmx is to deal with lower/upper case characters.
+
+  Even just restricting to the main scripts that have the lower/upper
+case distinction (Latin, Greek and Cyrillic) and the major encodings
+(Unicode, ISO/IEC, Windows code pages, ...) would provide something
+that could be of little use for somebody and of no use for many.
+
+  So, I went for the easiest solution: the Latin-1
+characters in the iso-8859-1 and Unicode Latin-1 supplement.
+In other words: the characters encoded in a single byte.
+
+  We need to extend the functions `islower()`, `isupper()`, `isalpha()`,
+`isalnum()` to include the letters in the range 0xA0-0xFF.
+
+  I've decided to not include the "numeric" caharacters for
+superscript or fractions, It seeems counterintuitive to me that
+`isdigit(0xBD); // 1/2` returns true. 
+  
+  To represent this encoding, we need four bits for each character:
+
+    xxxx
+    \\\
+     \\\_____ isupper 
+      \\_____ islower
+       \_____ isdigit     
+       
+  This allows using a table with 128 bytes rather than 256.
+*/
+
+static unsigned char utl_ENCODING[] = {
+       /*  10   32   54   76   98   BA   DC   FE */
+/* 0_ */ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+/* 1_ */ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+/* 2_ */ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+/* 3_ */ 0x88,0x88,0x88,0x88,0x88,0x00,0x00,0x00,
+/* 4_ */ 0x20,0x22,0x22,0x22,0x22,0x22,0x22,0x22,
+/* 5_ */ 0x22,0x22,0x22,0x22,0x22,0x02,0x00,0x00,
+/* 6_ */ 0x40,0x44,0x44,0x44,0x44,0x44,0x44,0x44,
+/* 7_ */ 0x44,0x44,0x44,0x44,0x44,0x04,0x00,0x00,
+/* 8_ */ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+/* 9_ */ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+/* A_ */ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+/* B_ */ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+/* C_ */ 0x22,0x22,0x22,0x22,0x22,0x22,0x22,0x22,
+/* D_ */ 0x22,0x22,0x22,0x02,0x22,0x22,0x22,0x22,
+/* E_ */ 0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,
+/* F_ */ 0x44,0x44,0x44,0x04,0x44,0x44,0x44,0x44
+};
+
+/*
+  Note that the table above is arranged so to make easy writing the
+macro below.
+Characters with odd code (i.e. ending with 1) are represented in the
+higher half of the byte. So, the last bit of the code can be used to
+shift right the byte and pick the higher half.
+
+  To make the macro below a little bit less obscure:
+  
+    - The byte to pick from the table for character c is c/2 (i.e. c>>1)
+    - If the character code is odd c&1 is 1 and the byteis shifted 4 bits right  
+
+*/
+
+#define utl_ENC(c) (utl_ENCODING[c>>1] >> ((c&1) << 2))
+
+static int utl_isdigit(int ch) {return (ch <= 0xFF) && (utl_ENC(ch) & 0x08);}
+static int utl_isalpha(int ch) {return (ch <= 0xFF) && (utl_ENC(ch) & 0x06);}
+static int utl_isalnum(int ch) {return (ch <= 0xFF) && (utl_ENC(ch) & 0x0E);}
+static int utl_islower(int ch) {return (ch <= 0xFF) && (utl_ENC(ch) & 0x04);}
+static int utl_isupper(int ch) {return (ch <= 0xFF) && (utl_ENC(ch) & 0x02);}
+static int utl_isblank(int ch) {return (ch == 0xA0) || ((ch <= 0xFF) && isblank(ch));}
+
+static int utl_isspace(int ch)  {return (ch <= 0xFF) && isspace(ch);}
+static int utl_iscntrl(int ch)  {return (ch <= 0xFF) && iscntrl(ch);}
+static int utl_isgraph(int ch)  {return (ch <= 0xFF) && isgraph(ch);} 
+static int utl_ispunct(int ch)  {return (ch <= 0xFF) && ispunct(ch);}
+static int utl_isprint(int ch)  {return (ch <= 0xFF) && isprint(ch);}
+static int utl_isxdigit(int ch) {return (ch <= 0xFF) && isxdigit(ch);}
+
+static int utl_pmx_fold(int ch)
+{
+  if (utl_isupper(ch)) ch += 32; 
+  return ch;
+}
+
 static int utl_pmx_class(const char **pat_ptr, const char **txt_ptr)
 {
   int inv = 0;
@@ -958,23 +1090,20 @@ static int utl_pmx_class(const char **pat_ptr, const char **txt_ptr)
   // {{ Matches a pattern n times
   #define utl_W(tst) while ((len = utl_pmx_nextch(txt,&ch)) && ((!tst) == inv) && (n<max_n)) {n++; txt+=len;}
   switch (*pat) {
-    case 'a' : utl_W(( ch<=0xFF && isalpha(ch) )); break;
-    case 's' : utl_W(( ch<=0xFF && isspace(ch) )); break;
-    case 'u' : utl_W(( ch<=0xFF && isupper(ch) )); break;
-    case 'l' : utl_W(( ch<=0xFF && islower(ch) )); break;
-    case 'd' : utl_W(( ch<=0xFF && isdigit(ch) )); break;
-    case 'k' : utl_W(( ch<=0xFF && isblank(ch) )); break;
-    case 'x' : utl_W(( ch<=0xFF && isxdigit(ch))); break;
-    case 'w' : utl_W(( ch<=0xFF && isalnum(ch) )); break;
-    case 'c' : utl_W(( ch<=0xFF && iscntrl(ch) )); break;
-    case 'g' : utl_W(( ch<=0xFF && isgraph(ch) )); break;
-    case 'p' : utl_W(( ch<=0xFF && ispunct(ch) )); break;
-    case 'r' : utl_W(( ch<=0xFF && isprint(ch) )); break;
+    case 'a' : utl_W(( utl_isalpha(ch) )); break;
+    case 's' : utl_W(( utl_isspace(ch) )); break;
+    case 'u' : utl_W(( utl_isupper(ch) )); break;
+    case 'l' : utl_W(( utl_islower(ch) )); break;
+    case 'd' : utl_W(( utl_isdigit(ch) )); break;
+    case 'k' : utl_W(( utl_isblank(ch) )); break;
+    case 'x' : utl_W(( utl_isxdigit(ch))); break;
+    case 'w' : utl_W(( utl_isalnum(ch) )); break;
+    case 'c' : utl_W(( utl_iscntrl(ch) )); break;
+    case 'g' : utl_W(( utl_isgraph(ch) )); break;
+    case 'p' : utl_W(( utl_ispunct(ch) )); break;
+    case 'r' : utl_W(( utl_isprint(ch) )); break;
 
     case 'i' : utl_W((ch < 0x80))               ; break;
-    
-    case 'h' : utl_W((ch == ' ' ||
-                      ch =='\t' || ch == 0xA0)) ; break;
     
     case '.' : utl_W((ch !='\0' && ch !='\n'))  ; break;
 
@@ -987,6 +1116,9 @@ static int utl_pmx_class(const char **pat_ptr, const char **txt_ptr)
 
     case 'Q' : utl_W((len=utl_pmx_delimited(pat+1,pat_end,txt, UTL_PMX_QUOTED))); break;
     case 'B' : utl_W((len=utl_pmx_delimited(pat+1,pat_end,txt, UTL_PMX_BRACED))); break;
+    
+    case 'I' : utl_pmx_case = 0; n=min_n; break;
+    case 'C' : utl_pmx_case = 1; n=min_n; break;
                             
     case '$' : if (*txt == '\0') n=min_n; break;
     
@@ -1165,6 +1297,10 @@ static const char *utl_pmx_match(const char *pat, const char *txt)
 
       default  : if (c1 == 0) len = utl_pmx_nextch(pat, &c1);
                  len = utl_pmx_nextch(txt, &ch);
+                 if (!utl_pmx_case) {
+                   ch = utl_pmx_fold(ch);
+                   c1 = utl_pmx_fold(c1);
+                 }
                  if (ch != c1) {
                    _logdebug("FAIL: %d %d",c1,ch);
                    utl_pmx_FAIL;
@@ -1192,6 +1328,7 @@ const char *utl_pmx_search(const char *pat, const char *txt, int fromstart)
   const char *ret=NULL;
   
   utl_pmx_error = NULL;
+  utl_pmx_case = 1;
   
        if (strncmp(pat,"<utf>",5) == 0) {pat+=5; utl_pmx_utf8=1;}
   else if (strncmp(pat,"<iso>",5) == 0) {pat+=5; utl_pmx_utf8=0;}
