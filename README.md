@@ -77,4 +77,4 @@ one or more of the following symbols:
  - `UTL_NOVEC` will make the containers functions (`vecxxx`, `stkxxx`, `bufxxx`, ...) unavailble.
 
 ## Documentation
-  The `doc` directory contains the full documentation of the library functions
+  The `doc` directory contains the full documentation of the library functions 
