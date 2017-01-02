@@ -94,8 +94,8 @@ dist: src/utl.h src/utl.c
 #    \__/ \___//____/ \__/(_)
 
 TESTS = test/x_chk.x test/t_vec$(_EXE)  test/t_buf$(_EXE)  test/t_mem$(_EXE)  \
-        test/t_pmx$(_EXE)  test/t_trc$(_EXE) \
-        test/t_pmx2$(_EXE) test/t_pmx3$(_EXE) test/t_pmx4$(_EXE) \
+        test/t_pmx$(_EXE)  test/t_trc$(_EXE) test/t_vec2$(_EXE) \
+        test/t_pmx2$(_EXE) test/t_pmx3$(_EXE) test/t_pmx4$(_EXE) test/t_pmx5$(_EXE) \
         test/t_utf$(_EXE)  test/t_logassert$(_EXE)
 
 tst:  $(TESTS) 
@@ -106,6 +106,9 @@ test/x_chk.x: src/utl.h
 
 test/t_vec$(_EXE): test/x_chk.x src/utl.o  test/ut_vec.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_vec.o src/utl.o
+
+test/t_vec2$(_EXE): test/x_chk.x src/utl.o  test/ut_vec2.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_vec2.o src/utl.o
 
 test/t_buf$(_EXE): test/x_chk.x src/utl.o test/ut_buf.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_buf.o src/utl.o
@@ -121,6 +124,9 @@ test/t_pmx3$(_EXE): test/x_chk.x src/utl.o test/ut_pmx3.o
 
 test/t_pmx4$(_EXE): test/x_chk.x src/utl.o test/ut_pmx4.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_pmx4.o src/utl.o
+
+test/t_pmx5$(_EXE): test/x_chk.x src/utl.o test/ut_pmx5.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_pmx5.o src/utl.o
 
 test/t_mem$(_EXE): test/x_chk.x src/utl.o test/ut_mem.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_mem.o src/utl.o
@@ -153,6 +159,6 @@ runtest: tst
 #     \___//_/ \___/ \__,_//_/ /_/(_)    
 
 clean:
-	cd src;  $(RM) utl.c utl.h utl_single.h libutl.a *.o *.obj *.gc?? utl_unc$(_EXE)
+	cd src;  $(RM) utl.c utl.h utl_single.h libutl.a *.o *.obj *.gc?? utl_unc utl_unc.exe
 	cd test; $(RM) t_* *.o *.obj *.tmp *.log gmon.out *.gc?? utl.c x_chk.x
 	$(RM) *.log
