@@ -21,6 +21,8 @@
 #ifndef UTL_NOVEC
 #ifdef UTL_MAIN
 
+int utl_vec_nullcmp(void *a, void *b){return 0;}
+
 static int16_t utl_vec_makeroom(vec_t v,uint32_t n)
 {
   uint32_t new_max = 1;
@@ -38,7 +40,7 @@ static int16_t utl_vec_makeroom(vec_t v,uint32_t n)
 static int16_t utl_vec_makegap(vec_t v, uint32_t i, uint32_t l)
 {
  
-  if (!utl_vec_makeroom(v,i+l+1)) return 0;
+  if (!utl_vec_makeroom(v,v->cnt + l)) return 0;
   
   /*
   **                    __l__
@@ -123,7 +125,7 @@ void *utl_vec_set(vec_t v, uint32_t i)
   if (utl_vec_makeroom(v,i)) {
     elm = v->vec + (i*v->esz);
     memcpy(elm, v->elm, v->esz);
-    if (i>=v->cnt) v->cnt = i+1;
+    if (i >= v->cnt) v->cnt = i+1;
     vecunsorted(v);
   }
   return elm;
@@ -138,6 +140,38 @@ void *utl_vec_ins(vec_t v, uint32_t i)
     elm = (uint8_t *)utl_vec_set(v,i);
   vecunsorted(v);
   return elm;
+}
+
+static void *utl_vec_add_sorted(vec_t v)
+{
+  uint8_t *elm=NULL;
+  int32_t mid,lo,hi;
+  int ret;
+  
+  vecsort(v); 
+  lo = 0; hi = v->cnt-1;
+  while (lo <= hi) {
+    mid = lo + (hi-lo)/2;
+    elm = v->vec + mid * v->esz;
+    ret = v->cmp(v->elm,elm);
+    if (ret == 0) {
+      memcpy(elm, v->elm, v->esz);
+      return elm;
+    } 
+    if (ret < 0) hi = mid-1;
+    else         lo = mid+1;
+  }
+  // Not found. `lo` points to the first element greater than the one to add
+  // (or just past the last element)
+  //logtrace("add: %d at %d size: %d max:%d",*((int *)v->elm),lo,v->cnt,v->max);
+  return utl_vec_ins(v,lo);
+}
+
+void *utl_vec_add(vec_t v, uint32_t i) {
+  if (v->cnt > 0) {
+    if (v->cmp) return utl_vec_add_sorted(v);
+  }
+  return utl_vec_set(v,v->cnt);
 }
 
 int16_t utl_vec_del(vec_t v, uint32_t i)
@@ -169,11 +203,14 @@ size_t utl_vec_write(vec_t v, uint32_t i, size_t n, FILE *f)
 
 void utl_vec_sort(vec_t v, int (*cmp)(void *, void *))
 {
-  if (cmp && cmp != v->cmp) {
+  if (cmp != utl_vec_nullcmp && cmp != v->cmp) {
     v->cmp = cmp;
     vecunsorted(v);
   }
-  if (!vecissorted(v) && v->cmp) {
+  if (v->cmp == NULL) {
+    vecunsorted(v);
+  }
+  else if (!vecissorted(v)) {
     if (v->cnt > 1)
       qsort(v->vec,v->cnt,v->esz,(int (*)(const void *, const void *))(v->cmp));  
     vecsorted(v);
@@ -183,15 +220,19 @@ void utl_vec_sort(vec_t v, int (*cmp)(void *, void *))
 void *utl_vec_search(vec_t v, int x)
 {
   if (v->cmp) {
-    utl_vec_sort(v,NULL);
+    vecsort(v);
     return bsearch(v->elm,v->vec,v->cnt,v->esz,(int (*)(const void *, const void *))(v->cmp));
   }
   return NULL;
 }
 
+
+
+/* ** BUF ********************* */
+
 char utl_buf_get(buf_t b, uint32_t n)
 {
-  char *s = vecget(b,n);
+  char *s = vecget(char,b,n);
   return s?*s:'\0';
 }
 
