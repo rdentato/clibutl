@@ -49,6 +49,7 @@ del /Q /F src\*.obj  2> nul
 del /Q /F src\*.exe  2> nul
 del /Q /F src\utl.c  2> nul
 del /Q /F src\utl.h  2> nul
+del /Q /F src\utl_unc 2> nul
 del /Q /F src\*.a    2> nul
 del /Q /F src\*.o    2> nul
 del /Q /F src\*.log  2> nul
