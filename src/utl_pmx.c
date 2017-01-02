@@ -43,6 +43,7 @@ how pmx pattern match.
   The syntax of pmx has been intentionally chosen to be different from RE
 to avoid any confusion. 
 
+
 ## API
 
  These are the available functions:
@@ -101,7 +102,11 @@ exceptions:
   
   - `<3>(ab|xy)` matches "`abxyab`" or "`xyxyxy`" or "`xyabab`" etc..
   
-  there must be no spaint isid(char *pat,char *txt, int len, int32_t ch)
+there must be no space between the modifier and the open parenthesis
+of the sube-expression.
+  
+  
+int isid(char *pat,char *txt, int len, int32_t ch)
 {
   char *id = txt;
   char *c = "0123456789_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -162,7 +167,6 @@ not consume any text.
 
   These are defined within `pmx`:
 
-  - `h`  (hspace)   matches an horizontal space (` `, `\t` and `nbsp`)
   - `.`  (any)      matches any character except `\0` and `\n` .
   - `$`  (eot)      matches the end of the text
   - `N`  (eol)      matches the end of the line that can either be `\n` or `\r\n`
@@ -218,6 +222,12 @@ delimiters.
  - `<=-+>`         matches `+` or `-` (must be the first character in the set)
  - `<=])}>>`       matches a closing bracket including `>` (must be the last one)
 
+## Case insensitive match
+ 
+  The pattern `<I>` signals that the match must be done in a case-insensitive manner
+(i.e. "AbC" and "abc" are considered identical).
+
+  The pattern `<C>` reset the behaviour to its case-sensitive default.
   
 ## Extending recognizers
   
@@ -229,7 +239,7 @@ a C function. You can do so by defining a function with the following prototype:
   ```
 and enabling it by executing `pmxextend(mypatterns)`. The arguments are:
   
-   - `pat` a pointer at the pattern, right after `:`
+   - `pat` a pointer to the pattern, right after `:`
    - `txt` a pointer to the text to match
    - `len` the length of the representation of the first character in `txt`
    - `ch`  the Unicode codepoint of the first character
@@ -237,7 +247,7 @@ and enabling it by executing `pmxextend(mypatterns)`. The arguments are:
   If the pattern matches, the function must return the length of the consumed text
 in `txt`. If it doesn't match it must return 0. attern is to be matched: 
  
-  The function wil be invoked any time the recognizer `<:>` is to be matched.
+  The function wil be invoked any time the recognizer `<:>` is matched.
   
   This short example should (hopefully) clarify better how it works.
   
@@ -275,7 +285,7 @@ in `txt`. If it doesn't match it must return 0. attern is to be matched:
       return (s-txt);             
     }
     
-    int isCV(char *pat,char *txt, int len, int32_t ch)
+    int isIP(char *pat,char *txt, int len, int32_t ch)
     {
       if (*pat == 'I') return isid(pat,txt,len,ch);
       if (*pat == 'P') return isprime(pat,txt,len,ch);
@@ -287,8 +297,8 @@ in `txt`. If it doesn't match it must return 0. attern is to be matched:
     int main(int argc, char *argv[])
     {
       line_num = 0;
-      // Read a file and print the lines that start with a prime number 
-      // or with an identifier. 
+      pmxextend(isIP);
+      // Read a line and check those starting with a prime number (< 200) or an identifier. 
       while (fgets(buf,256,stdin)) {
         line_num++;
         if (pmxsearch("^<*s>(<:P>)",buf)) 
@@ -300,10 +310,7 @@ in `txt`. If it doesn't match it must return 0. attern is to be matched:
   ```
   
   In the example above, matching "a prime number (less than 200)" is something that can't
-be reasonably done without an external function.  
-
-  
-
+be reasonably done without an external function.
     
 ## Text encoding
   
@@ -311,7 +318,7 @@ be reasonably done without an external function.
 but it can also handle UTF-8 encoded strings.  To specify which encoding is expected, put
 at the beginning of the pattern one of the following:
 
-  - `<iso>` consider 8 bit per character (eg. ISO-8859-1)
+  - `<iso>` Assume a 1-byte encoding (like ISO-8859, ASCII, ANSI)
   - `<utf>` Assume UTF-8 encoding
   
   The encoding is saved across multiple pmxsearch() calls:
@@ -323,8 +330,8 @@ at the beginning of the pattern one of the following:
    pmxsearch("<=bcdef>",txt);      // Text will be considered to be ISO-8859-x encoded
   ```
 
-  Sometimes the encoding seems not to be relevant, but it is important to specify it
-the encoding to avoid unexpected results. Assuming the text is in UTF-8:
+  Sometimes the encoding is not that relevant, but some other time it is important to
+specify it to avoid unexpected results. Assuming the text is in UTF-8:
   
   ```C
    // These will give the same results (three bytes):
@@ -334,14 +341,21 @@ the encoding to avoid unexpected results. Assuming the text is in UTF-8:
    // These will give two different match:
    pmxsearch("<utf><.>x","uàx");  // will match three bytes
    pmxsearch("<iso><.>x","uàx");  // will match two bytes
-  ```
+  ```  
+  
+  The distinction between lower and upper case (as well as what is a letter and what
+is not) is done according the Windows-1252 (ANSI) encoding which cover all the 
+Latin-1 letters (that have the same enconding in ANSI, Unicode and ISO-8859-1).
+In other words, only the characters with code between 0x00 and 0xFF are considered.
+Should one 
 
+  
 ## Back references
 
-  - `<^n>`' will match the text captured by the sub-expression `n`
+  - `<^n>` will match the text captured by the sub-expression `n`
 
   Examples:
-  - `(<l>)<^1>' matches a couple of identical lower case characters.
+  - `(<l>)<^1>` matches a couple of identical lower case characters.
 
 ## Recognizers
                 
@@ -350,6 +364,8 @@ the encoding to avoid unexpected results. Assuming the text is in UTF-8:
   - `<X>`  An hexadecimal number: `F32A`, `2012`, `4aeF`
   - `<L>`  The rest of the line up to the newline character(s) (see below)
 
+# Unicode Support
+  
 *** ]]]
 
 */
@@ -370,6 +386,7 @@ const char *utl_pmx_error                    = NULL  ;
 #define utl_pmx_set_paterror(t) do {if (!utl_pmx_error) {utl_pmx_error = t;}} while (0)
 
 static int utl_pmx_utf8 = 0;
+static int utl_pmx_case = 1; // assume case sensitive
 
 #define utl_pmx_FAIL       goto fail
 
@@ -388,7 +405,7 @@ typedef struct {
   int32_t max_n;
   int32_t n;
   int16_t inv;
-  int16_t cap;
+  int16_t cap; 
 } utl_pmx_state_s;
 
 utl_pmx_state_s utl_pmx_stack[utl_pmx_MAXCAPT];
@@ -677,6 +694,93 @@ static int utl_pmx_delimited(const char *pat, const char *pat_end, const char *t
 }
 
 
+/*
+  Dealing with text encoding is a complex business. The most basic
+issue for pmx is to deal with lower/upper case characters.
+
+  Even just restricting to the main scripts that have the lower/upper
+case distinction (Latin, Greek and Cyrillic) and the major encodings
+(Unicode, ISO/IEC, Windows code pages, ...) would provide something
+that could be of little use for somebody and of no use for many.
+
+  So, I went for the easiest solution: the Latin-1
+characters in the iso-8859-1 and Unicode Latin-1 supplement.
+In other words: the characters encoded in a single byte.
+
+  We need to extend the functions `islower()`, `isupper()`, `isalpha()`,
+`isalnum()` to include the letters in the range 0xA0-0xFF.
+
+  I've decided to not include the "numeric" caharacters for
+superscript or fractions, It seeems counterintuitive to me that
+`isdigit(0xBD); // 1/2` returns true. 
+  
+  To represent this encoding, we need four bits for each character:
+
+    xxxx
+    \\\
+     \\\_____ isupper 
+      \\_____ islower
+       \_____ isdigit     
+       
+  This allows using a table with 128 bytes rather than 256.
+*/
+
+static unsigned char utl_ENCODING[] = {
+       /*  10   32   54   76   98   BA   DC   FE */
+/* 0_ */ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+/* 1_ */ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+/* 2_ */ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+/* 3_ */ 0x88,0x88,0x88,0x88,0x88,0x00,0x00,0x00,
+/* 4_ */ 0x20,0x22,0x22,0x22,0x22,0x22,0x22,0x22,
+/* 5_ */ 0x22,0x22,0x22,0x22,0x22,0x02,0x00,0x00,
+/* 6_ */ 0x40,0x44,0x44,0x44,0x44,0x44,0x44,0x44,
+/* 7_ */ 0x44,0x44,0x44,0x44,0x44,0x04,0x00,0x00,
+/* 8_ */ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+/* 9_ */ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+/* A_ */ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+/* B_ */ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+/* C_ */ 0x22,0x22,0x22,0x22,0x22,0x22,0x22,0x22,
+/* D_ */ 0x22,0x22,0x22,0x02,0x22,0x22,0x22,0x22,
+/* E_ */ 0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,
+/* F_ */ 0x44,0x44,0x44,0x04,0x44,0x44,0x44,0x44
+};
+
+/*
+  Note that the table above is arranged so to make easy writing the
+macro below.
+Characters with odd code (i.e. ending with 1) are represented in the
+higher half of the byte. So, the last bit of the code can be used to
+shift right the byte and pick the higher half.
+
+  To make the macro below a little bit less obscure:
+  
+    - The byte to pick from the table for character c is c/2 (i.e. c>>1)
+    - If the character code is odd c&1 is 1 and the byteis shifted 4 bits right  
+
+*/
+
+#define utl_ENC(c) (utl_ENCODING[c>>1] >> ((c&1) << 2))
+
+static int utl_isdigit(int ch) {return (ch <= 0xFF) && (utl_ENC(ch) & 0x08);}
+static int utl_isalpha(int ch) {return (ch <= 0xFF) && (utl_ENC(ch) & 0x06);}
+static int utl_isalnum(int ch) {return (ch <= 0xFF) && (utl_ENC(ch) & 0x0E);}
+static int utl_islower(int ch) {return (ch <= 0xFF) && (utl_ENC(ch) & 0x04);}
+static int utl_isupper(int ch) {return (ch <= 0xFF) && (utl_ENC(ch) & 0x02);}
+static int utl_isblank(int ch) {return (ch == 0xA0) || ((ch <= 0xFF) && isblank(ch));}
+
+static int utl_isspace(int ch)  {return (ch <= 0xFF) && isspace(ch);}
+static int utl_iscntrl(int ch)  {return (ch <= 0xFF) && iscntrl(ch);}
+static int utl_isgraph(int ch)  {return (ch <= 0xFF) && isgraph(ch);} 
+static int utl_ispunct(int ch)  {return (ch <= 0xFF) && ispunct(ch);}
+static int utl_isprint(int ch)  {return (ch <= 0xFF) && isprint(ch);}
+static int utl_isxdigit(int ch) {return (ch <= 0xFF) && isxdigit(ch);}
+
+static int utl_pmx_fold(int ch)
+{
+  if (utl_isupper(ch)) ch += 32; 
+  return ch;
+}
+
 static int utl_pmx_class(const char **pat_ptr, const char **txt_ptr)
 {
   int inv = 0;
@@ -745,23 +849,20 @@ static int utl_pmx_class(const char **pat_ptr, const char **txt_ptr)
   // {{ Matches a pattern n times
   #define utl_W(tst) while ((len = utl_pmx_nextch(txt,&ch)) && ((!tst) == inv) && (n<max_n)) {n++; txt+=len;}
   switch (*pat) {
-    case 'a' : utl_W(( ch<=0xFF && isalpha(ch) )); break;
-    case 's' : utl_W(( ch<=0xFF && isspace(ch) )); break;
-    case 'u' : utl_W(( ch<=0xFF && isupper(ch) )); break;
-    case 'l' : utl_W(( ch<=0xFF && islower(ch) )); break;
-    case 'd' : utl_W(( ch<=0xFF && isdigit(ch) )); break;
-    case 'k' : utl_W(( ch<=0xFF && isblank(ch) )); break;
-    case 'x' : utl_W(( ch<=0xFF && isxdigit(ch))); break;
-    case 'w' : utl_W(( ch<=0xFF && isalnum(ch) )); break;
-    case 'c' : utl_W(( ch<=0xFF && iscntrl(ch) )); break;
-    case 'g' : utl_W(( ch<=0xFF && isgraph(ch) )); break;
-    case 'p' : utl_W(( ch<=0xFF && ispunct(ch) )); break;
-    case 'r' : utl_W(( ch<=0xFF && isprint(ch) )); break;
+    case 'a' : utl_W(( utl_isalpha(ch) )); break;
+    case 's' : utl_W(( utl_isspace(ch) )); break;
+    case 'u' : utl_W(( utl_isupper(ch) )); break;
+    case 'l' : utl_W(( utl_islower(ch) )); break;
+    case 'd' : utl_W(( utl_isdigit(ch) )); break;
+    case 'k' : utl_W(( utl_isblank(ch) )); break;
+    case 'x' : utl_W(( utl_isxdigit(ch))); break;
+    case 'w' : utl_W(( utl_isalnum(ch) )); break;
+    case 'c' : utl_W(( utl_iscntrl(ch) )); break;
+    case 'g' : utl_W(( utl_isgraph(ch) )); break;
+    case 'p' : utl_W(( utl_ispunct(ch) )); break;
+    case 'r' : utl_W(( utl_isprint(ch) )); break;
 
     case 'i' : utl_W((ch < 0x80))               ; break;
-    
-    case 'h' : utl_W((ch == ' ' ||
-                      ch =='\t' || ch == 0xA0)) ; break;
     
     case '.' : utl_W((ch !='\0' && ch !='\n'))  ; break;
 
@@ -774,6 +875,9 @@ static int utl_pmx_class(const char **pat_ptr, const char **txt_ptr)
 
     case 'Q' : utl_W((len=utl_pmx_delimited(pat+1,pat_end,txt, UTL_PMX_QUOTED))); break;
     case 'B' : utl_W((len=utl_pmx_delimited(pat+1,pat_end,txt, UTL_PMX_BRACED))); break;
+    
+    case 'I' : utl_pmx_case = 0; n=min_n; break;
+    case 'C' : utl_pmx_case = 1; n=min_n; break;
                             
     case '$' : if (*txt == '\0') n=min_n; break;
     
@@ -952,6 +1056,10 @@ static const char *utl_pmx_match(const char *pat, const char *txt)
 
       default  : if (c1 == 0) len = utl_pmx_nextch(pat, &c1);
                  len = utl_pmx_nextch(txt, &ch);
+                 if (!utl_pmx_case) {
+                   ch = utl_pmx_fold(ch);
+                   c1 = utl_pmx_fold(c1);
+                 }
                  if (ch != c1) {
                    _logdebug("FAIL: %d %d",c1,ch);
                    utl_pmx_FAIL;
@@ -979,6 +1087,7 @@ const char *utl_pmx_search(const char *pat, const char *txt, int fromstart)
   const char *ret=NULL;
   
   utl_pmx_error = NULL;
+  utl_pmx_case = 1;
   
        if (strncmp(pat,"<utf>",5) == 0) {pat+=5; utl_pmx_utf8=1;}
   else if (strncmp(pat,"<iso>",5) == 0) {pat+=5; utl_pmx_utf8=0;}
