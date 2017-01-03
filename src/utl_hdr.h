@@ -53,9 +53,15 @@ extern "C" {
 int   utl_ret(int x);
 void *utl_retptr(void *x);
 
+uint32_t utl_hash_string(void *key);
+uint32_t utl_hash_int32(void *key);
+
+#define utlhashstring  utl_hash_string
+#define utlhashint32   utl_hash_int32
+
 extern const char *utl_emptystring;
 
-#define utl_arg0(x1,...)        x1                                                                                                                             
+#define utl_arg0(x1,...)        x1
 #define utl_arg1(x1,x2,...)     x2
 #define utl_arg2(x1,x2,x3,...)  x3
 

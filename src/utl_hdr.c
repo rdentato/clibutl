@@ -96,5 +96,45 @@ const char *utl_emptystring = "";
 
 int   utl_ret(int x)      {return x;}
 void *utl_retptr(void *x) {return x;}
+
+/* * Collection of hash functions * */
+
+/* Bob Jenkins' "one_at_a_time" hash function
+**  http://burtleburtle.net/bob/hash/doobs.html
+*/
+uint32_t utl_hash_string(void *key)
+{
+  uint32_t h = 0x071f9f8f;
+  uint8_t *k = key;
+  
+  while (*k)  {
+    h += *k++;
+    h += (h << 10);
+    h ^= (h >> 6);
+  }
+  h += (h << 3);
+  h ^= (h >> 11);
+  h += (h << 15);
+  
+  return h;
+}
+
+/* Bob Jenkins' integer hash function
+**  http://burtleburtle.net/bob/hash/integer.html
+*/
+
+uint32_t utl_hash_int32(void *key)
+{
+  uint32_t h = *((uint32_t *)key);
+  h = (h+0x7ed55d16) + (h<<12);
+  h = (h^0xc761c23c) ^ (h>>19);
+  h = (h+0x165667b1) + (h<<5);
+  h = (h+0xd3a2646c) ^ (h<<9);
+  h = (h+0xfd7046c5) + (h<<3);
+  h = (h^0xb55a4f09) ^ (h>>16);
+  return h;
+}
+
+
 //>>>//
 
