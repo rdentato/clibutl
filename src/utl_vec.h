@@ -22,17 +22,19 @@
 #define vec_MAX_CNT  UINT32_MAX
 
 typedef struct vec_s {
-  uint32_t  fst; 
-  uint32_t  lst; 
-  uint32_t  max;
-  uint32_t  cnt;
-  uint16_t  esz;  /* each element max size: 64K */
-  uint16_t  flg;
-  int     (*cmp)(void *, void *);
-  int     (*hsh)(void *);
-  uint8_t  *vec;
-  void     *elm; // this will always point to eld
-  uint8_t   eld[4];
+  uint32_t   fst; 
+  uint32_t   lst; 
+  uint32_t   cur; 
+  uint32_t   max;
+  uint32_t   cnt;
+  uint16_t   esz;  /* each element max size: 64K */
+  uint16_t   flg;
+  int      (*cmp)(void *, void *);
+  uint32_t (*hsh)(void *);
+  uint8_t   *vec;
+  void      *aux;
+  void      *elm; // this will always point to eld
+  uint8_t    eld[4];
 } vec_s, *vec_t;
 
 #define vecDO(type,v,i,e,x)  do {vec_t v_=v;  *((type *)(v_->elm)) = (e); x(v_,i);} while (0)
@@ -45,10 +47,12 @@ typedef struct vec_s {
 
 // Set (sorted or unsorted) 
 #define vecadd(type,v,e)     vecDO(type,v,vec_MAX_CNT,e,utl_vec_add)
-#define vecsearch(type,v,e)  (type *)utl_vec_search(v, (*((type *)(v->elm)) = (e), 0))  
+//#define vecsearch(type,v,e)  (type *)utl_vec_search(v, (*((type *)(v->elm)) = (e), 0))  
+#define vecsearch(type,v,e)  (*((type *)(v->elm)) = (e), (type *)utl_vec_search(v, 0))
+#define vecremove(type,v,e)  utl_vec_remove(v, (*((type *)(v->elm)) = (e), 0))  
 
 #define vecsort(...)  utl_vec_sort(utl_arg0(__VA_ARGS__,NULL), utl_arg1(__VA_ARGS__,utl_vec_nullcmp,NULL))
-                                                                                                                                                  
+
 #define vecSORTED 0x0001
 #define vecHASHED 0x0020
 
@@ -70,12 +74,18 @@ typedef struct vec_s {
 #define vecwrite(v,i,n,f) utl_vec_write(v,i,n,f)
 
 // Info
-#define vecnew(type)   utl_vec_new(sizeof(type))
-#define vecfree(v)     utl_vec_free(v)
-#define veccount(v)    ((v)->cnt)
-#define vecmax(v)      ((v)->max)
-#define vecisempty(v)  ((v)->cnt == 0)
-#define vec(type,v)    ((type *)((v)->vec))
+#define vecnew(...)       utl_vec_new(sizeof(utl_arg0(__VA_ARGS__,int)),utl_arg1(__VA_ARGS__,NULL,NULL),utl_arg2(__VA_ARGS__,NULL,NULL,NULL))
+#define vecfree(v)        utl_vec_free(v)
+#define veccount(v)       ((v)->cnt)
+#define vecmax(v)         ((v)->max)
+#define vecisempty(v)     ((v)->cnt == 0)
+#define vec(type,v)       ((type *)((v)->vec))
+#define vecclear(v)       ((v)->cnt = 0)
+
+#define vecfirst(v)       utl_vec_first(v)
+#define vecnext(v)        utl_vec_next(v)
+#define vecprev(v)        utl_vec_prev(v)
+#define veclast(v)        utl_vec_last(v)
 
 // Protypes
 void *utl_vec_set(vec_t v, uint32_t i);
@@ -83,10 +93,15 @@ void *utl_vec_ins(vec_t v, uint32_t i);
 void *utl_vec_add(vec_t v, uint32_t i);
 void *utl_vec_get(vec_t v, uint32_t i);
 
+void *utl_vec_first(vec_t v);
+void *utl_vec_next(vec_t v) ;
+void *utl_vec_prev(vec_t v) ;
+void *utl_vec_last(vec_t v) ;
+
 int16_t utl_vec_del(vec_t v,  uint32_t i);
 int16_t utl_vec_delrange(vec_t v, uint32_t i,  uint32_t j);
 
-vec_t utl_vec_new(uint16_t esz);
+vec_t utl_vec_new(uint16_t esz, int (*cmp)(void *, void *), uint32_t (*hsh)(void *));
 vec_t utl_vec_free(vec_t v);
 
 size_t utl_vec_read(vec_t v,uint32_t i, size_t n,FILE *f);
@@ -94,6 +109,7 @@ size_t utl_vec_write(vec_t v, uint32_t i, size_t n, FILE *f);
 
 void utl_vec_sort(vec_t v, int (*cmp)(void *, void *));
 void *utl_vec_search(vec_t v,int x);
+int utl_vec_remove(vec_t v, int x);
 
 int utl_vec_nullcmp(void *a, void *b);
 
