@@ -20,7 +20,7 @@
 #ifndef UTL_NOVEC
 #ifdef UTL_MAIN
 
-int utl_vec_nullcmp(void *a, void *b){return 0;}
+int utl_vec_nullcmp(void *a, void *b, void* aux){return 0;}
 
 static int16_t utl_vec_makeroom(vec_t v,uint32_t n)
 {
@@ -88,7 +88,7 @@ int16_t utl_vec_delrange(vec_t v, uint32_t i,  uint32_t j)
   return utl_vec_delgap(v,i,j-i+1);  
 }
 
-vec_t utl_vec_new(uint16_t esz, int (*cmp)(void *, void *), uint32_t (*hsh)(void *))
+vec_t utl_vec_new(uint16_t esz, int (*cmp)(void *, void *,void *), uint32_t (*hsh)(void *, void *))
 {
   vec_t v = NULL;
   uint32_t sz;
@@ -170,7 +170,185 @@ void *utl_vec_ins(vec_t v, uint32_t i)
   return elm;
 }
 
-/* * Sorted sets (Hash tables) * */
+/* * Sorted sets  * */
+
+/*                             
+#define utl_dpqswap(a,b) do { if (a!=b) { \
+                                uint8_t t;\
+                                pa = ((uint8_t *)a); pb = ((uint8_t *)b); \
+                                for (uint32_t k=0; k<esz; k++,pa++,pb++) { \
+                                  t = *pa; *pa = *pb; *pb = t;\
+                                }\
+                              }\
+                           } while (0)
+*/
+/*
+#define utl_dpqswap(a,b) do { if (a!=b) { \
+                                  uint32_t sz = esz;\
+                                  uint8_t  tmp8; \
+                                  uint32_t tmp32; \
+                                  uint8_t *pa = ((uint8_t *)a); \
+                                  uint8_t *pb = ((uint8_t *)b); \
+                                  while (sz >= 4) { \
+                                    tmp32 = *(uint32_t *)pa; \
+                                    *(uint32_t *)pa = *(uint32_t *)pb;\
+                                    *(uint32_t *)pb = tmp32;\
+                                    sz-=4; pa+=4; pb+=4;\
+                                  }\
+                                  switch (sz) {\
+                                    case 3: tmp8=*pa; *pa=*pb; *pb=tmp8; pa--; pb--;\
+                                    case 2: tmp8=*pa; *pa=*pb; *pb=tmp8; pa--; pb--;\
+                                    case 1: tmp8=*pa; *pa=*pb; *pb=tmp8; pa--; pb--;\
+                                  }\
+                                }\
+                           } while (0)
+*/                           
+static inline void utl_dpqswap(void *a, void *b, uint32_t sz)
+{
+  uint8_t  tmp8;
+  uint32_t tmp32;
+  uint8_t *pa = ((uint8_t *)a);
+  uint8_t *pb = ((uint8_t *)b);
+  
+  if (a!=b) {
+    while (sz >= 4) {
+      tmp32 = *(uint32_t *)pa;
+      *(uint32_t *)pa = *(uint32_t *)pb;
+      *(uint32_t *)pb = tmp32;
+      sz-=4; pa+=4; pb+=4;
+    }
+    switch (sz) {
+      case 3: tmp8=*pa; *pa=*pb; *pb=tmp8; pa--; pb--;
+      case 2: tmp8=*pa; *pa=*pb; *pb=tmp8; pa--; pb--;
+      case 1: tmp8=*pa; *pa=*pb; *pb=tmp8; pa--; pb--;
+    }
+  }
+}
+
+static inline int utl_dpqordrange(int32_t a, int32_t b, int32_t c)
+{
+  if (a>b) {
+    if (b>c) return 123;  // a>b>c
+    if (c>a) return 312;  // c>a>b
+             return 132;  // a>c>b
+  } 
+  if (a>c) return 213;    // b>a>c
+  if (c>b) return 321;    // c>b>a 
+           return 231;    // b>c>a
+}
+
+static uint32_t utl_rnd_status = 0;
+static inline uint32_t utl_dpqrand() 
+{ // xorshift
+  if (utl_rnd_status == 0) utl_rnd_status = (uint32_t)time(0);
+	//utl_rnd_status = 1664525 * utl_rnd_status + 1013904223; // LCRNG 
+  utl_rnd_status ^= utl_rnd_status << 13;
+	utl_rnd_status ^= utl_rnd_status >> 17;
+	utl_rnd_status ^= utl_rnd_status << 5;
+	return utl_rnd_status;
+}
+
+#define utl_dpqptr(k)    ((uint8_t *)base+(k)*esz)
+#define utl_dpqpush(l,r) do {stack[stack_top][0]=(l); stack[stack_top][1]=(r); stack_top++; } while(0)
+#define utl_dpqpop(l,r)  do {stack_top--; l=stack[stack_top][0]; r=stack[stack_top][1];} while(0)
+
+void utl_dpqsort(void *base, uint32_t nel, uint32_t esz, int (*cmp)(const void *, const void *, const void *), void *aux)
+{
+  int32_t left,right;
+  uint8_t *leftptr, *rightptr; 
+  uint32_t L,K,G;
+  
+  int32_t stack[128][2]; // Enough for 2^31 max elements in the array
+  int16_t stack_top = 0;
+  //uint32_t stack_max = 0;
+  
+  utl_dpqpush(0,nel-1);
+  while (stack_top > 0) {
+    //if (stack_top > stack_max) stack_max=stack_top;
+    utl_dpqpop(left, right);
+    if (left < right) {
+      if ((right - left) <= 16) {  // Use insertion sort
+        for (int32_t i = left+1; i<=right; i++) {
+          rightptr = utl_dpqptr(i);
+          leftptr = rightptr - esz;
+          for (int32_t j=i; j>0 && cmp(leftptr, rightptr, aux) > 0; j--) {
+            utl_dpqswap(rightptr, leftptr, esz);
+            rightptr = leftptr;
+            leftptr = rightptr - esz;
+          }
+        }
+      }
+      else {
+        leftptr = utl_dpqptr(left);
+        rightptr = utl_dpqptr(right);
+        
+        /* Randomize pivot to avoid worst case (already sorted array) */
+        L = left + (utl_dpqrand() % (right-left));
+        G = left + (utl_dpqrand() % (right-left));
+        utl_dpqswap(utl_dpqptr(L),leftptr, esz);
+        utl_dpqswap(utl_dpqptr(G),rightptr, esz);
+        
+        if (cmp(leftptr, rightptr, aux) > 0) {
+          utl_dpqswap(leftptr, rightptr, esz);
+        }
+        L=left+1; K=L; G=right-1;
+        while (K <= G) {
+          if (cmp(utl_dpqptr(K), leftptr, aux) < 0) {
+            utl_dpqswap(utl_dpqptr(K), utl_dpqptr(L), esz);
+            L++;
+          }
+          else if (cmp(utl_dpqptr(K), rightptr, aux) > 0) {
+            while ((cmp(utl_dpqptr(G), rightptr, aux) > 0) && (K<G)) 
+              G--;
+
+            utl_dpqswap(utl_dpqptr(K), utl_dpqptr(G), esz);
+            G--;
+            if (cmp(utl_dpqptr(K), leftptr, aux) < 0) {
+              utl_dpqswap(utl_dpqptr(K), utl_dpqptr(L), esz);
+              L++;
+            }
+          }
+          K++;
+        }
+        L--; G++;
+
+        utl_dpqswap(leftptr,  utl_dpqptr(L), esz);
+        utl_dpqswap(rightptr, utl_dpqptr(G), esz);
+
+        switch (utl_dpqordrange((right-(G+1)), ((G-1)-(L+1)), ((L-1)-left))) {
+          case 123: utl_dpqpush(G+1, right); utl_dpqpush(L+1, G-1);   utl_dpqpush(left, L-1);  break;
+          case 132: utl_dpqpush(G+1, right); utl_dpqpush(left, L-1);  utl_dpqpush(L+1, G-1);   break;
+          case 213: utl_dpqpush(L+1, G-1);   utl_dpqpush(G+1, right); utl_dpqpush(left, L-1);  break;
+          case 231: utl_dpqpush(L+1, G-1);   utl_dpqpush(left, L-1);  utl_dpqpush(G+1, right); break;
+          case 312: utl_dpqpush(left, L-1);  utl_dpqpush(G+1, right); utl_dpqpush(L+1, G-1);   break;
+          case 321: utl_dpqpush(left, L-1);  utl_dpqpush(L+1, G-1);   utl_dpqpush(G+1, right); break;
+        }
+      }
+    }
+  }
+  //logtrace("DPQ: maxstack: %d",stack_max);
+}
+
+void utl_vec_sort(vec_t v, int (*cmp)(void *, void *, void *))
+{
+  if (v->hsh) {vecunsorted(v); return;}
+  
+  if (cmp != utl_vec_nullcmp && cmp != v->cmp) {
+    v->cmp = cmp;
+    vecunsorted(v);
+  }
+  if (v->cmp == NULL) {
+    vecunsorted(v);
+  }
+  else if (!vecissorted(v)) {
+    if (v->cnt > 1) {
+      //qsort(v->vec,v->cnt,v->esz,(int (*)(const void *, const void *))(v->cmp));  
+      utl_dpqsort(v->vec,v->cnt,v->esz,(int (*)(const void *, const void *, const void *))(v->cmp),v);  
+    }
+    vecsorted(v);
+  }
+}
+
 static void *utl_vec_add_sorted(vec_t v)
 {
   uint8_t *elm=NULL;
@@ -182,7 +360,7 @@ static void *utl_vec_add_sorted(vec_t v)
   while (lo <= hi) {
     mid = lo + (hi-lo)/2;
     elm = v->vec + mid * v->esz;
-    ret = v->cmp(v->elm,elm);
+    ret = v->cmp(v->elm,elm,v);
     if (ret == 0) {
       memcpy(elm, v->elm, v->esz);
       return elm;
@@ -207,7 +385,7 @@ static void *utl_vec_search_sorted(vec_t v)
   while (lo <= hi) {
     mid = lo + (hi-lo)/2;
     elm = v->vec + mid * v->esz;
-    ret = v->cmp(v->elm,elm);
+    ret = v->cmp(v->elm,elm,v);
     if (ret == 0) return elm;
     if (ret < 0) hi = mid-1;
     else         lo = mid+1;
@@ -251,7 +429,7 @@ static void *utl_search_hashed(vec_t v)
   uint32_t max = v->max;
   int32_t delta;
   
-  val_h = v->hsh(v->elm) & 0x7FFFFFFF;
+  val_h = v->hsh(v->elm,v) & 0x7FFFFFFF;
   pos = val_h;
   while(1) {
     delta = 0;
@@ -259,7 +437,7 @@ static void *utl_search_hashed(vec_t v)
     elm = v->vec + pos * v->esz;
     elm_h = utl_h(elm,v->esz);
     if (elm_h == 0xFFFFFFFF) return NULL;
-    if ((elm_h == val_h) && (v->cmp(v->elm,elm) == 0)) return elm;
+    if ((elm_h == val_h) && (v->cmp(v->elm,elm,v) == 0)) return elm;
     if ((elm_h - (utl_h(elm,v->esz) & (max-1))) < delta) return NULL;
     pos++; delta++;
   }
@@ -267,7 +445,7 @@ static void *utl_search_hashed(vec_t v)
   return elm; 
 }
 
-static uint8_t *utl_vec_hsh_set(uint8_t *val, uint8_t *tab, uint32_t max, uint16_t esz,  int (*cmp)(void *, void *))
+static uint8_t *utl_vec_hsh_set(uint8_t *val, uint8_t *tab, uint32_t max, uint16_t esz,  int (*cmp)(void *, void *,void *), void *aux)
 {
   uint32_t pos;
   uint32_t prv;
@@ -285,7 +463,7 @@ static uint8_t *utl_vec_hsh_set(uint8_t *val, uint8_t *tab, uint32_t max, uint16
       //logtrace("pos: %d hash: %08X max: %d",pos,h,max);
       elm = tab + pos * esz;
       elm_h = utl_h(elm,esz);
-      if ((elm_h == 0xFFFFFFFF) || ((elm_h == val_h) && (cmp(val,elm) == 0)))  {
+      if ((elm_h == 0xFFFFFFFF) || ((elm_h == val_h) && (cmp(val,elm,aux) == 0)))  {
         memcpy(elm,val,esz);
         break;
       }
@@ -306,7 +484,7 @@ static uint8_t *utl_vec_hsh_set(uint8_t *val, uint8_t *tab, uint32_t max, uint16
   return elm;
 }
 
-static uint8_t *utl_reash(uint8_t *tab,uint32_t max, uint16_t esz, int (*cmp)(void *, void *))
+static uint8_t *utl_reash(uint8_t *tab,uint32_t max, uint16_t esz, int (*cmp)(void *, void *, void *),void *aux)
 {
   uint8_t *new_tab;
   uint32_t new_max;
@@ -318,7 +496,7 @@ static uint8_t *utl_reash(uint8_t *tab,uint32_t max, uint16_t esz, int (*cmp)(vo
     memset(new_tab,0xFF,new_max*esz);
     for (k=0; k<max;k++) {
       //logtrace("reash %d",k);
-      utl_vec_hsh_set(tab, new_tab, new_max,esz,cmp);
+      utl_vec_hsh_set(tab, new_tab, new_max,esz,cmp,aux);
       tab += esz;
     }
   }
@@ -334,17 +512,17 @@ static void *utl_vec_add_hashed(vec_t v)
   
   if (((v->cnt * 100) / 80) >= v->max) {  // Load factor max: 80%
     //logtrace("Reash at %d",v->cnt);
-    tab = utl_reash(v->vec,v->max,v->esz,v->cmp);
+    tab = utl_reash(v->vec,v->max,v->esz,v->cmp,v);
     if (tab == NULL) return NULL;
     free(v->vec);
     v->vec = tab;
     v->max *= 2;
   }
   
-  h = v->hsh(v->elm) & 0x7FFFFFFF;
+  h = v->hsh(v->elm,v) & 0x7FFFFFFF;
   elm = v->elm;
   utl_h(elm, v->esz) = h;
-  elm = utl_vec_hsh_set(elm,v->vec,v->max,v->esz,v->cmp);
+  elm = utl_vec_hsh_set(elm,v->vec,v->max,v->esz,v->cmp,v);
   
   if (elm) v->cnt += 1;
  
@@ -359,7 +537,6 @@ void *utl_vec_add(vec_t v, uint32_t i) {
   }
   return utl_vec_set(v,v->cnt);
 }
-
 
 size_t utl_vec_read(vec_t v,uint32_t i, size_t n,FILE *f)
 {
@@ -377,26 +554,6 @@ size_t utl_vec_write(vec_t v, uint32_t i, size_t n, FILE *f)
   return fwrite(v->vec+(i*v->esz),v->esz,n,f);
 }
 
-void utl_vec_sort(vec_t v, int (*cmp)(void *, void *))
-{
-  if (v->hsh) {
-    vecunsorted(v);
-    return;
-  }
-  
-  if (cmp != utl_vec_nullcmp && cmp != v->cmp) {
-    v->cmp = cmp;
-    vecunsorted(v);
-  }
-  if (v->cmp == NULL) {
-    vecunsorted(v);
-  }
-  else if (!vecissorted(v)) {
-    if (v->cnt > 1)
-      qsort(v->vec,v->cnt,v->esz,(int (*)(const void *, const void *))(v->cmp));  
-    vecsorted(v);
-  }
-}
 
 void *utl_vec_search(vec_t v, int x)
 {

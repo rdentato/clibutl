@@ -29,8 +29,8 @@ typedef struct vec_s {
   uint32_t   cnt;
   uint16_t   esz;  /* each element max size: 64K */
   uint16_t   flg;
-  int      (*cmp)(void *, void *);
-  uint32_t (*hsh)(void *);
+  int      (*cmp)(void *, void *, void *);
+  uint32_t (*hsh)(void *, void *);
   uint8_t   *vec;
   void      *aux;
   void      *elm; // this will always point to eld
@@ -78,6 +78,7 @@ typedef struct vec_s {
 #define vecfree(v)        utl_vec_free(v)
 #define veccount(v)       ((v)->cnt)
 #define vecmax(v)         ((v)->max)
+#define vecaux(v)         ((v)->aux)
 #define vecisempty(v)     ((v)->cnt == 0)
 #define vec(type,v)       ((type *)((v)->vec))
 #define vecclear(v)       ((v)->cnt = 0)
@@ -101,21 +102,22 @@ void *utl_vec_last(vec_t v) ;
 int16_t utl_vec_del(vec_t v,  uint32_t i);
 int16_t utl_vec_delrange(vec_t v, uint32_t i,  uint32_t j);
 
-vec_t utl_vec_new(uint16_t esz, int (*cmp)(void *, void *), uint32_t (*hsh)(void *));
+vec_t utl_vec_new(uint16_t esz, int (*cmp)(void *, void *, void *), uint32_t (*hsh)(void *, void *));
 vec_t utl_vec_free(vec_t v);
 
 size_t utl_vec_read(vec_t v,uint32_t i, size_t n,FILE *f);
 size_t utl_vec_write(vec_t v, uint32_t i, size_t n, FILE *f);
 
-void utl_vec_sort(vec_t v, int (*cmp)(void *, void *));
+void utl_vec_sort(vec_t v, int (*cmp)(void *, void *, void *));
 void *utl_vec_search(vec_t v,int x);
 int utl_vec_remove(vec_t v, int x);
 
-int utl_vec_nullcmp(void *a, void *b);
+int utl_vec_nullcmp(void *a, void *b, void *aux);
 
 // Character buffer
 #define buf_t                 vec_t
 #define bufnew()              vecnew(char)
+#define buffree(b)            vecfree(b)
 #define bufaddc(b,c)          vecpush(char,b,c)
 #define bufsetc(b,i,c)        vecset(char,b,i,c)
 #define bufinsc(b,i,c)        utl_buf_insc(b,i,c)
@@ -128,8 +130,11 @@ int utl_vec_nullcmp(void *a, void *b);
 #define bufreadln(b,i,f)      utl_buf_readln(b,i,f)
 #define bufreadall(b,i,f)     utl_buf_readall(b,i,f)
 #define bufwrite(b,i,n,f)     vecwrite(b,i,n,f)
-#define buf(b)                vec(char, b)
+#define buf(b)                vec(char, (vec_t)b)
 #define buflen(b)             veccount(b)
+
+#define bufaux(b)             vecaux(b)
+#define bufcur(b)            ((b)->cur)
 
 char utl_buf_get(buf_t b, uint32_t n);
 size_t utl_buf_readall(buf_t b, uint32_t i, FILE *f);
@@ -139,6 +144,9 @@ char *utl_buf_sets(buf_t b, uint32_t i, const char *s);
 char *utl_buf_inss(buf_t b, uint32_t i, const char *s);
 char *utl_buf_insc(buf_t b, uint32_t i, char c);
 int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j);
+
+void utl_dpqsort(void *base, uint32_t nel, uint32_t esz, int (*cmp)(const void *, const void *, const void *), void *aux);
+#define utlqsort(b,n,s,c,x) utl_dpqsort(b,n,s,c,x)
 
 #endif 
 //>>>//
