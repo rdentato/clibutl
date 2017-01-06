@@ -135,6 +135,26 @@ uint32_t utl_hash_int32(void *key)
   return h;
 }
 
-
+/* Quick and dirty PRNG */
+/*
+uint32_t utl_rnd()
+{ // xorshift
+  static uint32_t rnd = 0;
+  while (rnd == 0) rnd = (uint32_t)time(0);
+	rnd ^= rnd << 13;
+	rnd ^= rnd >> 17;
+	rnd ^= rnd << 5;
+	return rnd;
+}
+*/
+/*
+uint32_t utl_rnd()
+{ // Linear Congruetial
+  static uint32_t rnd = 0;
+  if (rnd == 0) rnd = (uint32_t)time(0);
+	rnd = 1664525 * rnd + 1013904223;
+	return rnd;
+}
+*/
 //>>>//
 
