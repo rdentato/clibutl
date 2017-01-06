@@ -27,14 +27,19 @@ typedef struct {
   int   v;
 } mapSI_t;
 
-int intcmp(void *a, void *b)
+int intcmp(void *a, void *b, void *aux)
 {
   return (*((int *)a) - *((int *)b));
 }
 
-uint32_t mapSIhash(void *key)
+uint32_t inthash(void *a, void *aux)
 {
-  return utlhashstring(((mapSI_t *)key)->k);
+  return utlhashint32(a);
+}
+
+uint32_t strhash(void *a, void *aux)
+{
+  return utlhashstring(a);
 }
 
 
@@ -123,7 +128,7 @@ int main(int argc, char *argv[])
   srand(time(0));
   
   v=vecnew(int,intcmp);
-  #define N 10000
+  #define N 1000
   vecset(int,v,N,0);
   vecclear(v);
   logprintf("cnt: %d max: %d",veccount(v),vecmax(v));
@@ -137,6 +142,7 @@ int main(int argc, char *argv[])
   }
   logprintf("Added elements: %d",veccount(v));
   
+#if 1
   pk = vecget(int,v,3);
   if (pk) kk = *pk;
   
@@ -152,7 +158,7 @@ int main(int argc, char *argv[])
   
   
   /* * HASH * */
-  v = vecnew(int32_t,intcmp,utlhashint32);
+  v = vecnew(int32_t,intcmp,inthash);
   logcheck(v)  ;
   logprintf("cnt: %d max: %d esz:%d",veccount(v), vecmax(v), v->esz);
   
@@ -192,7 +198,7 @@ int main(int argc, char *argv[])
   vecfree(v);
   
   
-  v = vecnew(int32_t,intcmp,utl_hash_int32);
+  v = vecnew(int32_t,intcmp,inthash);
   logcheck(v)  ;
   logprintf("cnt: %d max: %d esz:%d",veccount(v), vecmax(v), v->esz);
   logclock {
@@ -204,7 +210,7 @@ int main(int argc, char *argv[])
   logprintf("Added elements: %d",veccount(v));
   vecfree(v);
 
-  
+#endif  
   
   logclose();
 

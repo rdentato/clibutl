@@ -21,12 +21,12 @@ typedef struct point_s {
 } point_t;
 
 
-int intcmp(void *a, void *b)
+int intcmp(void *a, void *b, void *aux)
 {
   return (*((int *)a) - *((int *)b));
 }
 
-int pntcmp(void *a, void *b)
+int pntcmp(void *a, void *b, void *aux)
 {
   float delta;
   point_t *a_pnt = a, *b_pnt = b;
@@ -37,6 +37,16 @@ int pntcmp(void *a, void *b)
   if (delta < 0.0) return -1;
   if (delta > 0.0) return 1;
   return 0;
+}
+void logtable(vec_t v)
+{
+  int *pk;
+  int k =0;
+  pk = vecfirst(v);
+  while (pk) {
+    logprintf("V[%d] -> %d",k++,*pk);
+    pk = vecnext(v);
+  }
 }
 
 int main(int argc, char *argv[])
@@ -197,7 +207,10 @@ int main(int argc, char *argv[])
   vecset(int,v,2,5);
   vecset(int,v,3,2);
   
+  logtable(v);
   vecsort(v,intcmp);
+  logtrace("VEC: After sort");
+  logtable(v);
   
   logcheck((pk=vecget(int,v,0)) && *pk == 2);
   logcheck((pk=vecget(int,v,1)) && *pk == 3);
