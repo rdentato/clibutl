@@ -45,20 +45,21 @@ goto theend
 
 :clean
 
-del /Q /F src\*.obj  2> nul
-del /Q /F src\*.exe  2> nul
-del /Q /F src\utl.c  2> nul
-del /Q /F src\utl.h  2> nul
-del /Q /F src\utl_unc 2> nul
-del /Q /F src\*.a    2> nul
-del /Q /F src\*.o    2> nul
-del /Q /F src\*.log  2> nul
-del /Q /F test\*.obj 2> nul
-del /Q /F test\*.o   2> nul
-del /Q /F test\t_* 2> nul
-del /Q /F test\*.log 2> nul
-del /Q /F test\*.tmp 2> nul
-del /Q /F build.log  2> nul
+del /Q /F src\*.obj    2> nul
+del /Q /F src\*.exe    2> nul
+del /Q /F src\utl.c    2> nul
+del /Q /F src\utl.h    2> nul
+del /Q /F src\utl_unc  2> nul
+del /Q /F src\*.a      2> nul
+del /Q /F src\*.o      2> nul
+del /Q /F src\*.log    2> nul
+del /Q /F test\*.obj   2> nul
+del /Q /F test\*.o     2> nul
+del /Q /F test\t_*     2> nul
+del /Q /F test\*.log   2> nul
+del /Q /F test\*.tmp   2> nul
+del /Q /F build.log    2> nul
+del /Q /F test\x_chk.x 2> nul
 goto theend
 
 :MSC
@@ -94,7 +95,7 @@ cd src
 
 %BUILD_1% utl_unc.c %BUILD_2% %BUILD_O%utl_unc.exe >> ..\build.log
 
-utl_unc utl_hdr.h utl_log.h utl_mem.h utl_vec.h utl_pmx.h utl_fsm.h utl_end.h > utl.h 
+utl_unc utl_hdr.h utl_log.h utl_mem.h utl_vec.h utl_pmx.h utl_fsm.h utl_try.h utl_end.h > utl.h 
 utl_unc utl_hdr.c utl_log.c utl_mem.c utl_vec.c utl_pmx.c > utl.c 
 copy utl.c ..\dist >>..\build.log
 copy utl.h ..\dist >>..\build.log
@@ -115,7 +116,14 @@ cd ..\test
 %BUILD_1% ut_utf.c  %BUILD_2% utl.obj %BUILD_O%t_utf.exe   >> ../build.log      
 %BUILD_1% ut_vec.c  %BUILD_2% utl.obj %BUILD_O%t_vec.exe   >> ../build.log
 %BUILD_1% ut_trc.c  %BUILD_2% utl.obj %BUILD_O%t_trc.exe   >> ../build.log
+%BUILD_1% ut_dpq.c  %BUILD_2% utl.obj %BUILD_O%t_dpq.exe   >> ../build.log
+%BUILD_1% ut_pmx5.c %BUILD_2% utl.obj %BUILD_O%t_pmx5.exe  >> ../build.log
+%BUILD_1% ut_trc.c  %BUILD_2% utl.obj %BUILD_O%t_trc.exe   >> ../build.log
+%BUILD_1% ut_try.c  %BUILD_2% utl.obj %BUILD_O%t_try.exe   >> ../build.log
+%BUILD_1% ut_utf.c  %BUILD_2% utl.obj %BUILD_O%t_utf.exe   >> ../build.log
+%BUILD_1% ut_vec2.c %BUILD_2% utl.obj %BUILD_O%t_vec2.exe  >> ../build.log
 %BUILD_1% ut_logassert.c  %BUILD_2% utl.obj %BUILD_O%t_logassert.exe   >> ../build.log
+
 del utl.h
 cd ..
 
@@ -124,7 +132,7 @@ cd test
 echo Start tests
 for %%f in (t_???.exe) do %%f
 for %%f in (t_????.exe) do %%f
-echo ut_logassert.exe is expected to abort and return an error
+echo t_logassert.exe is expected to abort and return an error
 t_logassert
 find "#KO:" l_*.log
 
