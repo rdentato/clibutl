@@ -9,8 +9,8 @@ The functions are related to:
  - [*Finite State Machines*](https://github.com/rdentato/clibutl/blob/master/doc/fsm.md)
  - *Memory check*
  - *Containers*
- - *Pattern matching* over string
- - *Try/Catch* exceptions
+ - [*Pattern matching*](https://github.com/rdentato/clibutl/blob/master/doc/pmx.md) over string
+ - [*Try/Catch* exceptions](https://github.com/rdentato/clibutl/blob/master/doc/try.md)
 
 They provide simple and reasonably easy to use solutions to recurring
 problems.
@@ -58,7 +58,7 @@ I've tested it with gcc, clang, g++, Pelles C and Microsoft C/C++
       - `MSC`     : Compile and run tests (Microsoft C/C++)
       - `PCC`     : Compile and run tests (Pelles C 32bit)
       - `PCC64`   : Compile and run tests (Pelles C 64bit)
-  
+
   The "official" development environment for `clibutl` is bash and
 the GNU tool chain (gcc, make, ...). Tested with `gcc` and `clang`.
 
@@ -67,15 +67,17 @@ the GNU tool chain (gcc, make, ...). Tested with `gcc` and `clang`.
    
   You may want to entirely exclude a portion of the library because
 it is of no interest for your project. To do so you may define
-one or more of the following symbols:
+one or more of the following symbols before including `utl.h`:
 
  - `UTL_NOLOG` will make the logging functions `logxxx` unavailble.
+ 
+ - `UTL_NOTRY` will make the try/catch exceptions unavailble.
  
  - `UTL_NOFSM` will make the finite state machines `fsmxxx` constructors unavailble.
  
  - `UTL_NOPMX` will make the pattern matching functions `pmxyyy` unavailble.
  
- - `UTL_NOVEC` will make the containers functions (`vecxxx`, `stkxxx`, `bufxxx`, ...) unavailble.
+ - `UTL_NOVEC` will make the containers functions (`vecxxx`, `bufxxx`, ...) unavailble.
 
 ## Documentation
   The `doc` directory contains the full documentation of the library functions 
