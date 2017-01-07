@@ -64,6 +64,10 @@ uint32_t utl_hash_int32(void *key);
 
 extern const char *utl_emptystring;
 
+// utl_expand is here just to please Microsoft C whose preprocessor
+// behaves differently from the other (up to VS2015, at least)
+#define utl_expand(x) x
+
 #define utl_arg0(x1,...)        x1
 #define utl_arg1(x1,x2,...)     x2
 #define utl_arg2(x1,x2,x3,...)  x3
@@ -230,7 +234,7 @@ typedef struct vec_s {
 #define vecsearch(type,v,e)  (*((type *)(v->elm)) = (e), (type *)utl_vec_search(v, 0))
 #define vecremove(type,v,e)  utl_vec_remove(v, (*((type *)(v->elm)) = (e), 0))  
 
-#define vecsort(...)  utl_vec_sort(utl_arg0(__VA_ARGS__,NULL), utl_arg1(__VA_ARGS__,utl_vec_nullcmp,NULL))
+#define vecsort(...)  utl_vec_sort utl_expand((utl_arg0(__VA_ARGS__,NULL), utl_arg1(__VA_ARGS__,utl_vec_nullcmp,NULL)))
 
 #define vecSORTED 0x0001
 #define vecHASHED 0x0020
@@ -253,7 +257,10 @@ typedef struct vec_s {
 #define vecwrite(v,i,n,f) utl_vec_write(v,i,n,f)
 
 // Info
-#define vecnew(...)       utl_vec_new(sizeof(utl_arg0(__VA_ARGS__,int)),utl_arg1(__VA_ARGS__,NULL,NULL),utl_arg2(__VA_ARGS__,NULL,NULL,NULL))
+
+#define vecnew(...)       utl_vec_new utl_expand((sizeof(utl_arg0(__VA_ARGS__,int)),\
+                                      utl_arg1(__VA_ARGS__,NULL,NULL), \
+                                      utl_arg2(__VA_ARGS__,NULL,NULL,NULL)))
 #define vecfree(v)        utl_vec_free(v)
 #define veccount(v)       ((v)->cnt)
 #define vecmax(v)         ((v)->max)
