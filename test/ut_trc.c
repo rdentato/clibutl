@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
     chk = utl_log_check_fail;
     logtrace("pluto");
     logprintf("The check above is supposed to FAIL! (and will not be counted)");
-    if (chk < utl_log_check_fail) utl_log_check_fail--;
+    if ((unsigned int)chk < utl_log_check_fail) utl_log_check_fail--;
     else utl_log_check_fail++;
     logtrace("pippo");
   }
