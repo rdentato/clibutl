@@ -30,6 +30,8 @@ extern "C" {
 #include <time.h>
 #include <ctype.h>
 #include <assert.h>
+#include <setjmp.h>
+
 
 #ifdef NDEBUG
 
@@ -68,6 +70,28 @@ extern const char *utl_emptystring;
 
 //uint32_t utl_rnd();
 
+
+/* Try/Catch */
+
+typedef struct utl_jmp_buf_s {
+  jmp_buf jmp;
+  int     err;
+  struct utl_jmp_buf_s *prev;
+} utl_jmp_buf;
+
+extern utl_jmp_buf *utl_jmp_list;
+
+//, utl_jmp.err = 0, utl_jmp.prev = utl_jmp_list, utl_jmp_list = utl_jmp
+
+#define try  for (utl_jmp_buf utl_jmp = {{0}},k=0; \
+                  utl_jmp.err == 0;  utl_jmp_list = utl_jmp.prev )\
+              if ((utl_jmp.err = setjmp(utl_jmp.jmp))== 0)
+                 
+#define catch(x)  else if (utl_jmp.err == (x)) 
+  
+#define catchall else
+                 
+#define throw(x) do {int x_ = (x); if (x_ && utl_jmp_list) longjmp(utl_jmp_list->jmp,x_); } while (0)
 #line 28 "src/utl_log.h"
 #ifndef UTL_NOLOG
 

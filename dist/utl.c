@@ -22,6 +22,8 @@ const char *utl_emptystring = "";
 int   utl_ret(int x)      {return x;}
 void *utl_retptr(void *x) {return x;}
 
+utl_jmp_buf *utl_jmp_list = NULL;
+
 /* * Collection of hash functions * */
 
 /* Bob Jenkins' "one_at_a_time" hash function
@@ -81,6 +83,9 @@ uint32_t utl_rnd()
 	return rnd;
 }
 */
+
+
+
 #line 286 "src/utl_log.c"
 #ifndef UTL_NOLOG
 #ifdef UTL_MAIN
@@ -613,6 +618,7 @@ void utl_dpqsort(void *base, uint32_t nel, uint32_t esz, int (*cmp)(const void *
     utl_dpqpop(left, right);
     if (left < right) {
       if ((right - left) <= 16) {  // Use insertion sort
+        //logtrace("DPQ: Insertion sort [%d - %d]",left,right);
         for (int32_t i = left+1; i<=right; i++) {
           rightptr = utl_dpqptr(i);
           leftptr = rightptr - esz;
@@ -632,17 +638,21 @@ void utl_dpqsort(void *base, uint32_t nel, uint32_t esz, int (*cmp)(const void *
         G = left + (utl_dpqrand() % (right-left));
         utl_dpqswap(utl_dpqptr(L),leftptr, esz);
         utl_dpqswap(utl_dpqptr(G),rightptr, esz);
-        
+        //logtrace("DPQ: Randomized left:%d right:%d ",L,G);
         if (cmp(leftptr, rightptr, aux) > 0) {
           utl_dpqswap(leftptr, rightptr, esz);
         }
         L=left+1; K=L; G=right-1;
+        //logtrace("DPQ: [%d - %d] L:%d K:%d G:%d [START]",left,right,L,K,G);
         while (K <= G) {
+          //logtrace("DPQ: [%d - %d] L:%d K:%d G:%d",left,right,L,K,G);
           if (cmp(utl_dpqptr(K), leftptr, aux) < 0) {
+            //logtrace("DPQ: [K] < [left]");
             utl_dpqswap(utl_dpqptr(K), utl_dpqptr(L), esz);
             L++;
           }
           else if (cmp(utl_dpqptr(K), rightptr, aux) > 0) {
+            //logtrace("DPQ: [K] >= [right]");
             while ((cmp(utl_dpqptr(G), rightptr, aux) > 0) && (K<G)) 
               G--;
 

@@ -10,6 +10,7 @@ The functions are related to:
  - *Memory check*
  - *Containers*
  - *Pattern matching* over string
+ - *Try/Catch* exceptions
 
 They provide simple and reasonably easy to use solutions to recurring
 problems.

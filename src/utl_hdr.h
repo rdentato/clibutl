@@ -30,6 +30,8 @@ extern "C" {
 #include <time.h>
 #include <ctype.h>
 #include <assert.h>
+#include <setjmp.h>
+
 
 #ifdef NDEBUG
 
@@ -67,5 +69,5 @@ extern const char *utl_emptystring;
 #define utl_arg2(x1,x2,x3,...)  x3
 
 //uint32_t utl_rnd();
-
+  
 //>>>//
