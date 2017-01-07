@@ -238,7 +238,7 @@ static inline int utl_dpqordrange(int32_t a, int32_t b, int32_t c)
 }
 
 static uint32_t utl_rnd_status = 0;
-static inline uint32_t utl_dpqrand() 
+static inline uint32_t utl_dpqrand(void) 
 { // xorshift
   if (utl_rnd_status == 0) utl_rnd_status = (uint32_t)time(0);
 	//utl_rnd_status = 1664525 * utl_rnd_status + 1013904223; // LCRNG 
@@ -432,7 +432,7 @@ static void *utl_search_hashed(vec_t v)
   uint32_t val_h;
   uint32_t elm_h;
   uint32_t max = v->max;
-  int32_t delta;
+  uint32_t delta;
   
   val_h = v->hsh(v->elm,v) & 0x7FFFFFFF;
   pos = val_h;
@@ -446,8 +446,6 @@ static void *utl_search_hashed(vec_t v)
     if ((elm_h - (utl_h(elm,v->esz) & (max-1))) < delta) return NULL;
     pos++; delta++;
   }
-  v->cnt--;
-  return elm; 
 }
 
 static uint8_t *utl_vec_hsh_set(uint8_t *val, uint8_t *tab, uint32_t max, uint16_t esz,  int (*cmp)(void *, void *,void *), void *aux)
@@ -455,7 +453,7 @@ static uint8_t *utl_vec_hsh_set(uint8_t *val, uint8_t *tab, uint32_t max, uint16
   uint32_t pos;
   uint32_t prv;
   uint8_t *elm = NULL;
-  int32_t delta;
+  uint32_t delta;
   uint32_t val_h;
   uint32_t elm_h;
   
