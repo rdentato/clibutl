@@ -61,40 +61,39 @@ int main(int argc, char *argv[])
   vecset(int,v,1,5);
   vecset(int,v,2,79);
 
-  logtable(v);
+  //logtable(v);
   
   vecsort(v,intcmp);
   logcheck(vecsorted(v));
   
-  logtable(v);
+  //logtable(v);
   
   vecset(int,v,0,3);
   vecset(int,v,1,57);
   vecset(int,v,2,79);
 
-  logtable(v);
+  //logtable(v);
   
   vecsort(v,intcmp);
   logcheck(vecsorted(v));
   
-  logtable(v);
+  //logtable(v);
   logtrace("random vector (small)");
   srand(time(0));
   for (k=0;k<=18;k++) {
     vecset(int,v,k,((rand() & 0xF) <<2)+k);
   }
   
+  logtable(v);
   logclock {
     vecsort(v);
   }
+  logcheck(vecsorted(v));
   logtable(v);
   
-  
-  
-#if 1
   logtrace("random vector (large)");
   
-  #define N 100000
+  #define N 1000
   for (k=0;k<=N;k++) {
     vecset(int,v,k,((rand() & 0xF) <<24)+k);
   }
@@ -119,7 +118,7 @@ int main(int argc, char *argv[])
     vecsort(v);
   }
   //logtable(v);
-#endif  
+
   vecfree(v);
   logclose();
   exit(0);
