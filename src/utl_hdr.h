@@ -64,6 +64,10 @@ uint32_t utl_hash_int32(void *key);
 
 extern const char *utl_emptystring;
 
+// utl_expand is here just to please Microsoft C whose preprocessor
+// behaves differently from the other (up to VS2015, at least)
+#define utl_expand(x) x
+
 #define utl_arg0(x1,...)        x1
 #define utl_arg1(x1,x2,...)     x2
 #define utl_arg2(x1,x2,x3,...)  x3
