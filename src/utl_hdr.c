@@ -98,7 +98,7 @@ int   utl_ret(int x)      {return x;}
 void *utl_retptr(void *x) {return x;}
 
 #ifndef UTL_NOTRY
-utl_jmp_buf *utl_jmp_list = NULL; // For try/catch
+utl_jb_t *utl_jmp_list = NULL; // For try/catch
 #endif
 
 /* * Collection of hash functions * */
