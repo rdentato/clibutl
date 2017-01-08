@@ -64,7 +64,7 @@ uint32_t utl_hash_int32(void *key);
 
 extern const char *utl_emptystring;
 
-// utl_expand is here just to please Microsoft C whose preprocessor
+// utl_expand() is just to please Microsoft C whose preprocessor
 // behaves differently from the other (up to VS2015, at least)
 #define utl_expand(x) x
 
@@ -248,7 +248,7 @@ typedef struct vec_s {
 #define vecdrop(v)           do {vec_t v_=v; if (v_->cnt) v_->cnt--;} while (0)
 #define vectop(type,v)       vecget(type,v,vec_MAX_CNT)    
 
-// Queue
+// Queue (TODO:)
 #define vecenq(type,v,e)
 #define vecdeq(v)
 
@@ -374,24 +374,29 @@ void   utl_pmx_extend(int(*ext)(const char *, const char *,int, int32_t));
 
 #ifndef UTL_NOTRY
 
-typedef struct utl_jmp_buf_s {
-  jmp_buf jmp;
-  int     err;
-  struct utl_jmp_buf_s *prev;
-} utl_jmp_buf;
+typedef struct utl_jb_s {
+  jmp_buf           jmp;
+  struct utl_jb_s  *prv;
+  int               err;
+  int32_t           flg;
+} utl_jb_t;
 
-extern utl_jmp_buf *utl_jmp_list; // Defined in utl_hdr.c
+extern utl_jb_t *utl_jmp_list; // Defined in utl_hdr.c
 
-#define try  for (utl_jmp_buf utl_jmp = {.err=0, .prev = utl_jmp_list}; \
-                  (utl_jmp_list = &utl_jmp) && utl_jmp.err >= 0; \
-                  utl_jmp_list = utl_jmp.prev, utl_jmp.err = -1) \
-              if ((utl_jmp.err = setjmp(utl_jmp.jmp))== 0)
+#define try  for ( utl_jb_t utl_jb = {.flg=0, .err=0, .prv=utl_jmp_list}; \
+                   !utl_jb.flg && (utl_jb.flg=1) && (utl_jmp_list=&utl_jb); \
+                   utl_jb.flg = utl_jb.flg == 1? (utl_jmp_list = utl_jb.prv, 1):1) \
+              if ((utl_jb.err = setjmp(utl_jb.jmp))== 0)
                  
-#define catch(x) else if (utl_jmp.err == (x)) 
+#define catch(x) else if ((utl_jb.err == (x)) && (utl_jmp_list = utl_jb.prv, utl_jb.flg = 2)) 
   
-#define catchall else
+#define catchall else if ((utl_jb.err > 0) && (utl_jmp_list = utl_jb.prv, utl_jb.flg = 2)) 
                  
-#define throw(x) do {int x_ = (x); if (x_ && utl_jmp_list) longjmp(utl_jmp_list->jmp,x_); } while (0)
+#define throw(x)  do {int ex_ = x; if (ex_ > 0 && utl_jmp_list) longjmp(utl_jmp_list->jmp,ex_); } while (0)
+
+#define thrown()  utl_jb.err
+  
+#define rethrow() throw(thrown())
 
 #endif
 #line 17 "src/utl_end.h"
