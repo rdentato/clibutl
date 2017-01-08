@@ -22,7 +22,16 @@
        ... code ...
     }
 
-# Examples
+## Description
+
+    - `try { ...}`     Execute the code blocks
+    - `throw(e)`       Throw an exception within a try blocks (`e` must be an `int` > 0)
+    - `catch(e) {...}` Handle the exception that has been thrown
+    - `catchall {...}` Handle any exception that has not been handled already
+    - `rethrow()`      Throw the same exception in the parent try/catch block (if any)
+    - `thrown()`       The exception that has been thrown
+    
+## Examples
 
   The usage is simple and it's explained in the  
 [test program](https://github.com/rdentato/clibutl/blob/master/test/ut_try.c)
