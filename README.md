@@ -38,7 +38,8 @@ I've tested it with gcc, clang, g++, Pelles C and Microsoft C/C++
  - Include the `utl.h` header in your source files.
  - Compile and link `utl.c` with the other files.
 
- The documentation is in the `doc` directory.
+ The documentation is in the `doc` directory and I've also opened a [blog](https://clibutl.blogspot.it/)
+where I'll post about c-libutl from time to time.
  
 ## Hot to re-build `clibutl`
 
