@@ -19,6 +19,7 @@
 
 #ifdef __cplusplus
 extern "C" {
+#define UTL_NOTRY
 #endif
 
 #include <stdio.h>
@@ -64,7 +65,7 @@ uint32_t utl_hash_int32(void *key);
 
 extern const char *utl_emptystring;
 
-// utl_expand is here just to please Microsoft C whose preprocessor
+// utl_expand() is just to please Microsoft C whose preprocessor
 // behaves differently from the other (up to VS2015, at least)
 #define utl_expand(x) x
 
