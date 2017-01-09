@@ -97,8 +97,8 @@ function that works as the `logprintf()` function but will produce lines like:
 messages. This can be useful to filter a log file (for example with `grep` or 
 `sed`) in search of speficic messages.
   
-  If `NDEBUG` is defined while compiling, tracing and debugging will be disabled.
-  if `UTLNOTRACE` is defined, only tracing messages are disabled.
+  If `UTL_NDEBUG` is defined while compiling, tracing and debugging will be disabled.
+  if `UTL_NOTRACE` is defined, only tracing messages are disabled.
 
 	
 ## Unit Testing
@@ -289,6 +289,7 @@ any other identifier, so I'm not feeling particularly pressed on changing it.
 FILE *utl_log_file = NULL;
 uint32_t utl_log_check_num   = 0;
 uint32_t utl_log_check_fail  = 0;
+int utl_log_level = 0;
 
 char *utl_log_watch[1] = {""};
 
@@ -341,6 +342,9 @@ int utl_log_time(void)
 int utl_log_check(int res, const char *test, const char *file, int32_t line)
 {
   int ret = 0;
+  
+  if (utl_log_level > UTL_LOG_D) return 1;
+  
   ret = utl_log_time();
   
   if (ret >= 0) ret = fprintf(utl_log_file,"CHK %s (%s)?\x09:%s:%d\x09\n", (res?"PASS":"FAIL"), test, file, line);
@@ -353,7 +357,7 @@ int utl_log_check(int res, const char *test, const char *file, int32_t line)
 void utl_log_assert(int res, const char *test, const char *file, int32_t line)
 {
   if (!utl_log_check(res,test,file,line)) {
-    logprintf("CHK EXITING ON FAIL");
+    logprintf("CHK ASSERTION FAILED");
     logclose();
     abort();
   }
@@ -395,6 +399,21 @@ void utl_log_trc_check_last(char *watch[], const char *file, int32_t line)
       expected = !((p[0] == '<') && (p[1] == 'n') && (p[2] == 'o') && (p[3] == 't') && (p[4] == '>'));
       utl_log_check(!expected,watch[k],file,line);
     }
+  }
+}
+
+void utl_log_setlevel(const char *lvl) {
+  utl_log_level = 0;
+  if (lvl) {
+    switch (toupper(*lvl)) {
+      case 'N' : utl_log_level++; 
+      case 'E' : utl_log_level++; 
+      case 'W' : utl_log_level++; 
+      case 'I' : utl_log_level++; 
+      case 'D' : utl_log_level++; 
+      case 'T' : break;
+    }
+    logprintf("XYX %d %c", utl_log_level, *lvl);
   }
 }
 
