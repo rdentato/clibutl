@@ -31,6 +31,8 @@
     - `rethrow()`      Throw the same exception in the parent try/catch block (if any)
     - `thrown()`       The exception that has been thrown
     
+  Note that `rethrow()` and `thrown()` can be used only within a `catch` block.
+    
 ## Examples
 
   The usage is simple and it's explained in the  
