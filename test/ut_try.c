@@ -107,6 +107,7 @@ int main(int argc, char *argv[])
   // At this point k is undefined!! 
   //(with GCC would be 0, with MSVC would be 7)
   logprintf("    undefined k: %d",k);
+  
 #endif
  
   k = 652;
