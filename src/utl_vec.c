@@ -171,38 +171,7 @@ void *utl_vec_ins(vec_t v, uint32_t i)
 }
 
 /* * Sorted sets  * */
-
-/*                             
-#define utl_dpqswap(a,b) do { if (a!=b) { \
-                                uint8_t t;\
-                                pa = ((uint8_t *)a); pb = ((uint8_t *)b); \
-                                for (uint32_t k=0; k<esz; k++,pa++,pb++) { \
-                                  t = *pa; *pa = *pb; *pb = t;\
-                                }\
-                              }\
-                           } while (0)
-*/
-/*
-#define utl_dpqswap(a,b) do { if (a!=b) { \
-                                  uint32_t sz = esz;\
-                                  uint8_t  tmp8; \
-                                  uint32_t tmp32; \
-                                  uint8_t *pa = ((uint8_t *)a); \
-                                  uint8_t *pb = ((uint8_t *)b); \
-                                  while (sz >= 4) { \
-                                    tmp32 = *(uint32_t *)pa; \
-                                    *(uint32_t *)pa = *(uint32_t *)pb;\
-                                    *(uint32_t *)pb = tmp32;\
-                                    sz-=4; pa+=4; pb+=4;\
-                                  }\
-                                  switch (sz) {\
-                                    case 3: tmp8=*pa; *pa=*pb; *pb=tmp8; pa--; pb--;\
-                                    case 2: tmp8=*pa; *pa=*pb; *pb=tmp8; pa--; pb--;\
-                                    case 1: tmp8=*pa; *pa=*pb; *pb=tmp8; pa--; pb--;\
-                                  }\
-                                }\
-                           } while (0)
-*/                           
+                          
 static inline void utl_dpqswap(void *a, void *b, uint32_t sz)
 {
   uint8_t  tmp8;
@@ -239,10 +208,10 @@ static inline int utl_dpqordrange(int32_t a, int32_t b, int32_t c)
 
 static uint32_t utl_rnd_status = 0;
 static inline uint32_t utl_dpqrand(void) 
-{ // xorshift
+{ 
   if (utl_rnd_status == 0) utl_rnd_status = (uint32_t)time(0);
-	//utl_rnd_status = 1664525 * utl_rnd_status + 1013904223; // LCRNG 
-  utl_rnd_status ^= utl_rnd_status << 13;
+	//utl_rnd_status = 1664525 * utl_rnd_status + 1013904223; // Linar Congruence
+  utl_rnd_status ^= utl_rnd_status << 13;                   // xorshift
 	utl_rnd_status ^= utl_rnd_status >> 17;
 	utl_rnd_status ^= utl_rnd_status << 5;
 	return utl_rnd_status;

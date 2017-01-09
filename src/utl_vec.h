@@ -65,7 +65,7 @@ typedef struct vec_s {
 #define vecdrop(v)           do {vec_t v_=v; if (v_->cnt) v_->cnt--;} while (0)
 #define vectop(type,v)       vecget(type,v,vec_MAX_CNT)    
 
-// Queue
+// Queue (TODO:)
 #define vecenq(type,v,e)
 #define vecdeq(v)
 
