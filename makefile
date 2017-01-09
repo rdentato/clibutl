@@ -96,7 +96,7 @@ dist: src/utl.h src/utl.c
 TESTS = test/x_chk.x test/t_vec$(_EXE)  test/t_buf$(_EXE)  test/t_mem$(_EXE)  \
         test/t_pmx$(_EXE)  test/t_trc$(_EXE) test/t_vec2$(_EXE) test/t_dpq$(_EXE) \
         test/t_pmx2$(_EXE) test/t_pmx3$(_EXE) test/t_pmx4$(_EXE) test/t_pmx5$(_EXE) \
-        test/t_utf$(_EXE)  test/t_logassert$(_EXE) test/t_try$(_EXE)
+        test/t_utf$(_EXE)  test/t_logassert$(_EXE) test/t_try$(_EXE) test/t_log$(_EXE)
 
 tst:  $(TESTS) 
 
@@ -115,6 +115,9 @@ test/t_dpq$(_EXE): test/x_chk.x src/utl.o  test/ut_dpq.o
 
 test/t_try$(_EXE): test/x_chk.x src/utl.o  test/ut_try.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_try.o src/utl.o
+
+test/t_log$(_EXE): test/x_chk.x src/utl.o  test/ut_log.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_log.o src/utl.o
 
 test/t_buf$(_EXE): test/x_chk.x src/utl.o test/ut_buf.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_buf.o src/utl.o
