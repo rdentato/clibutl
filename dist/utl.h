@@ -88,7 +88,7 @@ extern const char *utl_emptystring;
 #define UTL_LOG_D  1
 #define UTL_LOG_T  0
 
-#define utl_log_trc(l,c,...)  if ((l)>=utl_log_level) { \
+#define utl_log_trc(l,c,...)  if (l) { \
                                 char utl_log_buf[UTL_LOG_BUF_SIZE];\
                                 utl_log_time();\
                                 fputs(c,utl_log_file);\
@@ -107,21 +107,20 @@ extern const char *utl_emptystring;
 #define logprintf(...) (void)utl_log_prt(__VA_ARGS__)
 #define logopen(f,m)    utl_log_open(f,m)
 #define logclose()      utl_log_close("LOG STOP")
-#define loglevel(s)     utl_log_setlevel(s)
-
+#define loglevel(...)   utl_log_setlevel utl_expand((utl_arg0(__VA_ARGS__,NULL), utl_arg1(__VA_ARGS__,NULL,NULL)))
 #define loginfo(...)
 #define logwarning(...)
 #define logerror(...)
 
 #ifndef UTL_LOGLVL_NONE
 #undef  logerror
-#define logerror(...)   utl_log_trc(UTL_LOG_E,"ERR ",__VA_ARGS__)
+#define logerror(...)   utl_log_trc(utl_log_prdlvl <= UTL_LOG_E,"ERR ",__VA_ARGS__)
 #ifndef UTL_LOGLVL_ERR
 #undef  logwarning
-#define logwarning(...) utl_log_trc(UTL_LOG_W,"WRN ",__VA_ARGS__)
+#define logwarning(...) utl_log_trc(utl_log_prdlvl <= UTL_LOG_W,"WRN ",__VA_ARGS__)
 #ifndef UTL_LOGLVL_WRN
 #undef  loginfo
-#define loginfo(...)    utl_log_trc(UTL_LOG_I,"INF ",__VA_ARGS__)
+#define loginfo(...)    utl_log_trc(utl_log_prdlvl <= UTL_LOG_I,"INF ",__VA_ARGS__)
 #endif
 #endif
 #else // ULT_LOGLVL_NONE
@@ -138,10 +137,10 @@ extern const char *utl_emptystring;
 #define logexpect(e,...) (logcheck(e)? 1 :(logprintf(__VA_ARGS__),0))
 #define logclock       for(clock_t utl_log_clk = clock();\
                                utl_log_clk != (clock_t)-1; \
-                                  (utl_log_level <= UTL_LOG_D)?utl_log_prt("CLK %ld/%ld sec.\x09:%s:%d\x09",(clock()-utl_log_clk), (long int)CLOCKS_PER_SEC,__FILE__,__LINE__):1,\
+                                  (utl_log_dbglvl <= UTL_LOG_D)?utl_log_prt("CLK %ld/%ld sec.\x09:%s:%d\x09",(clock()-utl_log_clk), (long int)CLOCKS_PER_SEC,__FILE__,__LINE__):1,\
                                    utl_log_clk = (clock_t)-1 )
 
-#define logdebug(...)    utl_log_trc(UTL_LOG_D,"DBG ",__VA_ARGS__)
+#define logdebug(...)    utl_log_trc(utl_log_dbglvl <= UTL_LOG_D,"DBG ",__VA_ARGS__)
 
 
 #else
@@ -154,9 +153,9 @@ extern const char *utl_emptystring;
 #endif
 
 #ifndef UTL_NOTRACE
-#define logtrace(...)       utl_log_trc(UTL_LOG_T,"TRC ",__VA_ARGS__)
+#define logtrace(...)       utl_log_trc(utl_log_prdlvl <= UTL_LOG_T,"TRC ",__VA_ARGS__)
 #define logtracewatch(...)  for (char *utl_log_watch[UTL_LOG_WATCH_SIZE] = {__VA_ARGS__,""}; \
-                                 (utl_log_level <= UTL_LOG_T) && \
+                                 (utl_log_dbglvl <= UTL_LOG_T) && \
                                  (utl_log_watch[0] != NULL) ? utl_log_prt("TRC WATCH START\x09:%s:%d\x09",__FILE__,__LINE__), 1 : 0; \
                                  utl_log_trc_check_last(utl_log_watch,__FILE__,__LINE__),\
                                  utl_log_prt("TRC WATCH END\x09:%s:%d\x09",__FILE__,__LINE__),utl_log_watch[0] = NULL)
@@ -185,7 +184,8 @@ extern FILE *utl_log_file;
 extern uint32_t utl_log_check_num;
 extern uint32_t utl_log_check_fail;
 extern char *utl_log_watch[];
-extern int utl_log_level;
+extern int16_t utl_log_dbglvl;
+extern int16_t utl_log_prdlvl;
 
 FILE *utl_log_open(const char *fname, const char *mode);
 int   utl_log_close(const char *msg);
@@ -194,7 +194,7 @@ void  utl_log_assert(int res, const char *test, const char *file, int32_t line);
 int   utl_log_time(void);
 void  utl_log_trc_check(char *buf, char *watch[], const char *file, int32_t line);
 void  utl_log_trc_check_last(char *watch[], const char *file, int32_t line);
-void  utl_log_setlevel(const char *lvl);
+void  utl_log_setlevel(const char *prd, const char *dbg);
 
 #endif
 #line 24 "src/utl_mem.h"
