@@ -95,6 +95,7 @@ uint32_t utl_rnd()
 FILE *utl_log_file = NULL;
 uint32_t utl_log_check_num   = 0;
 uint32_t utl_log_check_fail  = 0;
+int utl_log_level = 0;
 
 char *utl_log_watch[1] = {""};
 
@@ -147,6 +148,9 @@ int utl_log_time(void)
 int utl_log_check(int res, const char *test, const char *file, int32_t line)
 {
   int ret = 0;
+  
+  if (utl_log_level > UTL_LOG_D) return 1;
+  
   ret = utl_log_time();
   
   if (ret >= 0) ret = fprintf(utl_log_file,"CHK %s (%s)?\x09:%s:%d\x09\n", (res?"PASS":"FAIL"), test, file, line);
@@ -159,7 +163,7 @@ int utl_log_check(int res, const char *test, const char *file, int32_t line)
 void utl_log_assert(int res, const char *test, const char *file, int32_t line)
 {
   if (!utl_log_check(res,test,file,line)) {
-    logprintf("CHK EXITING ON FAIL");
+    logprintf("CHK ASSERTION FAILED");
     logclose();
     abort();
   }
@@ -201,6 +205,21 @@ void utl_log_trc_check_last(char *watch[], const char *file, int32_t line)
       expected = !((p[0] == '<') && (p[1] == 'n') && (p[2] == 'o') && (p[3] == 't') && (p[4] == '>'));
       utl_log_check(!expected,watch[k],file,line);
     }
+  }
+}
+
+void utl_log_setlevel(const char *lvl) {
+  utl_log_level = 0;
+  if (lvl) {
+    switch (toupper(*lvl)) {
+      case 'N' : utl_log_level++; 
+      case 'E' : utl_log_level++; 
+      case 'W' : utl_log_level++; 
+      case 'I' : utl_log_level++; 
+      case 'D' : utl_log_level++; 
+      case 'T' : break;
+    }
+    logprintf("XYX %d %c", utl_log_level, *lvl);
   }
 }
 
@@ -523,38 +542,7 @@ void *utl_vec_ins(vec_t v, uint32_t i)
 }
 
 /* * Sorted sets  * */
-
-/*                             
-#define utl_dpqswap(a,b) do { if (a!=b) { \
-                                uint8_t t;\
-                                pa = ((uint8_t *)a); pb = ((uint8_t *)b); \
-                                for (uint32_t k=0; k<esz; k++,pa++,pb++) { \
-                                  t = *pa; *pa = *pb; *pb = t;\
-                                }\
-                              }\
-                           } while (0)
-*/
-/*
-#define utl_dpqswap(a,b) do { if (a!=b) { \
-                                  uint32_t sz = esz;\
-                                  uint8_t  tmp8; \
-                                  uint32_t tmp32; \
-                                  uint8_t *pa = ((uint8_t *)a); \
-                                  uint8_t *pb = ((uint8_t *)b); \
-                                  while (sz >= 4) { \
-                                    tmp32 = *(uint32_t *)pa; \
-                                    *(uint32_t *)pa = *(uint32_t *)pb;\
-                                    *(uint32_t *)pb = tmp32;\
-                                    sz-=4; pa+=4; pb+=4;\
-                                  }\
-                                  switch (sz) {\
-                                    case 3: tmp8=*pa; *pa=*pb; *pb=tmp8; pa--; pb--;\
-                                    case 2: tmp8=*pa; *pa=*pb; *pb=tmp8; pa--; pb--;\
-                                    case 1: tmp8=*pa; *pa=*pb; *pb=tmp8; pa--; pb--;\
-                                  }\
-                                }\
-                           } while (0)
-*/                           
+                          
 static inline void utl_dpqswap(void *a, void *b, uint32_t sz)
 {
   uint8_t  tmp8;
@@ -591,10 +579,10 @@ static inline int utl_dpqordrange(int32_t a, int32_t b, int32_t c)
 
 static uint32_t utl_rnd_status = 0;
 static inline uint32_t utl_dpqrand(void) 
-{ // xorshift
+{ 
   if (utl_rnd_status == 0) utl_rnd_status = (uint32_t)time(0);
-	//utl_rnd_status = 1664525 * utl_rnd_status + 1013904223; // LCRNG 
-  utl_rnd_status ^= utl_rnd_status << 13;
+	//utl_rnd_status = 1664525 * utl_rnd_status + 1013904223; // Linar Congruence
+  utl_rnd_status ^= utl_rnd_status << 13;                   // xorshift
 	utl_rnd_status ^= utl_rnd_status >> 17;
 	utl_rnd_status ^= utl_rnd_status << 5;
 	return utl_rnd_status;
