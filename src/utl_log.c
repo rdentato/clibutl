@@ -289,7 +289,8 @@ any other identifier, so I'm not feeling particularly pressed on changing it.
 FILE *utl_log_file = NULL;
 uint32_t utl_log_check_num   = 0;
 uint32_t utl_log_check_fail  = 0;
-int utl_log_level = 0;
+int16_t utl_log_dbglvl = 0;
+int16_t utl_log_prdlvl = 0;
 
 char *utl_log_watch[1] = {""};
 
@@ -343,7 +344,7 @@ int utl_log_check(int res, const char *test, const char *file, int32_t line)
 {
   int ret = 0;
   
-  if (utl_log_level > UTL_LOG_D) return 1;
+  if (utl_log_dbglvl > UTL_LOG_D) return 1;
   
   ret = utl_log_time();
   
@@ -402,18 +403,26 @@ void utl_log_trc_check_last(char *watch[], const char *file, int32_t line)
   }
 }
 
-void utl_log_setlevel(const char *lvl) {
-  utl_log_level = 0;
-  if (lvl) {
-    switch (toupper(*lvl)) {
-      case 'N' : utl_log_level++; 
-      case 'E' : utl_log_level++; 
-      case 'W' : utl_log_level++; 
-      case 'I' : utl_log_level++; 
-      case 'D' : utl_log_level++; 
-      case 'T' : break;
+void utl_log_setlevel(const char *prd, const char *dev) {
+  int l = 0;
+  if (prd) {
+    l = 2;
+    switch (toupper(*prd)) {
+      case 'N' : l++; 
+      case 'E' : l++; 
+      case 'W' : l++; 
+      case 'I' : utl_log_prdlvl = l; 
+                 break;
     }
-    logprintf("XYX %d %c", utl_log_level, *lvl);
+  }
+  if (dev) {
+    l = 0;
+    switch (toupper(*dev)) {
+      case 'N' : l+=4; 
+      case 'D' : l++; 
+      case 'T' : utl_log_dbglvl = l; 
+                 break;
+    }
   }
 }
 
