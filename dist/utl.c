@@ -98,7 +98,7 @@ uint32_t utl_log_check_fail  = 0;
 int16_t utl_log_dbglvl = 0;
 int16_t utl_log_prdlvl = 0;
 
-char *utl_log_watch[1] = {""};
+char *utl_log_watch[1] = {"\1"};
 
 int utl_log_close(const char *msg)
 {
@@ -170,19 +170,21 @@ void utl_log_assert(int res, const char *test, const char *file, int32_t line)
   }
 }
 
-void utl_log_trc_check(char *buf, char *watch[], const char *file, int32_t line)
+void utl_log_watch_check(char *buf, char *watch[], const char *file, int32_t line)
 { 
   int k=0;
   char *p;
-  int expected = 0;
-  int res = 0;
+  int expected = 1;
+  int res = 1;
   _logprintf("XXX %s",buf);
   for (k=0; k<UTL_LOG_WATCH_SIZE; k++) {
-    if (watch[k]) {
-      p = watch[k];
-      if (p[0] == '\0') break;
-      expected = !((p[0] == '<') && (p[1] == 'n') && (p[2] == 'o') && (p[3] == 't') && (p[4] == '>'));
-      if (!expected) p+=5;
+    expected = 1;
+    p = watch[k];
+    if (p) {
+      if (p[0] == '\1' && p[1] == '\0') break;
+      if (p[0] == '!') {p++; expected = (p[0]=='!'); }
+     
+      _logprintf("?? err:%d exp:%d %s %s",utl_log_check_fail,expected,watch[k],p);
     	res = pmxsearch(p,buf) != NULL;
       if (res) {
         utl_log_check(expected,watch[k],file,line);
@@ -192,18 +194,19 @@ void utl_log_trc_check(char *buf, char *watch[], const char *file, int32_t line)
   }
 }
 
-void utl_log_trc_check_last(char *watch[], const char *file, int32_t line)
+void utl_log_watch_last(char *watch[], const char *file, int32_t line)
 { 
-  /* The  only tests in `watch[]` should be the ones with `<not>` at the beginning */
+  /* The  only tests in `watch[]` should be the ones with `!` at the beginning */
   int k;
   int expected = 0;
   char *p;
   
   for (k=0; k<UTL_LOG_WATCH_SIZE;k++) {
-    if (watch[k]) {
-      p = watch[k];
-      if (p[0] == '\0') break;
-      expected = !((p[0] == '<') && (p[1] == 'n') && (p[2] == 'o') && (p[3] == 't') && (p[4] == '>'));
+    p = watch[k];
+    expected = 0;
+    if (p) {
+      if (p[0] == '\1' && p[1] == '\0') break;
+      if (p[0] != '!') expected = 1;
       utl_log_check(!expected,watch[k],file,line);
     }
   }

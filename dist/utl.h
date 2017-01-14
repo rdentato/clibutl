@@ -91,13 +91,15 @@ extern const char *utl_emptystring;
 #define utl_log_trc(l,c,...)  if (l) { \
                                 char utl_log_buf[UTL_LOG_BUF_SIZE];\
                                 utl_log_time();\
-                                fputs(c,utl_log_file);\
-                                snprintf(utl_log_buf,UTL_LOG_BUF_SIZE,__VA_ARGS__);\
+                                memcpy(utl_log_buf,c,4);\
+                                snprintf(utl_log_buf+4,UTL_LOG_BUF_SIZE-4,__VA_ARGS__);\
                                 fputs(utl_log_buf,utl_log_file);\
                                 fprintf(utl_log_file,"\x09:%s:%d\x09\n",__FILE__,__LINE__);\
-                                utl_log_trc_check(utl_log_buf,utl_log_watch,__FILE__,__LINE__);\
+                                utl_log_watch_check(utl_log_buf,utl_log_watch,__FILE__,__LINE__);\
                                 fflush(utl_log_file);\
                               } else (void)0
+                              
+                              
 
 #define utl_log_prt(...) (utl_log_time(), \
                           fprintf(utl_log_file,__VA_ARGS__),\
@@ -142,6 +144,12 @@ extern const char *utl_emptystring;
 
 #define logdebug(...)    utl_log_trc(utl_log_dbglvl <= UTL_LOG_D,"DBG ",__VA_ARGS__)
 
+#define logwatch(...)  for (char *utl_log_watch[UTL_LOG_WATCH_SIZE] = {__VA_ARGS__,"\1"}; \
+                                 (utl_log_dbglvl <= UTL_LOG_D) && \
+                                 (utl_log_watch[0] != NULL) ? utl_log_prt("WCH START\x09:%s:%d\x09",__FILE__,__LINE__), 1 : 0; \
+                                 utl_log_watch_last(utl_log_watch,__FILE__,__LINE__),\
+                                 utl_log_prt("WCH END\x09:%s:%d\x09",__FILE__,__LINE__),utl_log_watch[0] = NULL)
+							 
 
 #else
 #define logcheck(e)    utl_ret(1)
@@ -149,20 +157,14 @@ extern const char *utl_emptystring;
 #define logassert(e)   
 #define logclock
 #define logdebug(...)
+#define logwatch(...)
 #define UTL_NOTRACE
 #endif
 
 #ifndef UTL_NOTRACE
 #define logtrace(...)       utl_log_trc(utl_log_prdlvl <= UTL_LOG_T,"TRC ",__VA_ARGS__)
-#define logtracewatch(...)  for (char *utl_log_watch[UTL_LOG_WATCH_SIZE] = {__VA_ARGS__,""}; \
-                                 (utl_log_dbglvl <= UTL_LOG_T) && \
-                                 (utl_log_watch[0] != NULL) ? utl_log_prt("TRC WATCH START\x09:%s:%d\x09",__FILE__,__LINE__), 1 : 0; \
-                                 utl_log_trc_check_last(utl_log_watch,__FILE__,__LINE__),\
-                                 utl_log_prt("TRC WATCH END\x09:%s:%d\x09",__FILE__,__LINE__),utl_log_watch[0] = NULL)
-							 
 #else
 #define logtrace(...)
-#define logtracewatch(...)
 #endif
 
 #define _logprintf(...)     
@@ -192,8 +194,8 @@ int   utl_log_close(const char *msg);
 int   utl_log_check(int res, const char *test, const char *file, int32_t line);
 void  utl_log_assert(int res, const char *test, const char *file, int32_t line);
 int   utl_log_time(void);
-void  utl_log_trc_check(char *buf, char *watch[], const char *file, int32_t line);
-void  utl_log_trc_check_last(char *watch[], const char *file, int32_t line);
+void  utl_log_watch_check(char *buf, char *watch[], const char *file, int32_t line);
+void  utl_log_watch_last(char *watch[], const char *file, int32_t line);
 void  utl_log_setlevel(const char *prd, const char *dbg);
 
 #endif
