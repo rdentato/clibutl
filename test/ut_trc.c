@@ -23,12 +23,12 @@ int main(int argc, char *argv[])
   
   logopen("l_trc.log","w");
   
-  logtracewatch("pluto") {
+  logwatch("pluto") {
     logtrace("pluto");
   }
 
   chk = utl_log_check_fail;
-  logtracewatch("event<*s>1", "event 2") {
+  logwatch("event<*s>1", "event 2") {
     logtrace("event 1");
     logtrace("event2"); // will fail
     logtrace("event 3");
@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
   if (chk == utl_log_check_fail-1) utl_log_check_fail--;
   else utl_log_check_fail++;
   
-  logtracewatch("pippo", "<not>pluto") {
+  logwatch("pippo", "!pluto") {
     chk = utl_log_check_fail;
     logtrace("pluto");
     logprintf("The check above is supposed to FAIL! (but will not be counted)");

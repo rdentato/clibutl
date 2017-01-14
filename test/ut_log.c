@@ -22,7 +22,13 @@ int main(int argc, char *argv[])
 
   logprintf("This line will always be printed");
   
-  logtracewatch("(info)","(warning)","(error)") {
+  logwatch("%(info%))","%(warning%)","%(error%)") {
+    loginfo("This line is expected to be in the log (info)");
+    logwarning("This line is expected to be in the log (warning)");
+    logerror("This line is expected to be in the log (error)");
+  }
+
+  logwatch("INF ","WRN ","ERR ") {
     loginfo("This line is expected to be in the log (info)");
     logwarning("This line is expected to be in the log (warning)");
     logerror("This line is expected to be in the log (error)");
@@ -31,7 +37,7 @@ int main(int argc, char *argv[])
   loglevel("INFO");
   logexpect(utl_log_prdlvl == UTL_LOG_I,"Log Level: %d",utl_log_prdlvl);
   
-  logtracewatch("(info)","(warning)","(error)") {
+  logwatch("%(info%)","%(warning%)","%(error%)") {
     loginfo("This line is expected to be in the log (info)");
     logwarning("This line is expected to be in the log (warning)");
     logerror("This line is expected to be in the log (error)");
@@ -40,7 +46,7 @@ int main(int argc, char *argv[])
   loglevel("WARNING");
   logexpect(utl_log_prdlvl == UTL_LOG_W,"Log Level: %d",utl_log_prdlvl);
   
-  logtracewatch("<not>(info)","(warning)","(error)") {
+  logwatch("!%(info%)","%(warning%)","%(error%)") {
     loginfo("This line is NOT expected to be in the log (info)");
     logwarning("This line is expected to be in the log (warning)");
     logerror("This line is expected to be in the log (error)");
@@ -49,7 +55,7 @@ int main(int argc, char *argv[])
   loglevel("ERROR");
   logexpect(utl_log_prdlvl == UTL_LOG_E,"Log Level: %d",utl_log_prdlvl);
   
-  logtracewatch("<not>(info)","<not>(warning)","(error)") {
+  logwatch("!%(info%)","!%(warning%)","%(error%)") {
     loginfo("This line is NOT expected to be in the log (info)");
     logwarning("This line is NOT expected to be in the log (warning)");
     logerror("This line is expected to be in the log (error)");
@@ -58,7 +64,7 @@ int main(int argc, char *argv[])
   loglevel("NONE");
   logexpect(utl_log_prdlvl == UTL_LOG_N,"Log Level: %d",utl_log_prdlvl);
   
-  logtracewatch("<not>(info)","<not>(warning)","<not>(error)") {
+  logwatch("!%(info%)","!%(warning%)","!%(error%)") {
     loginfo("This line is NOT expected to be in the log (info)");
     logwarning("This line is NOT expected to be in the log (warning)");
     logerror("This line is NOT expected to be in the log (error)");
