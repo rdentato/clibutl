@@ -83,9 +83,9 @@
 #endif
 
 #ifndef UTL_NDEBUG
-#define logcheck(e)    utl_log_check(!!(e),#e,__FILE__,__LINE__)
-#define logassert(e)   utl_log_assert(!!(e),#e,__FILE__,__LINE__)
-#define logexpect(e,...) (logcheck(e)? 1 :(logprintf(__VA_ARGS__),0))
+#define logcheck(e)       utl_log_check(!!(e),#e,__FILE__,__LINE__)
+#define logassert(e)      utl_log_assert(!!(e),#e,__FILE__,__LINE__)
+#define logexpect(e,...) (utl_log_check(!!(e),#e,__FILE__,__LINE__)? 1 :(logprintf(__VA_ARGS__),0))
 #define logclock       for(clock_t utl_log_clk = clock();\
                                utl_log_clk != (clock_t)-1; \
                                   (utl_log_dbglvl <= UTL_LOG_D)?utl_log_prt("CLK %ld/%ld sec.\x09:%s:%d\x09",(clock()-utl_log_clk), (long int)CLOCKS_PER_SEC,__FILE__,__LINE__):1,\
@@ -118,7 +118,7 @@
 
 #define _logprintf(...)     
 #define _logcheck(...)      utl_ret(1)
-#define _logexepect(...)    utl_ret(1)
+#define _logexpect(...)     utl_ret(1)
 #define _logassert(...)     
 #define _logopen(f,m)       utl_retptr(NULL)
 #define _logclose()         utl_ret(0)
@@ -128,7 +128,7 @@
 #define _logwarning(...)
 #define _logerror(...)
 #define _logtrace(...)  
-#define _logtracewatch(...)
+#define _logwatch(...)
    
 
 extern FILE *utl_log_file;
