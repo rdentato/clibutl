@@ -9,7 +9,7 @@
 **             ___  __(_   ___)  /
 **            /  / /  )/  /  /  /
 **           /  (_/  //  (__/  / 
-**          (____,__/(_____(__/
+**          (____,__/(_____(__/   
 **    https://github.com/rdentato/clibutl
 **
 
@@ -82,7 +82,7 @@ understand why a specific function is not working as expected.
 
   In more complex situations, where more functions work together and one wants to 
 check that their interaction is working fine, using `logtrace()` could be a better 
-option. It works with the `logtracewatch()` function (see next section) to help
+option. It works with the `logwatch()` function (see next section) to help
 checking everything works as expected.
 
   - `void logtrace(char *format, ...);`
@@ -174,7 +174,7 @@ and `logcheck()` will perform no action and always return `1`;
   You can also monitor if a specific tracing messages appears (or not) when
 executing a block of code:
 
-  - `logtracewatch(char *pat1, char *pat2, ...) { ... }`
+  - `logwatch(char *pat1, char *pat2, ...) { ... }`
 
   The patterns are `pmx` expressions.
 
@@ -197,7 +197,7 @@ we have set up the three functions so that they emit different messages. The fir
 test checks that when an existing file is used, everything is ok. The second test
 checks that when the file can't be opened the functions behave properly.
 
-  Using `logcheck` and `logtracewatch` one can define tests that use two very
+  Using `logcheck` and `logwatch` one can define tests that use two very
 different approaches:
 
    - `logcheck` is a way to reason about the expect results of a function.
@@ -207,7 +207,7 @@ different approaches:
 	 become invalid and will need to be rewritten. For example a function that returned
 	 an `unsigned int` may now return a `double`.
   
-   - `logtracewatch` allows to indirectly verify the behaviour of a function without
+   - `logwatch` allows to indirectly verify the behaviour of a function without
      having to know about the inner details. This creates tests that are more resilient
 	 to refactoring but might.
 	 
@@ -263,7 +263,7 @@ For cases like this, the following functions are defined:
    - `void  _logprintf(char *format, ...);`
    - `void  _logdebug(char *format, ...);`
    - `void  _logtrace(char *format, ...);`
-  -  '      _logtracewatch(char *pat1, char *pat2, ...) { ... }`
+  -  `      _logwatch(char *pat1, char *pat2, ...) { ... }`
    - `int   _logcheck(int test);`
    - `void  _logassert(int test);`
    - `FILE *_logopen(char *fname, char *mode);`
