@@ -32,6 +32,7 @@ extern "C" {
 #include <ctype.h>
 #include <assert.h>
 #include <setjmp.h>
+#include <limits.h>
 
 
 #ifdef NDEBUG
@@ -64,14 +65,19 @@ uint32_t utl_hash_int32(void *key);
 #define utlhashint32   utl_hash_int32
 
 extern const char *utl_emptystring;
+#define utlemptystring utl_emptystring;
 
 // utl_expand() is just to please Microsoft C whose preprocessor
-// behaves differently from the other (up to VS2015, at least)
+// behaves differently from the other compilers (up to VS2015, at least)
 #define utl_expand(x) x
 
-#define utl_arg0(x1,...)        x1
-#define utl_arg1(x1,x2,...)     x2
-#define utl_arg2(x1,x2,x3,...)  x3
+#define utl_arg0(x0,...)              x0
+#define utl_arg1(x0,x1,...)           x1
+#define utl_arg2(x0,x1,x2,...)        x2
+#define utl_arg3(x0,x1,x2,x3,...)     x3
+#define utl_arg4(x0,x1,x2,x3,x4,...)  x4
+
+int utl_unpow2(int n);
 
 //uint32_t utl_rnd();
   

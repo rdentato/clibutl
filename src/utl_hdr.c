@@ -160,6 +160,17 @@ uint32_t utl_rnd()
 	return rnd;
 }
 */
+/* returns log2(n) assuming n is 2^m */
+int utl_unpow2(int n)
+{ int r;
+
+  r  =  (n & 0xAAAA) != 0;
+  r |= ((n & 0xCCCC) != 0) << 1;
+  r |= ((n & 0xF0F0) != 0) << 2;
+  r |= ((n & 0xFF00) != 0) << 3;
+  return r;
+}
+
 
 
 
