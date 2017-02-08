@@ -39,15 +39,20 @@ typedef struct vec_s {
 
 #define vecDO(type,v,i,e,x)  do {vec_t v_=v;  *((type *)(v_->elm)) = (e); x(v_,i);} while (0)
 
-// Random access
+// Array
 #define vecset(type,v,i,e)   vecDO(type,v,i,e,utl_vec_set)
 #define vecins(type,v,i,e)   vecDO(type,v,i,e,utl_vec_ins)
-#define vecget(type,v,i)     (type *)utl_vec_get(v,i)
+#define vecget(type,v,i,d)   (*((type *)((v)->elm))=(d),utl_vec_get((v),i),*((type *)((v)->elm)))
+
+#define vecsetptr(v,i,p)     (memset((v)->elm,p,(v)->esz),vecset(v,i))
+#define vecinsptr(v,i,p)     (memset((v)->elm,p,(v)->esz),vecins(v,i))
+#define vecgetptr(v,i)       utl_vec_get(v,i)
+
 #define vecdel(v,i)          utl_vec_del(v,i)
 
 // Set (sorted or unsorted) 
 #define vecadd(type,v,e)     vecDO(type,v,vec_MAX_CNT,e,utl_vec_add)
-//#define vecsearch(type,v,e)  (type *)utl_vec_search(v, (*((type *)(v->elm)) = (e), 0))  
+
 #define vecsearch(type,v,e)  (*((type *)(v->elm)) = (e), (type *)utl_vec_search(v, 0))
 #define vecremove(type,v,e)  utl_vec_remove(v, (*((type *)(v->elm)) = (e), 0))  
 
@@ -60,14 +65,15 @@ typedef struct vec_s {
 #define vecsorted(v)   ((v)->flg |=  vecSORTED)
 #define vecunsorted(v) ((v)->flg &= ~vecSORTED)
 
-// Stack policy
+// Stack
 #define vecpush(type,v,e)    vecins(type,v,vec_MAX_CNT,e)
 #define vecdrop(v)           do {vec_t v_=v; if (v_->cnt) v_->cnt--;} while (0)
-#define vectop(type,v)       vecget(type,v,vec_MAX_CNT)    
+#define vectop(type,v,d)     vecget(type,v,vec_MAX_CNT,d)    
+#define vectopptr(v)         vecgetptr(v,vec_MAX_CNT)    
 
-// Queue (TODO:)
-#define vecenq(type,v,e)
-#define vecdeq(v)
+// Queue
+#define vecenq(type,v,e)     vecDO(type,v,0,e,utl_vec_enq)
+#define vecdeq(v)            utl_vec_deq(v)
 
 // I/O
 #define vecread(v,i,n,f)  utl_vec_read(v,i,n,f)
@@ -78,6 +84,7 @@ typedef struct vec_s {
 #define vecnew(...)       utl_vec_new utl_expand((sizeof(utl_arg0(__VA_ARGS__,int)),\
                                       utl_arg1(__VA_ARGS__,NULL,NULL), \
                                       utl_arg2(__VA_ARGS__,NULL,NULL,NULL)))
+
 #define vecfree(v)        utl_vec_free(v)
 #define veccount(v)       ((v)->cnt)
 #define vecmax(v)         ((v)->max)
@@ -86,10 +93,15 @@ typedef struct vec_s {
 #define vec(type,v)       ((type *)((v)->vec))
 #define vecclear(v)       ((v)->cnt = 0)
 
-#define vecfirst(v)       utl_vec_first(v)
-#define vecnext(v)        utl_vec_next(v)
-#define vecprev(v)        utl_vec_prev(v)
-#define veclast(v)        utl_vec_last(v)
+#define vecfirstptr(v)    utl_vec_first(v)
+#define vecnextptr(v)     utl_vec_next(v)
+#define vecprevptr(v)     utl_vec_prev(v)
+#define veclastptr(v)     utl_vec_last(v)
+
+#define vecfirst(type,v,d)  (utl_vec_first(v)? *((type *)((v)->elm)):d)
+#define vecnext(type,v,d)   (utl_vec_next(v)? *((type *)((v)->elm)):d)
+#define vecprev(type,v,d)   (utl_vec_prev(v)? *((type *)((v)->elm)):d)
+#define veclast(type,v,d)   (utl_vec_last(v)? *((type *)((v)->elm)):d)
 
 // Protypes
 void *utl_vec_set(vec_t v, uint32_t i);
@@ -117,15 +129,19 @@ int utl_vec_remove(vec_t v, int x);
 
 int utl_vec_nullcmp(void *a, void *b, void *aux);
 
+void *utl_vec_enq(vec_t v, uint32_t i);
+void utl_vec_deq(vec_t v);
+
 // Character buffer
 #define buf_t                 vec_t
 #define bufnew()              vecnew(char)
 #define buffree(b)            vecfree(b)
-#define bufaddc(b,c)          vecpush(char,b,c)
+#define bufaddc(b,c)          utl_buf_addc(b,c)
 #define bufsetc(b,i,c)        vecset(char,b,i,c)
 #define bufinsc(b,i,c)        utl_buf_insc(b,i,c)
 #define bufinss(b,i,s)        utl_buf_inss(b,i,s)
 #define bufsets(b,i,s)        utl_buf_sets(b,i,s)
+#define bufadds(b,s)          utl_buf_sets(b,vec_MAX_CNT,s)
 
 #define bufgetc(b,i)          utl_buf_get(b,i)
 #define bufdel(b,i,j)         utl_buf_del(b,i,j)
@@ -138,18 +154,50 @@ int utl_vec_nullcmp(void *a, void *b, void *aux);
 
 #define bufaux(b)             vecaux(b)
 #define bufcur(b)            ((b)->cur)
+#define buffmt(b,i,f,...)     utl_buf_fmt(b,i,f,__VA_ARGS__)
+#define bufsetf(b,f,...)      utl_buf_fmt(b,0,f,__VA_ARGS__)
+#define bufaddf(b,f,...)      utl_buf_fmt(b,vec_MAX_CNT,f,__VA_ARGS__)
 
 char utl_buf_get(buf_t b, uint32_t n);
-size_t utl_buf_readall(buf_t b, uint32_t i, FILE *f);
-size_t utl_buf_read(buf_t b, uint32_t i, uint32_t n, FILE *f) ;
-char *utl_buf_readln(buf_t b, uint32_t i, FILE *f);
-char *utl_buf_sets(buf_t b, uint32_t i, const char *s);
-char *utl_buf_inss(buf_t b, uint32_t i, const char *s);
-char *utl_buf_insc(buf_t b, uint32_t i, char c);
+size_t  utl_buf_readall(buf_t b, uint32_t i, FILE *f);
+size_t  utl_buf_read(buf_t b, uint32_t i, uint32_t n, FILE *f) ;
+char   *utl_buf_readln(buf_t b, uint32_t i, FILE *f);
+char   *utl_buf_sets(buf_t b, uint32_t i, const char *s);
+char   *utl_buf_inss(buf_t b, uint32_t i, const char *s);
+char   *utl_buf_insc(buf_t b, uint32_t i, char c);
+char   *utl_buf_addc(buf_t b, char c);
 int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j);
+int     utl_buf_fmt(buf_t b, uint32_t i, const char *fmt, ...);
 
 void utl_dpqsort(void *base, uint32_t nel, uint32_t esz, int (*cmp)(const void *, const void *, const void *), void *aux);
 #define utlqsort(b,n,s,c,x) utl_dpqsort(b,n,s,c,x)
+
+#define utlqseacrch(b)
+
+#define sym_t vec_t
+
+#define symNULL vec_MAX_CNT
+
+#define symnew()           utl_sym_new()
+#define symfree(t)         utl_sym_free(t)
+#define symadd(t,s)        utl_sym_add(t,s)
+#define symdel(t,i)        utl_sym_del(t,i)
+#define symget(t,i)        utl_sym_get(t,i)
+#define symsearch(t,s)     utl_sym_search(t,s)
+#define symcount(t)        veccount(t)
+#define symsetdata(t,i,n)  utl_sym_setdata(t,i,n)
+#define symgetdata(t,i)    utl_sym_getdata(t,i)
+#define symfirst(t)        vecfirst(int32_t,t,symNULL)
+#define symnext(t)         vecnext(int32_t,t,symNULL)
+
+int16_t  utl_sym_del(sym_t t, const char *sym);
+uint32_t utl_sym_search(sym_t t, const char *sym);
+uint32_t utl_sym_add(sym_t t, const char *sym);
+char    *utl_sym_get(sym_t t,uint32_t id);
+sym_t    utl_sym_free(sym_t t);
+sym_t    utl_sym_new(void);
+int32_t  utl_sym_getdata(sym_t t,uint32_t id);
+int16_t  utl_sym_setdata(sym_t t,uint32_t id, int32_t val);
 
 #endif 
 //>>>//
