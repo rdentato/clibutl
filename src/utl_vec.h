@@ -67,7 +67,15 @@ typedef struct vec_s {
 
 // Stack
 #define vecpush(type,v,e)    vecins(type,v,vec_MAX_CNT,e)
-#define vecdrop(v)           do {vec_t v_=v; if (v_->cnt) v_->cnt--;} while (0)
+#define utl_vec_drop(v,n)    do { \
+                               vec_t v_=v; \
+                               if (v_) { \
+                                 if (v_->cnt > n) v_->cnt -= n; \
+                                 else v_->cnt=0; \
+                               } \
+                             } while (0)
+#define vecdrop(...)         utl_vec_drop(utl_expand(utl_arg0(__VA_ARGS__,NULL)), \
+                                          utl_expand(utl_arg1(__VA_ARGS__,1,1)))
 #define vectop(type,v,d)     vecget(type,v,vec_MAX_CNT,d)    
 #define vectopptr(v)         vecgetptr(v,vec_MAX_CNT)    
 
