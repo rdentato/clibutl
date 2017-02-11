@@ -38,10 +38,10 @@ void logtable(vec_t v)
 {
   int *pk;
   int k =0;
-  pk = vecfirst(v);
+  pk = vecfirstptr(v);
   while (pk) {
     logprintf("V[%d] -> %d",k++,*pk);
-    pk = vecnext(v);
+    pk = vecnextptr(v);
   }
 }
 
