@@ -18,10 +18,10 @@
 #include <math.h>
 
 
-#define OUTOFMEM   1
-#define NOFILE     2
-#define WRONGINPUT 3
-#define PANIC      5
+#define OUTOFMEM   0x0
+#define NOFILE     0x1
+#define WRONGINPUT 0x2
+#define PANIC      0xF
 
 void myfunc(int ex)
 {
@@ -41,17 +41,18 @@ int main(int argc, char *argv[])
     k=1;
   }
   catchall {
-    logprintf("   Catch all");
+    logprintf("   Catch all (caught: %d)",thrown());
     k = 9;    
   }
   logcheck(k==1);
   
   try {
     logprintf("     Exception NOFILE");
-    throw(NOFILE);
+    throw(NOFILE,1);
   }
   catch(NOFILE) {
     k = 20;  logprintf("    NO FILE FOUND");
+    logexpect(thrown() == NOFILE,"exc: %d",thrown());
   }  
   catch(OUTOFMEM) {
     k = 10;  logprintf("    OUT OF MEMORY");
@@ -62,8 +63,34 @@ int main(int argc, char *argv[])
   logcheck(k==20);
  
   try {
+    logprintf("     Exception NOFILE (single catch)");
+    throw(NOFILE,1);
+  }
+  catch(NOFILE,OUTOFMEM) {
+    logexpect(thrown() == NOFILE,"exc: %d",thrown());
+    k = 20;  logprintf("    NO FILE FOUND OR OUT OF MEMORY");
+  }  
+  catchall {
+    k = 30;  logprintf("    DON'T KNOW WHAT'S WRONG!");
+  }
+  logcheck(k==20);
+
+  try {
+    logprintf("     Exception OUTOFMEM (single catch)");
+    throw(OUTOFMEM,1);
+  }
+  catch(NOFILE,OUTOFMEM) {
+    logexpect(thrown() == OUTOFMEM,"exc: %d",thrown());
+   k = 20;  logprintf("    NO FILE FOUND  OR OUT OF MEMORY");
+  }  
+  catchall {
+    k = 30;  logprintf("    DON'T KNOW WHAT'S WRONG!");
+  }
+  logcheck(k==20);
+
+  try {
     logprintf("    Exception NOFILE");
-    throw(OUTOFMEM);
+    throw(OUTOFMEM,1);
   }
   catch(NOFILE) {
     k = 20;  logprintf("    NO FILE FOUND");
@@ -78,7 +105,7 @@ int main(int argc, char *argv[])
  
   try {
     logprintf("    Exception unhandled");
-    throw(PANIC);
+    throw(PANIC,1);
   }
   catch(NOFILE) {
     k = 20;  logprintf("    NO FILE FOUND");
@@ -87,6 +114,7 @@ int main(int argc, char *argv[])
     k = 10;  logprintf("    OUTOFMEM");
   }  
   catchall {
+    logexpect(thrown() == PANIC,"exc: %d",thrown());
     k = 30;  logprintf("    DON'T KNOW WHAT'S WRONG!");
   }
   logcheck(k==30);
@@ -94,8 +122,8 @@ int main(int argc, char *argv[])
   k = 0;
   try {
     logprintf("    Exception unhandled (no catch all)");
-    k=7; // WARNING! Local vars will be reverted to the previous value
-    throw(PANIC);
+    k=7; // WARNING! Local vars might be reverted to the previous value
+    throw(PANIC,0);
     k=9; // Won't be executed
   }
   catch(NOFILE) {
@@ -153,7 +181,7 @@ int main(int argc, char *argv[])
   try {
     logprintf("    Nested try");
     try {
-      throw(OUTOFMEM);
+      throw(OUTOFMEM,100);
     }
     catch(NOFILE) {
       k=2;
@@ -164,12 +192,12 @@ int main(int argc, char *argv[])
     k = 20;  logprintf("    NO FILE FOUND");
   }  
   catch(OUTOFMEM) {
-    k = 10;  logprintf("    OUTOFMEM");
+    k = 10 + thrownid();  logprintf("    OUTOFMEM");
   }  
   catchall {
     k = 30;  logprintf("    DON'T KNOW WHAT'S WRONG!");
   }
-  logcheck(k==10);
+  logcheck(k==110);
   
 
   logclose();
