@@ -109,10 +109,19 @@ int main(int argc, char *argv[])
   
   bufdel(b,5,5);
   logcheck(buflen(b) == 10);
-  if (!logcheck(strcmp(buf(b),"[WXA][CDE]")==0)) {
-    logprintf("   [%s]",buf(b));
-  }
+  logexpect(strcmp(buf(b),"[WXA][CDE]")==0,"   [%s]",buf(b));
   
+  b = buffree(b);
+  logcheck(b==NULL);
+  
+  b = bufnew();
+  bufsetf(b,"%d",32);
+  logexpect(strcmp(buf(b),"32")==0,"   [%s]",buf(b));
+  logexpect(buflen(b) == 2,"len: %d",buflen(b));  
+  bufaddf(b,"%02X",32);
+  logexpect(strcmp(buf(b),"3220")==0,"   [%s]",buf(b));
+  
+  b = buffree(b);
   logclose();
   exit(0);
 }
