@@ -13,8 +13,6 @@ in the header file, while the operation on them are defined in a C source file. 
 implies that those who want to understand how things work, have to jump from a file to
 the other.
 
-  The key concept is the _chunk_
-  
 ## Requirements
 
     - Use MarkDown as typesetting language
@@ -26,7 +24,10 @@ the other.
 
 ## Block types
 
+  The key concept is the _block_
+  
    - `> "filename" [filetype]`   
+   - `= block title`
    - `^ block title`
    - `v block title`
 
@@ -37,36 +38,36 @@ the other.
   
 ## The C file
 
-:(> "lit.c" C
+:(out "lit.c" C
 
    #include "lit.h"
    
    int main(int argc, char *argc[])
    {
-     :( Get command line options    ):
-     :( Parse input files           ):
-     :( Generate output files       ):
-     :( Update index of identifiers ):
+     //: Get command line options   
+     //: Parse input files          
+     //: Generate output files      
+     //: Update index of identifiers
    }
    
 ):
 
 ## The header file 
 
-:(> "lit.h" C
+:(out "lit.h" C
 
     #include "utl.h"
  
-    :( Types      ):
-    :( Defines    ):
-    :( Variables  ):
-    :( Prototypes ):
+    //: Defines
+    //: Types     
+    //: Variables 
+    //: Prototypes
 
 ):
 
 ## The Makefile
 
-:(> makefile mk
+:(out makefile mk
 
 _EXE=.exe
 ifeq "$(COMSPEC)" ""
@@ -80,7 +81,7 @@ lit$(_EXE): lit.o
 
 # Parsing input files
 
-:(v Parse input files
+:(after Parse input files
     char *f;
     for (char *fname = files[0]; fname; fname++) {
       f = fopen(fname,"r");
