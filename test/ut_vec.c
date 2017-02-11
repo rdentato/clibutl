@@ -28,7 +28,7 @@ int intcmp(void *a, void *b, void *aux)
 
 int pntcmp(void *a, void *b, void *aux)
 {
-  float delta;
+  double delta;
   point_t *a_pnt = a, *b_pnt = b;
   delta = a_pnt->x - b_pnt->x;
   if (delta < 0.0) return -1;
@@ -42,16 +42,16 @@ void logtable(vec_t v)
 {
   int *pk;
   int k =0;
-  pk = vecfirst(v);
+  pk = vecfirstptr(v);
   while (pk) {
     logprintf("V[%d] -> %d",k++,*pk);
-    pk = vecnext(v);
+    pk = vecnextptr(v);
   }
 }
 
 int main(int argc, char *argv[])
 {
-  
+  int k;
   vec_t v;
   int *pk;
   uint64_t *pu;
@@ -73,13 +73,19 @@ int main(int argc, char *argv[])
   logcheck(v->cnt == 20);
   logcheck(v->max == 24);
   
-  pk = vecget(int,v,9);
+  k = vecget(int,v,9,-1);
+  logcheck(k==123);
+
+  k = vecget(int,v,999,-1);
+  logcheck(k==-1);
+
+  pk = vecgetptr(v,9);
   logcheck(pk && *pk==123);
   
-  pk = vecget(int,v,19);
+  pk = vecgetptr(v,19);
   logcheck(pk && *pk==124);
   
-  pk = vecget(int,v,190);
+  pk = vecgetptr(v,190);
   logcheck(!pk);
   
   v=vecfree(v);
@@ -100,19 +106,20 @@ int main(int argc, char *argv[])
   vecset(point_t,v,3,p);
   logcheck(v->cnt == 4);
   
-  pq = vecget(point_t,v,3);
+  pq = vecgetptr(v,3);
   logcheck(pq && pq->x == p.x && pq->y == p.y);
 
-  pq = vecget(point_t,v,4);
+  pq = vecgetptr(v,4);
   logcheck(!pq);
   
-  pq = vecget(point_t,v,23);
+  pq = vecgetptr(v,23);
   logcheck(!pq);
 
   vecsort(v,pntcmp);
+  logcheck(vecsorted(v));
   
   pq = vecsearch(point_t,v,p);
-  logcheck(pq);
+  logexpect(pq,"p.x=%f p.y=%f",p.x,p.y);
   
   v = vecfree(v);
   logclose();  
@@ -125,23 +132,23 @@ int main(int argc, char *argv[])
   vecset(uint64_t,v,1,10012);
   vecset(uint64_t,v,2,10013);
   logcheck(veccount(v)==3);
-  pu=vecget(uint64_t,v,2);
+  pu=vecgetptr(v,2);
   logcheck(pu && *pu == 10013);
   
   vecins(uint64_t,v,1,10011);
   logcheck(veccount(v)==4);
-  logcheck((pu = vecget(uint64_t,v,1)) && *pu == 10011);
-  logcheck((pu = vecget(uint64_t,v,2)) && *pu == 10012);
+  logcheck((pu = vecgetptr(v,1)) && *pu == 10011);
+  logcheck((pu = vecgetptr(v,2)) && *pu == 10012);
   
   /* Insert after max! */
   vecins(uint64_t,v,100,11000);
-  logcheck((pu = vecget(uint64_t,v,100)) && *pu == 11000);
+  logcheck((pu = vecgetptr(v,100)) && *pu == 11000);
   logcheck(veccount(v) == 101);
   
   /* delete */
   vecdel(v,2);
-  logcheck((pu = vecget(uint64_t,v,2)) && *pu == 10013);
-  logcheck((pu = vecget(uint64_t,v,99)) && *pu == 11000);
+  logcheck((pu = vecgetptr(v,2)) && *pu == 10013);
+  logcheck((pu = vecgetptr(v,99)) && *pu == 11000);
   logcheck(veccount(v) == 100);
   
   v = vecfree(v);
@@ -167,10 +174,10 @@ int main(int argc, char *argv[])
     if (!logcheck(veccount(v) == 4)) {
       logprintf(" Count: %d",veccount(v));
     }
-    pq = vecget(point_t,v,2);
+    pq = vecgetptr(v,2);
     logcheck(pq && pq->x == p.x && pq->y == p.y);
     
-    pq = vecget(point_t,v,3);
+    pq = vecgetptr(v,3);
     if (!logcheck(pq && pq->x == q.x && pq->y == q.y)) {
       if (pq) logprintf("pq: %p pq->x:%f pq->y:%f",(void *)pq, pq->x, pq->y);
       else logprintf("pq is NULL");
@@ -181,7 +188,6 @@ int main(int argc, char *argv[])
 
 #if 1  
   #define MAXMAX 10000000
-  int k;
   
   v = vecnew(uint64_t);
   logprintf("inserting %d elements", MAXMAX);
@@ -212,16 +218,16 @@ int main(int argc, char *argv[])
   logtrace("VEC: After sort");
   logtable(v);
   
-  logcheck((pk=vecget(int,v,0)) && *pk == 2);
-  logcheck((pk=vecget(int,v,1)) && *pk == 3);
-  logcheck((pk=vecget(int,v,3)) && *pk == 12);
+  logcheck((pk=vecgetptr(v,0)) && *pk == 2);
+  logcheck((pk=vecgetptr(v,1)) && *pk == 3);
+  logcheck((pk=vecgetptr(v,3)) && *pk == 12);
   
   logcheck(vecissorted(v));
   vecset(int,v,2,15);
   logcheck(!vecissorted(v));
 
   vecsort(v,intcmp);
-  logcheck((pk=vecget(int,v,3)) && *pk == 15);
+  logcheck((pk=vecgetptr(v,3)) && *pk == 15);
   
   pk = vecsearch(int,v,3);
   logcheck(pk && *pk == 3 && pk == (vec(int,v)+1));

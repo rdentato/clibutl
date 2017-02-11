@@ -96,32 +96,44 @@ int main(int argc, char *argv[])
   vecadd(int,v,37);
   logcheck(veccount(v) == 1);
   
-  pk=vecget(int,v,0);
+  pk=vecgetptr(v,0);
   logcheck(pk && *pk == 37);
   
   vecadd(int,v,5);
   vecadd(int,v,79);
 
-  pk=vecget(int,v,0);
-  if (!logcheck(pk && *pk == 5)) logprintf("[0]->%d",*pk);
-  pk=vecget(int,v,1);
-  if (!logcheck(pk && *pk == 37)) logprintf("[1]->%d",*pk);
-  pk=vecget(int,v,2);
-  if (!logcheck(pk && *pk == 79)) logprintf("[2]->%d",*pk);
+  pk=vecgetptr(v,0);
+  logexpect(pk && *pk == 5,"[0]->%d",*pk);
+  pk=vecgetptr(v,1);
+  logexpect(pk && *pk == 37,"[1]->%d",*pk);
+  pk=vecgetptr(v,2);
+  logexpect(pk && *pk == 79,"[2]->%d",*pk);
   
   logcheck(veccount(v) ==3);
 
-  pk = vecfirst(v);
+  pk = vecfirstptr(v);
   logcheck(pk && *pk == 5);
   
-  pk = vecnext(v);
+  pk = vecnextptr(v);
   logcheck(pk && *pk == 37);
 
-  pk = vecnext(v);
+  pk = vecnextptr(v);
   logcheck(pk && *pk == 79);
 
-  pk = vecnext(v);
+  pk = vecnextptr(v);
   logcheck(!pk);
+  
+  kk = vecfirst(int,v,-1);
+  logcheck(kk == 5);
+  
+  kk = vecnext(int,v,-1);
+  logcheck(kk == 37);
+
+  kk = vecnext(int,v,-1);
+  logcheck(kk == 79);
+
+  kk = vecnext(int,v,-1);
+  logcheck(kk == -1);
   
   vecfree(v);
   
@@ -143,7 +155,7 @@ int main(int argc, char *argv[])
   logprintf("Added elements: %d",veccount(v));
   
 #if 1
-  pk = vecget(int,v,3);
+  pk = vecgetptr(v,3);
   if (pk) kk = *pk;
   
   logprintf("Searching and removing %d",kk);
@@ -152,7 +164,7 @@ int main(int argc, char *argv[])
   logcheck(veccount(v) == (N-1));
   logprintf("Current elements: %d",veccount(v));
   
-  logcheck(vecsearch(int,v,39) == NULL);
+  logcheck(vecsearch(int,v,-98) == NULL);
   
   vecfree(v);
   
