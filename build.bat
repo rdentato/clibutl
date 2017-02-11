@@ -60,6 +60,7 @@ del /Q /F test\*.log   2> nul
 del /Q /F test\*.tmp   2> nul
 del /Q /F build.log    2> nul
 del /Q /F test\x_chk.x 2> nul
+echo Clean up complete
 goto theend
 
 :MSC
@@ -121,6 +122,7 @@ cd ..\test
 %BUILD_1% ut_trc.c  %BUILD_2% utl.obj %BUILD_O%t_trc.exe   >> ../build.log
 %BUILD_1% ut_try.c  %BUILD_2% utl.obj %BUILD_O%t_try.exe   >> ../build.log
 %BUILD_1% ut_utf.c  %BUILD_2% utl.obj %BUILD_O%t_utf.exe   >> ../build.log
+%BUILD_1% ut_sym.c  %BUILD_2% utl.obj %BUILD_O%t_sym.exe   >> ../build.log
 %BUILD_1% ut_vec2.c %BUILD_2% utl.obj %BUILD_O%t_vec2.exe  >> ../build.log
 %BUILD_1% ut_logassert.c  %BUILD_2% utl.obj %BUILD_O%t_logassert.exe   >> ../build.log
 
