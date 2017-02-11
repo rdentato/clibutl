@@ -46,15 +46,12 @@ all: src dist tst
 #     (__  )/ /   / /__ _    
 #    /____//_/    \___/(_)   
 
-HDRS = src/utl_hdr.h src/utl_log.h src/utl_mem.h src/utl_vec.h \
-       src/utl_pmx.h src/utl_fsm.h src/utl_try.h src/utl_end.h 
+HDRS = src/utl_hdr.h src/utl_log.h src/utl_mem.h src/utl_vec.h src/utl_peg.h \
+       src/utl_pmx.h src/utl_pmx.h src/utl_fsm.h src/utl_try.h src/utl_end.h 
 
 CSRC = src/utl_hdr.c src/utl_log.c src/utl_mem.c src/utl_vec.c \
-       src/utl_pmx.c 
+       src/utl_pmx.c src/utl_peg.c 
 
-SNGL = src/utl_hdr.h src/utl_try.h src/utl_log.h src/utl_mem.c src/utl_mem.h \
-       src/utl_vec.h src/utl_pmx.h src/utl_fsm.h src/utl_hdr.c \
-       src/utl_log.c src/utl_vec.c src/utl_pmx.c src/utl_end.h
 
 src: src/libutl.a
 
@@ -67,9 +64,6 @@ src/utl.c: src/utl.h $(CSRC)
 	src/utl_unc $(CSRC) > src/utl.c
 #	for f in $(CSRC); do echo "#line 1 \"$$f\"" >> src/utl.c; cat $$f >> src/utl.c; done
 
-#src/utl_single.h: src/utl_unc$(_EXE) $(SNGL)
-#	src/utl_unc $(SNGL) > src/utl_single.h
-  
 src/utl_unc$(_EXE): src/utl_unc.o
 	$(CC) $(LNFLAGS) -o $@ src/utl_unc.o
 
@@ -96,7 +90,8 @@ dist: src/utl.h src/utl.c
 TESTS = test/x_chk.x test/t_vec$(_EXE)  test/t_buf$(_EXE)  test/t_mem$(_EXE)  \
         test/t_pmx$(_EXE)  test/t_trc$(_EXE) test/t_vec2$(_EXE) test/t_dpq$(_EXE) \
         test/t_pmx2$(_EXE) test/t_pmx3$(_EXE) test/t_pmx4$(_EXE) test/t_pmx5$(_EXE) \
-        test/t_utf$(_EXE)  test/t_logassert$(_EXE) test/t_try$(_EXE) test/t_log$(_EXE)
+        test/t_utf$(_EXE)  test/t_logassert$(_EXE) test/t_try$(_EXE) test/t_log$(_EXE) \
+        test/t_vec3$(_EXE) test/t_sym$(_EXE) test/t_peg$(_EXE) test/t_peg2$(_EXE)
 
 tst:  $(TESTS) 
 
@@ -104,11 +99,17 @@ test/x_chk.x: src/utl.h
 	$(RM) test/*.o
 	echo > test/x_chk.x
 
+test/t_sym$(_EXE): test/x_chk.x src/utl.o  test/ut_sym.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_sym.o src/utl.o
+
 test/t_vec$(_EXE): test/x_chk.x src/utl.o  test/ut_vec.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_vec.o src/utl.o
 
 test/t_vec2$(_EXE): test/x_chk.x src/utl.o  test/ut_vec2.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_vec2.o src/utl.o
+
+test/t_vec3$(_EXE): test/x_chk.x src/utl.o  test/ut_vec3.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_vec3.o src/utl.o
 
 test/t_dpq$(_EXE): test/x_chk.x src/utl.o  test/ut_dpq.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_dpq.o src/utl.o
@@ -122,6 +123,12 @@ test/t_log$(_EXE): test/x_chk.x src/utl.o  test/ut_log.o
 test/t_buf$(_EXE): test/x_chk.x src/utl.o test/ut_buf.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_buf.o src/utl.o
 
+test/t_peg$(_EXE): test/x_chk.x src/utl.o test/ut_peg.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_peg.o src/utl.o
+  
+test/t_peg2$(_EXE): test/x_chk.x src/utl.o test/ut_peg2.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_peg2.o src/utl.o
+  
 test/t_pmx$(_EXE): test/x_chk.x src/utl.o test/ut_pmx.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_pmx.o src/utl.o
   
