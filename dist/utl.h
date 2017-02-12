@@ -66,12 +66,16 @@ uint32_t utl_hash_int32(void *key);
 extern const char *utl_emptystring;
 
 // utl_expand() is just to please Microsoft C whose preprocessor
-// behaves differently from the other (up to VS2015, at least)
+// behaves differently from the other compilers (up to VS2015, at least)
 #define utl_expand(x) x
 
-#define utl_arg0(x1,...)        x1
-#define utl_arg1(x1,x2,...)     x2
-#define utl_arg2(x1,x2,x3,...)  x3
+#define utl_arg0(x0,...)              x0
+#define utl_arg1(x0,x1,...)           x1
+#define utl_arg2(x0,x1,x2,...)        x2
+#define utl_arg3(x0,x1,x2,x3,...)     x3
+#define utl_arg4(x0,x1,x2,x3,x4,...)  x4
+
+int utl_unpow2(int n);
 
 //uint32_t utl_rnd();
   
@@ -134,9 +138,9 @@ extern const char *utl_emptystring;
 #endif
 
 #ifndef UTL_NDEBUG
-#define logcheck(e)    utl_log_check(!!(e),#e,__FILE__,__LINE__)
-#define logassert(e)   utl_log_assert(!!(e),#e,__FILE__,__LINE__)
-#define logexpect(e,...) (logcheck(e)? 1 :(logprintf(__VA_ARGS__),0))
+#define logcheck(e)       utl_log_check(!!(e),#e,__FILE__,__LINE__)
+#define logassert(e)      utl_log_assert(!!(e),#e,__FILE__,__LINE__)
+#define logexpect(e,...) (utl_log_check(!!(e),#e,__FILE__,__LINE__)? 1 :(logprintf(__VA_ARGS__),0))
 #define logclock       for(clock_t utl_log_clk = clock();\
                                utl_log_clk != (clock_t)-1; \
                                   (utl_log_dbglvl <= UTL_LOG_D)?utl_log_prt("CLK %ld/%ld sec.\x09:%s:%d\x09",(clock()-utl_log_clk), (long int)CLOCKS_PER_SEC,__FILE__,__LINE__):1,\
@@ -169,7 +173,7 @@ extern const char *utl_emptystring;
 
 #define _logprintf(...)     
 #define _logcheck(...)      utl_ret(1)
-#define _logexepect(...)    utl_ret(1)
+#define _logexpect(...)     utl_ret(1)
 #define _logassert(...)     
 #define _logopen(f,m)       utl_retptr(NULL)
 #define _logclose()         utl_ret(0)
@@ -179,7 +183,7 @@ extern const char *utl_emptystring;
 #define _logwarning(...)
 #define _logerror(...)
 #define _logtrace(...)  
-#define _logtracewatch(...)
+#define _logwatch(...)
    
 
 extern FILE *utl_log_file;
@@ -268,15 +272,20 @@ typedef struct vec_s {
 
 #define vecDO(type,v,i,e,x)  do {vec_t v_=v;  *((type *)(v_->elm)) = (e); x(v_,i);} while (0)
 
-// Random access
+// Array
 #define vecset(type,v,i,e)   vecDO(type,v,i,e,utl_vec_set)
 #define vecins(type,v,i,e)   vecDO(type,v,i,e,utl_vec_ins)
-#define vecget(type,v,i)     (type *)utl_vec_get(v,i)
+#define vecget(type,v,i,d)   (*((type *)((v)->elm))=(d),utl_vec_get((v),i),*((type *)((v)->elm)))
+
+#define vecsetptr(v,i,p)     (memset((v)->elm,p,(v)->esz),vecset(v,i))
+#define vecinsptr(v,i,p)     (memset((v)->elm,p,(v)->esz),vecins(v,i))
+#define vecgetptr(v,i)       utl_vec_get(v,i)
+
 #define vecdel(v,i)          utl_vec_del(v,i)
 
 // Set (sorted or unsorted) 
 #define vecadd(type,v,e)     vecDO(type,v,vec_MAX_CNT,e,utl_vec_add)
-//#define vecsearch(type,v,e)  (type *)utl_vec_search(v, (*((type *)(v->elm)) = (e), 0))  
+
 #define vecsearch(type,v,e)  (*((type *)(v->elm)) = (e), (type *)utl_vec_search(v, 0))
 #define vecremove(type,v,e)  utl_vec_remove(v, (*((type *)(v->elm)) = (e), 0))  
 
@@ -289,14 +298,15 @@ typedef struct vec_s {
 #define vecsorted(v)   ((v)->flg |=  vecSORTED)
 #define vecunsorted(v) ((v)->flg &= ~vecSORTED)
 
-// Stack policy
+// Stack
 #define vecpush(type,v,e)    vecins(type,v,vec_MAX_CNT,e)
 #define vecdrop(v)           do {vec_t v_=v; if (v_->cnt) v_->cnt--;} while (0)
-#define vectop(type,v)       vecget(type,v,vec_MAX_CNT)    
+#define vectop(type,v,d)     vecget(type,v,vec_MAX_CNT,d)    
+#define vectopptr(v)         vecgetptr(v,vec_MAX_CNT)    
 
-// Queue (TODO:)
-#define vecenq(type,v,e)
-#define vecdeq(v)
+// Queue
+#define vecenq(type,v,e)     vecDO(type,v,0,e,utl_vec_enq)
+#define vecdeq(v)            utl_vec_deq(v)
 
 // I/O
 #define vecread(v,i,n,f)  utl_vec_read(v,i,n,f)
@@ -307,6 +317,7 @@ typedef struct vec_s {
 #define vecnew(...)       utl_vec_new utl_expand((sizeof(utl_arg0(__VA_ARGS__,int)),\
                                       utl_arg1(__VA_ARGS__,NULL,NULL), \
                                       utl_arg2(__VA_ARGS__,NULL,NULL,NULL)))
+
 #define vecfree(v)        utl_vec_free(v)
 #define veccount(v)       ((v)->cnt)
 #define vecmax(v)         ((v)->max)
@@ -315,10 +326,15 @@ typedef struct vec_s {
 #define vec(type,v)       ((type *)((v)->vec))
 #define vecclear(v)       ((v)->cnt = 0)
 
-#define vecfirst(v)       utl_vec_first(v)
-#define vecnext(v)        utl_vec_next(v)
-#define vecprev(v)        utl_vec_prev(v)
-#define veclast(v)        utl_vec_last(v)
+#define vecfirstptr(v)    utl_vec_first(v)
+#define vecnextptr(v)     utl_vec_next(v)
+#define vecprevptr(v)     utl_vec_prev(v)
+#define veclastptr(v)     utl_vec_last(v)
+
+#define vecfirst(type,v,d)  (utl_vec_first(v)? *((type *)((v)->elm)):d)
+#define vecnext(type,v,d)   (utl_vec_next(v)? *((type *)((v)->elm)):d)
+#define vecprev(type,v,d)   (utl_vec_prev(v)? *((type *)((v)->elm)):d)
+#define veclast(type,v,d)   (utl_vec_last(v)? *((type *)((v)->elm)):d)
 
 // Protypes
 void *utl_vec_set(vec_t v, uint32_t i);
@@ -346,15 +362,19 @@ int utl_vec_remove(vec_t v, int x);
 
 int utl_vec_nullcmp(void *a, void *b, void *aux);
 
+void *utl_vec_enq(vec_t v, uint32_t i);
+void utl_vec_deq(vec_t v);
+
 // Character buffer
 #define buf_t                 vec_t
 #define bufnew()              vecnew(char)
 #define buffree(b)            vecfree(b)
-#define bufaddc(b,c)          vecpush(char,b,c)
+#define bufaddc(b,c)          utl_buf_addc(b,c)
 #define bufsetc(b,i,c)        vecset(char,b,i,c)
 #define bufinsc(b,i,c)        utl_buf_insc(b,i,c)
 #define bufinss(b,i,s)        utl_buf_inss(b,i,s)
 #define bufsets(b,i,s)        utl_buf_sets(b,i,s)
+#define bufadds(b,s)          utl_buf_sets(b,vec_MAX_CNT,s)
 
 #define bufgetc(b,i)          utl_buf_get(b,i)
 #define bufdel(b,i,j)         utl_buf_del(b,i,j)
@@ -367,20 +387,77 @@ int utl_vec_nullcmp(void *a, void *b, void *aux);
 
 #define bufaux(b)             vecaux(b)
 #define bufcur(b)            ((b)->cur)
+#define buffmt(b,i,f,...)     utl_buf_fmt(b,i,f,__VA_ARGS__)
+#define bufsetf(b,f,...)      utl_buf_fmt(b,0,f,__VA_ARGS__)
+#define bufaddf(b,f,...)      utl_buf_fmt(b,vec_MAX_CNT,f,__VA_ARGS__)
 
 char utl_buf_get(buf_t b, uint32_t n);
-size_t utl_buf_readall(buf_t b, uint32_t i, FILE *f);
-size_t utl_buf_read(buf_t b, uint32_t i, uint32_t n, FILE *f) ;
-char *utl_buf_readln(buf_t b, uint32_t i, FILE *f);
-char *utl_buf_sets(buf_t b, uint32_t i, const char *s);
-char *utl_buf_inss(buf_t b, uint32_t i, const char *s);
-char *utl_buf_insc(buf_t b, uint32_t i, char c);
+size_t  utl_buf_readall(buf_t b, uint32_t i, FILE *f);
+size_t  utl_buf_read(buf_t b, uint32_t i, uint32_t n, FILE *f) ;
+char   *utl_buf_readln(buf_t b, uint32_t i, FILE *f);
+char   *utl_buf_sets(buf_t b, uint32_t i, const char *s);
+char   *utl_buf_inss(buf_t b, uint32_t i, const char *s);
+char   *utl_buf_insc(buf_t b, uint32_t i, char c);
+char   *utl_buf_addc(buf_t b, char c);
 int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j);
+int     utl_buf_fmt(buf_t b, uint32_t i, const char *fmt, ...);
 
 void utl_dpqsort(void *base, uint32_t nel, uint32_t esz, int (*cmp)(const void *, const void *, const void *), void *aux);
 #define utlqsort(b,n,s,c,x) utl_dpqsort(b,n,s,c,x)
 
+#define utlqseacrch(b)
+
+#define sym_t vec_t
+
+#define symNULL vec_MAX_CNT
+
+#define symnew()           utl_sym_new()
+#define symfree(t)         utl_sym_free(t)
+#define symadd(t,s)        utl_sym_add(t,s)
+#define symdel(t,i)        utl_sym_del(t,i)
+#define symget(t,i)        utl_sym_get(t,i)
+#define symsearch(t,s)     utl_sym_search(t,s)
+#define symcount(t)        veccount(t)
+#define symsetdata(t,i,n)  utl_sym_setdata(t,i,n)
+#define symgetdata(t,i)    utl_sym_getdata(t,i)
+#define symfirst(t)        vecfirst(int32_t,t,symNULL)
+#define symnext(t)         vecnext(int32_t,t,symNULL)
+
+int16_t  utl_sym_del(sym_t t, const char *sym);
+uint32_t utl_sym_search(sym_t t, const char *sym);
+uint32_t utl_sym_add(sym_t t, const char *sym);
+char    *utl_sym_get(sym_t t,uint32_t id);
+sym_t    utl_sym_free(sym_t t);
+sym_t    utl_sym_new(void);
+int32_t  utl_sym_getdata(sym_t t,uint32_t id);
+int16_t  utl_sym_setdata(sym_t t,uint32_t id, int32_t val);
+
 #endif 
+#line 20 "src/utl_pmx.h"
+#ifndef UTL_NOPMX
+
+#define utl_pmx_MAXCAPT 16
+
+extern int(*utl_pmx_ext)(const char *pat, const char *txt, int, int32_t ch);
+
+extern const char  *utl_pmx_capt[utl_pmx_MAXCAPT][2];
+extern uint8_t      utl_pmx_capnum                  ;
+extern const char  *utl_pmx_error                   ;
+
+#define pmxsearch(r,t)  utl_pmx_search(r,t,0)
+#define pmxmatch(r,t)   utl_pmx_search(r,t,1)
+#define pmxstart(n)    (utl_pmx_capt[n][0])
+#define pmxend(n)      (utl_pmx_capt[n][1])
+#define pmxcount()     (utl_pmx_capnum)
+#define pmxlen(n)       utl_pmx_len(n)
+#define pmxerror()     (utl_pmx_error?utl_pmx_error:utl_emptystring)
+#define pmxextend(f)   (void)(utl_pmx_ext = f)
+
+const char *utl_pmx_search(const char *pat, const char *txt, int fromstart);
+int    utl_pmx_len(uint8_t n);
+void   utl_pmx_extend(int(*ext)(const char *, const char *,int, int32_t));
+
+#endif
 #line 20 "src/utl_pmx.h"
 #ifndef UTL_NOPMX
 
@@ -416,33 +493,67 @@ void   utl_pmx_extend(int(*ext)(const char *, const char *,int, int32_t));
 #define fsmSTART      
 
 #endif
-#line 45 "src/utl_try.h"
+#line 48 "src/utl_try.h"
 
 #ifndef UTL_NOTRY
 
 typedef struct utl_jb_s {
   jmp_buf           jmp;
   struct utl_jb_s  *prv;
-  int               err;
-  int32_t           flg;
+  const char       *fn;
+  int               ln;
+  int               ex;
+  int16_t           flg;
+  int16_t           id;
 } utl_jb_t;
 
 extern utl_jb_t *utl_jmp_list; // Defined in utl_hdr.c
 
-#define try  for ( utl_jb_t utl_jb = {.flg=0, .err=0, .prv=utl_jmp_list}; \
-                   !utl_jb.flg && (utl_jb.flg=1) && (utl_jmp_list=&utl_jb); \
-                   utl_jb.flg = utl_jb.flg == 1? (utl_jmp_list = utl_jb.prv, 1):1) \
-              if ((utl_jb.err = setjmp(utl_jb.jmp))== 0)
-                 
-#define catch(x) else if ((utl_jb.err == (x)) && (utl_jmp_list = utl_jb.prv, utl_jb.flg = 2)) 
-  
-#define catchall else if ((utl_jb.err > 0) && (utl_jmp_list = utl_jb.prv, utl_jb.flg = 2)) 
-                 
-#define throw(x)  do {int ex_ = x; if (ex_ > 0 && utl_jmp_list) longjmp(utl_jmp_list->jmp,ex_); } while (0)
+#define UTL_TRY_INIT  {.flg=0, \
+                       .prv=utl_jmp_list, \
+                       .fn=utl_emptystring, \
+                       .ln=0, \
+                       .id=0}
 
-#define thrown()  utl_jb.err
-  
-#define rethrow() throw(thrown())
+#define try  for ( utl_jb_t utl_jb = UTL_TRY_INIT; \
+                  !utl_jb.flg && (utl_jmp_list=&utl_jb); \
+                   utl_jmp_list=utl_jb.prv, utl_jb.flg=1) \
+              if ((utl_jb.ex = setjmp(utl_jb.jmp)) == 0)
+
+#define UTL_CATCH_TEST(x,y,w,z) ((1<<(x))|(1<<(y))|(1<<(w))|(1<<(z)))
+
+#define utl_catch(x,y,w,z) else if ( (utl_jb.ex  & UTL_CATCH_TEST(x,y,w,z)) \
+                                  && (utl_jmp_list=utl_jb.prv, utl_jb.flg=1)) 
+
+#define catch(...) utl_catch(utl_expand(utl_arg0(__VA_ARGS__,16)),\
+                             utl_expand(utl_arg1(__VA_ARGS__,16,16)),\
+                             utl_expand(utl_arg2(__VA_ARGS__,16,16,16)),\
+                             utl_expand(utl_arg3(__VA_ARGS__,16,16,16,16)))
+
+#define catchall else for ( utl_jmp_list=utl_jb.prv; \
+                           !utl_jb.flg; \
+                            utl_jb.flg=1) 
+
+#define utl_throw(x,y)  do { \
+                          int ex_ = x; \
+                          if (ex_ > 0 && utl_jmp_list) {\
+                            utl_jmp_list->fn = __FILE__; \
+                            utl_jmp_list->ln = __LINE__;\
+                            utl_jmp_list->id = y;\
+                            longjmp(utl_jmp_list->jmp,ex_); \
+                          }\
+                        } while (0)
+
+#define throw(...) utl_throw(1<<(utl_expand(utl_arg0(__VA_ARGS__,0)) & 0xF),\
+                             utl_expand(utl_arg1(__VA_ARGS__,0,0)))\
+
+#define rethrow()    utl_throw(utl_jb.ex,utl_jb.id)
+
+#define thrown()     utl_unpow2(utl_jb.ex)
+
+#define thrownid()   utl_jb.id
+#define thrownfile() utl_jb.fn
+#define thrownline() utl_jb.ln
 
 #endif
 #line 17 "src/utl_end.h"

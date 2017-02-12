@@ -85,6 +85,17 @@ uint32_t utl_rnd()
 	return rnd;
 }
 */
+/* returns log2(n) assuming n is 2^m */
+int utl_unpow2(int n)
+{ int r;
+
+  r  =  (n & 0xAAAA) != 0;
+  r |= ((n & 0xCCCC) != 0) << 1;
+  r |= ((n & 0xF0F0) != 0) << 2;
+  r |= ((n & 0xFF00) != 0) << 3;
+  return r;
+}
+
 
 
 
@@ -401,7 +412,6 @@ size_t utl_mem_used(void) {return utl_mem_allocated;}
 #endif
 #line 20 "src/utl_vec.c"
 #ifndef UTL_NOVEC
-#ifdef UTL_MAIN
 
 int utl_vec_nullcmp(void *a, void *b, void* aux){return 0;}
 
@@ -412,7 +422,10 @@ static int16_t utl_vec_makeroom(vec_t v,uint32_t n)
 
   if (n < v->max) return 1;
   new_max = v->max;
-  while (new_max <= n) new_max += (new_max / 2);  /*  (new_max *= 1.5) instead of (new_max *= 2) */
+  while (new_max <= n) {
+    new_max += (new_max / 2);  /* (new_max *= 1.5) instead of (new_max *= 2) */
+    new_max += (new_max & 1);  /* ensure new size is even */
+  }
   new_vec = (uint8_t *)realloc(v->vec, new_max * v->esz);
   if (!new_vec) return 0;
   v->vec = new_vec;
@@ -438,7 +451,6 @@ static int16_t utl_vec_makegap(vec_t v, uint32_t i, uint32_t l)
   }
   return 1;
 }
-
 
 static int16_t utl_vec_delgap(vec_t v, uint32_t i, uint32_t l)
 {
@@ -498,9 +510,10 @@ vec_t utl_vec_new(uint16_t esz, int (*cmp)(void *, void *,void *), uint32_t (*hs
       v->hsh = hsh;
       memset(v->vec,0xFF,v->max *esz); // if hashed, hash would be 0xFFFFFFFF
       vecunsorted(v);
-      v->fst=vec_MAX_CNT;
+      v->fst=0;
       v->lst=vec_MAX_CNT;
       v->cur=0;
+      v->cnt=0;
       v->aux=NULL;
     }
   }
@@ -532,7 +545,8 @@ void *utl_vec_get(vec_t v, uint32_t i)
 void *utl_vec_set(vec_t v, uint32_t i)
 {
   uint8_t *elm=NULL;
-
+  
+  if (i == vec_MAX_CNT) i = v->cnt;
   if (utl_vec_makeroom(v,i)) {
     elm = v->vec + (i*v->esz);
     memcpy(elm, v->elm, v->esz);
@@ -551,6 +565,69 @@ void *utl_vec_ins(vec_t v, uint32_t i)
     elm = (uint8_t *)utl_vec_set(v,i);
   vecunsorted(v);
   return elm;
+}
+
+/* * QUEUE */
+static int16_t utl_que_makeroom(vec_t v)
+{
+  uint32_t new_max = 1;
+  uint8_t *new_vec = NULL;
+  int32_t n;
+
+  if (v->lst==vec_MAX_CNT) v->lst=0;
+  
+  if (v->cnt < v->max) return 1;
+  new_max  = v->max;
+  new_max += (new_max / 2);  /* (new_max *= 1.5) instead of (new_max *= 2) */
+  new_max += (new_max & 1);  /* ensure new size is even */
+ 
+  new_vec = (uint8_t *)realloc(v->vec, new_max * v->esz);
+  if (!new_vec) return 0;
+ 
+  if (v->fst == 0) {
+    v->lst = v->max;
+  }
+  else if (v->fst < v->max /2) {
+    memcpy(new_vec+(v->max*v->esz), new_vec,v->fst * v->esz);
+    v->lst = v->max+v->fst;
+  } else {
+    n = v->max - v->fst;
+    memcpy(new_vec + (new_max-n)*v->esz, new_vec + (v->fst * v->esz), n*v->esz);
+    v->fst = new_max - n;
+  }
+  
+  v->vec = new_vec;
+  v->max = new_max;
+  return 1;
+}
+
+void *utl_vec_enq(vec_t v, uint32_t i)
+{
+  uint8_t *elm=NULL;
+
+  if (utl_que_makeroom(v)) {
+    _logdebug("enque cnt:%d lst:%d",v->cnt,v->lst);
+    elm = v->vec + (v->lst*v->esz);
+    memcpy(elm, v->elm, v->esz);
+    v->cnt++;
+    v->lst++;
+    if (v->lst >= v->max) v->lst = 0;
+    vecunsorted(v);
+  }
+  return elm;
+}
+
+void utl_vec_deq(vec_t v)
+{
+  if (v->cnt > 0) {
+    v->fst++;
+    if (v->fst >= v->max) v->fst = 0;
+    v->cnt--;
+  }
+  if (v->cnt == 0) {
+    v->fst = 0;
+    v->lst = 0;
+  }
 }
 
 /* * Sorted sets  * */
@@ -671,7 +748,7 @@ void utl_dpqsort(void *base, uint32_t nel, uint32_t esz, int (*cmp)(const void *
 
         utl_dpqswap(leftptr,  utl_dpqptr(L), esz);
         utl_dpqswap(rightptr, utl_dpqptr(G), esz);
-
+        /* Push ranges so that the largest will be handled first */
         switch (utl_dpqordrange((right-(G+1)), ((G-1)-(L+1)), ((L-1)-left))) {
           case 123: utl_dpqpush(G+1, right); utl_dpqpush(L+1, G-1);   utl_dpqpush(left, L-1);  break;
           case 132: utl_dpqpush(G+1, right); utl_dpqpush(left, L-1);  utl_dpqpush(L+1, G-1);   break;
@@ -752,6 +829,14 @@ static void *utl_vec_search_sorted(vec_t v)
 
 /* * Unsorted sets (Hash tables) * */
 
+/* 
+                                    +------+ 
+    The utl_h() macro retrieves     |      | actual element 
+    the hash value of the element   |      | 
+                                    +------+ 
+                                    | hash | hash value
+                                    +------+
+ */
 #define utl_h(p,sz) *((uint32_t *)(((uint8_t *)(p))+(sz)-sizeof(uint32_t)))
 
 static void *utl_remove_hashed(vec_t v,uint32_t pos)
@@ -880,7 +965,7 @@ static void *utl_vec_add_hashed(vec_t v)
   elm = utl_vec_hsh_set(elm,v->vec,v->max,v->esz,v->cmp,v);
   
   if (elm) v->cnt += 1;
- 
+  //logtrace("Hash add #%d @%d",v->cnt,(int)(elm?(elm-v->vec)/v->esz:-1));
   return elm;
 }
 
@@ -899,6 +984,7 @@ size_t utl_vec_read(vec_t v,uint32_t i, size_t n,FILE *f)
     n = fread(v->vec + (i*v->esz), v->esz, n, f);
     if (v->cnt < i+n) v->cnt = i+n;
     vecunsorted(v);
+    return n;
   }
   return 0;
 }
@@ -908,7 +994,6 @@ size_t utl_vec_write(vec_t v, uint32_t i, size_t n, FILE *f)
   if (i+n> v->max) n = v->max - i;
   return fwrite(v->vec+(i*v->esz),v->esz,n,f);
 }
-
 
 void *utl_vec_search(vec_t v, int x)
 {
@@ -948,21 +1033,25 @@ int utl_vec_remove(vec_t v, int x)
 void *utl_vec_first(vec_t v)
 {
   uint8_t  *elm = NULL;
-  
+
   if (v->cnt == 0) {
     v->cur = vec_MAX_CNT;
     return NULL;
   }
   elm = v->vec;
-  if (v->fst != vec_MAX_CNT) {
-    elm = v->vec + v->fst * v->esz ;
-  }
-  else if (v->hsh) {
+  if (v->hsh) {
+    // Since there is at lease 1 element, we will
+    // eventually exit the loop.
      while (utl_h(elm,v->esz) == 0xFFFFFFFF) {
        elm += v->esz;
      }
   }
+  else if (v->fst != vec_MAX_CNT) {
+    elm = v->vec + v->fst * v->esz ;
+  }
+  
   v->cur = (elm - v->vec) / v->esz;
+  memcpy(v->elm,elm,v->esz);
   return elm;
 }
 
@@ -975,42 +1064,54 @@ void *utl_vec_last(vec_t v)
     return NULL;
   }
   elm = v->vec + (v->cnt-1) * v->esz;
-  if (v->lst != vec_MAX_CNT) {
-    elm = v->vec + v->lst * v->esz ;
-  }
-  else if (v->hsh) {
+  if (v->hsh) {
     elm = v->vec + (v->max-1) * v->esz;
     while (utl_h(elm,v->esz) == 0xFFFFFFFF) {
       elm -= v->esz;
     }
   }
+  else if (v->lst != vec_MAX_CNT) {
+    elm = v->vec + ((v->lst-1) * v->esz);
+  }
   v->cur = (elm - v->vec) / v->esz;
+  memcpy(v->elm,elm,v->esz);
   return elm;
 }
 
 void *utl_vec_next(vec_t v)
 {
   uint32_t max = v->cnt;
-  uint8_t *elm;
+  uint8_t *elm = NULL;
   
   if (v->cnt == 0) v->cur = vec_MAX_CNT;
   if (v->cur == v->lst) v->cur = vec_MAX_CNT;
   if (v->cur == vec_MAX_CNT) return NULL;
+  
   v->cur++;
-  elm = v->vec + v->cur * v->esz;
-  if (v->hsh) {
-    max = v->max;
-    while (v->cur < max && (utl_h(elm,v->esz) == 0xFFFFFFFF)) {
-      v->cur++;
+  max = v->max;
+  if (v->hsh) {  // Hash table
+    while (v->cur < max) {
       elm = v->vec + v->cur * v->esz;
+      if (utl_h(elm,v->esz) != 0xFFFFFFFF) break;
+      v->cur++;
     }
+  } else if (v->lst != vec_MAX_CNT) { // que
+    if (v->cur >= max) v->cur = 0;
+    if (v->cur == v->lst) v->cur = max;
+  } else { // array
+    max = v->cnt;
   }
   
-  if (v->cur >= max) v->cur = vec_MAX_CNT;
-  if (v->cur == vec_MAX_CNT) return NULL;
+  if (v->cur >= max) return NULL;
+  
+  if (v->cur != vec_MAX_CNT) {
+    elm = v->vec + v->cur * v->esz;
+    memcpy(v->elm,elm,v->esz);
+  }
   return elm;
 }
 
+// TODO: Check and fix it
 void *utl_vec_prev(vec_t v)
 {
   uint8_t *elm;
@@ -1038,13 +1139,16 @@ void *utl_vec_prev(vec_t v)
 
 char utl_buf_get(buf_t b, uint32_t n)
 {
-  char *s = vecget(char,b,n);
+  char *s = vecgetptr(b,n);
   return s?*s:'\0';
 }
 
 size_t utl_buf_read(buf_t b, uint32_t i, uint32_t n, FILE *f)
 {
-  size_t r = vecread(b,i,n,f);
+  size_t r ;
+  
+  if (i == vec_MAX_CNT) i = b->cnt;
+  r = vecread(b,i,n,f);
   bufsetc(b,i+n,'\0');
   b->cnt = i+n;
   return r;
@@ -1054,6 +1158,7 @@ size_t utl_buf_readall(buf_t b, uint32_t i, FILE *f)
 {
   uint32_t n,pos;
   size_t ret;
+
   pos = ftell(f);
   fseek(f,0,SEEK_END);
   n = ftell(f);
@@ -1069,6 +1174,8 @@ char *utl_buf_readln(buf_t b, uint32_t i, FILE *f)
   int c;
   uint32_t n = i;
   
+  if (i == vec_MAX_CNT) i = b->cnt;
+ 
   if (!b || !f || feof(f)) return NULL;
   while ((c=fgetc(f)) != EOF) {
     if (c == '\r') {
@@ -1088,7 +1195,11 @@ char *utl_buf_readln(buf_t b, uint32_t i, FILE *f)
 
 char *utl_buf_sets(buf_t b, uint32_t i, const char *s)
 {
-  char *r = buf(b)+i;
+  char *r;
+  
+  if (i == vec_MAX_CNT) i = b->cnt;
+    
+  r = buf(b)+i;
   while (*s) bufsetc(b,i++,*s++);
   bufsetc(b,i,'\0');
   b->cnt=i;
@@ -1109,6 +1220,14 @@ char *utl_buf_inss(buf_t b, uint32_t i, const char *s)
 
   bufsetc(b,b->cnt,'\0');  b->cnt--;
   return buf(b)+i;
+}
+
+char *utl_buf_addc(buf_t b, char c)
+{
+  bufsetc(b,b->cnt,c); 
+  bufsetc(b,b->cnt,'\0');
+  b->cnt--;
+  return buf(b) + b->cnt - 1;
 }
 
 char *utl_buf_insc(buf_t b, uint32_t i, char c)
@@ -1133,7 +1252,193 @@ int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j)
   return r;
 }
 
-#endif
+int utl_buf_fmt(buf_t b, uint32_t i, const char *fmt, ...)
+{
+  va_list args;
+  int n;
+  if (i == vec_MAX_CNT) i = b->cnt;
+  va_start(args, fmt);
+  n = vsnprintf(NULL,0,fmt,args);
+  va_end(args);
+  if (n > 0) {
+    bufsetc(b,i+n+1,'\0'); // ensure there's enough room
+    va_start(args, fmt);
+    n = vsnprintf(buf(b)+i,n+1,fmt,args);
+    va_end(args);
+    b->cnt = i+n;
+  }
+  return n;
+}
+
+/* *** SYM *** */
+/*
+       spare string used  ____         
+       for search and set     \
+                               \
+ [sym_t] -aux-> [buf_t] -aux-> str
+    \              \
+     \              \___ keeps the strings:
+      \                  s1\0s2\0s3\0...
+       \
+        \__ keeps the ID in an hastable
+           (based on strings content)
+
+Each string is preceded by the associated info (a 32 bit integer)
+   0 1 2 3 4 5 6 7 8
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+  |x|x|x|x|a|b|/|/|x|x|x|x|c|d|e|/|f| ... 
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+   |       |      
+   |       id
+   |
+   data (int32_t)
+   (always aligned to 4-bytes)   
+
+*/
+
+static uint32_t utl_sym_hash(void *a, void *c)
+{
+  sym_t v = c;
+  char *a_str = utl_sym_get(v,*((uint32_t *)a));
+  return utl_hash_string(a_str);
+}
+
+static int utl_sym_cmp(void *a, void *b, void *c)
+{
+  sym_t v = c;
+  char *a_str = utl_sym_get(v,*((uint32_t *)a));
+  char *b_str = utl_sym_get(v,*((uint32_t *)b));
+  return strcmp(a_str,b_str);
+}
+
+sym_t utl_sym_new(void)
+{
+  sym_t t = NULL;
+  buf_t b = NULL;
+  
+  if ((b = bufnew())) {
+    if ((t = vecnew(uint32_t,utl_sym_cmp,utl_sym_hash))) {
+      t->aux = b;
+      b->aux = NULL;
+      return t;
+    }
+  }
+  b=buffree(b);
+  return NULL;
+}
+
+#define utl_sym_tbl(t)          ((sym_t)(t))
+#define utl_sym_buf(t) ((buf_t)(((sym_t)(t))->aux))
+
+sym_t utl_sym_free(sym_t t)
+{
+  buffree(utl_sym_buf(t));
+  vecfree(utl_sym_tbl(t));
+  return NULL; 
+}
+
+static uint32_t utl_sym_store(sym_t t,const char *sym)
+{
+  uint32_t id;
+  uint32_t k;
+  buf_t b = utl_sym_buf(t);
+
+  k =  b->cnt;
+  id = k + 4;
+  bufsets(b,id,sym);
+  *((int32_t *)(buf(b)+k)) = 0; // set data to 0
+  do { // Ensure the next pointer will be 4-bytes aligned
+    b->cnt++;
+  } while (b->cnt & 0x3);
+  return id;
+}
+
+uint32_t utl_sym_add(sym_t t, const char *sym)
+{
+  uint32_t k;
+  
+  k = utl_sym_search(t, sym);
+  if (k == symNULL) {
+    k = utl_sym_store(t,sym);
+    vecadd(uint32_t,t,k);
+  }
+  return k;  
+}
+
+uint32_t utl_sym_search(sym_t t, const char *sym)
+{
+  uint32_t k = symNULL;
+  uint32_t *p;
+
+  utl_sym_buf(t)->aux = (void *)sym;
+  p=vecsearch(uint32_t,t,symNULL);
+  utl_sym_buf(t)->aux = NULL;
+  if (p) k = *p;
+  return k;  
+}
+
+char *utl_sym_get(sym_t t,uint32_t id)
+{
+  char *s;
+  if (id == vec_MAX_CNT) return utl_sym_buf(t)->aux;
+  if (id >= utl_sym_buf(t)->cnt) return NULL;
+  s = buf(utl_sym_buf(t)) + id;
+  if (*s == '\0') s = NULL;
+  return s;
+}
+
+int16_t utl_sym_del(sym_t t, const char *sym)
+{
+  uint32_t  pos;
+  uint32_t  id;
+  char     *s;
+  uint32_t *p;
+
+  utl_sym_buf(t)->aux = (void *)sym;
+  p=vecsearch(uint32_t,t,symNULL);
+  utl_sym_buf(t)->aux = NULL;
+  if (p) {
+    id = *p;
+    pos = ((uint8_t *)p - t->vec)/t->esz;
+    //logtrace("Removing: %s (%d) @ %d",sym,id,pos);
+    if (utl_remove_hashed(t,pos)) {
+      s = buf(utl_sym_buf(t))+id;
+      ((int32_t *)s)[-1] = 0;
+      while (*s) *s++ = '\0';
+      return 1;
+    }
+  }
+  return 0;
+}
+
+static int32_t *utl_sym_data(sym_t t,uint32_t id)
+{
+  char *s;
+  if (id >= utl_sym_buf(t)->cnt) return NULL;
+  s = buf(utl_sym_buf(t)) + id;
+  if (*s == '\0') return NULL;
+  return ((int32_t *)(s-4));
+}
+
+int16_t utl_sym_setdata(sym_t t,uint32_t id, int32_t val)
+{
+  int32_t *s;
+  
+  s = utl_sym_data(t,id);
+  if (s == NULL) return 0;
+  
+  *s = val;
+  return 1;
+}
+
+int32_t utl_sym_getdata(sym_t t,uint32_t id)
+{
+  int32_t *s;
+  s = utl_sym_data(t,id);
+  if (s == NULL) return 0;
+  return *s;
+}
+
 #endif
 #line 376 "src/utl_pmx.c"
 #ifndef UTL_NOPMX
@@ -1864,4 +2169,24 @@ const char *utl_pmx_search(const char *pat, const char *txt, int fromstart)
 }
 
 #endif
+#endif
+#line 20 "src/utl_peg.c"
+#ifndef UTL_NOPEG
+
+char *utl_peg_str(char *pat, char *str)
+{
+  while (*str && *pat && (*str == *pat)) {str++; pat++;}
+  return (*pat == '\0'? str: NULL);
+}
+
+char *utl_peg_oneof(char *pat, char *str)
+{
+  return (strchr(pat,*str)?str+1:NULL);
+}
+
+char *utl_peg_lower(char *str)
+{
+  return (str && islower((int)*str))? str+1:NULL;
+}
+
 #endif
