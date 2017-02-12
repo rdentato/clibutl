@@ -50,7 +50,7 @@ static peg_t utl_peg_init(peg_t p, const char *s)
     p->errrule  = NULL;
     p->errln    = 0;
     p->errcn    = 0;
-    p->defer    = vecnew(void *);
+    p->defer    = vecnew(pegdefer_t);
   }
   return p;
 }
@@ -69,12 +69,15 @@ peg_t utl_peg_free(peg_t parser)
   return NULL;
 }
 
-const char *utl_peg_defer(peg_t parser, const char *func,const char *from, const char *to)
+const char *utl_peg_defer(peg_t parser, pegaction_t func,const char *from, const char *to)
 {
+  pegdefer_t defer;
+  
   if (!parser->fail) {
-    vecpush(void *, parser->defer, (void *)func);
-    vecpush(void *, parser->defer, (void *)from);
-    vecpush(void *, parser->defer, (void *)to);
+    defer.func = func;
+    defer.from = from;
+    defer.to   = to;
+    vecpush(pegdefer_t, parser->defer, defer);
   }
   return NULL;
 }
@@ -103,7 +106,6 @@ void utl_peg_ref(peg_t parser, const char *rule_name, pegrule_t rule)
     rule(parser,rule_name);
     if (parser->fail) 
       (void)utl_peg_back(parser,rule_name,tmp,cnt);
-
   }
 }
 
@@ -126,22 +128,24 @@ static void utl_peg_seterrln(peg_t parser)
   }
 }
 
-int utl_peg_parse(peg_t parser, pegrule_t start_rule, const char *txt,const char *rule_name)
+static void peg_defer_func_NULL(const char *from, const char *to, void *aux)
+{ return ; }
+
+int utl_peg_parse(peg_t parser, pegrule_t start_rule, 
+                const char *txt,const char *rule_name, void *aux)
 {
+  pegdefer_t defer;
+  pegdefer_t defer_NULL = {peg_defer_func_NULL, NULL, NULL};
   if (parser && start_rule && txt) {
     utl_peg_init(parser,txt);
+    parser->aux = aux;
     utl_peg_ref(parser, rule_name, start_rule);
     utl_peg_seterrln(parser);
     if (!parser->fail) { // exec deferred actions
-      const char *func;
-      const char *from;
-      const char *to;
-      func=vecfirst(void *,parser->defer,NULL);
-      while (func) {
-        from = vecnext(void *,parser->defer,NULL);
-        to   = vecnext(void *,parser->defer,NULL);
-        fprintf(stderr,"%s(\"%.*s\");",func,(int)(to-from),from);
-        func=vecnext(void *,parser->defer,NULL);
+      defer = vecfirst(pegdefer_t, parser->defer, defer_NULL);
+      while (defer.func != peg_defer_func_NULL) {
+        defer.func(defer.from, defer.to, parser->aux);
+        defer = vecnext(pegdefer_t, parser->defer, defer_NULL);
       }
     }
     return !parser->fail;
