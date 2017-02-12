@@ -25,11 +25,11 @@
 pegrule(S) {
   pegmore {
     pegref(SPC);
-    pegdefer(op) {
+    pegaction(op) {
       pegopt{pegoneof("+-");}
     }
     pegref(SPC);
-    pegdefer(arg) {
+    pegaction(arg) {
       pegref(V);
     }
   }
@@ -57,7 +57,7 @@ pegrule(expr) {
   pegswitch {
     pegcase {
       pegref(term);
-      pegdefer(op) {
+      pegaction(op) {
         pegoneof("+-");
       }
       pegref(expr);
@@ -72,7 +72,7 @@ pegrule(term) {
   pegswitch {
     pegcase {
       pegref(fact);
-      pegdefer(op) {
+      pegaction(op) {
         pegoneof("*/");
       }
       pegref(term);
@@ -86,12 +86,12 @@ pegrule(term) {
 pegrule(fact) {
   pegswitch {
     pegcase {
-      pegdefer(PUSH);
+      pegaction(PUSH);
       pegstr("("); pegref(expr); pegstr(")");
-      pegdefer(POP);
+      pegaction(POP);
     }
     pegcase {
-      pegdefer(argnum) {
+      pegaction(arg) {
         pegstar{ pegdigit; } 
       }
     }

@@ -15,7 +15,7 @@
 */
 
 #include "utl.h"
-
+#if 0
 /* 
    S = upper* digit
 */
@@ -108,13 +108,13 @@ int prt(const char *from, const char *to, void *aux)
   logprintf("(%.*s)",(int)(to-from),from);
   return 0;
 }
-
+#endif
 
 
 
 int main(int argc, char *argv[])
 {
-  
+#if 0  
   char *q;
   peg_t pg;
   
@@ -185,5 +185,6 @@ int main(int argc, char *argv[])
   
   pg = pegfree(pg);
   logclose();
+  #endif
   exit(0);
 }
