@@ -1,6 +1,4 @@
-# utl [![Build Status](https://travis-ci.org/rdentato/clibutl.svg?branch=master)](https://travis-ci.org/rdentato/clibutl)
-
-[![Join the chat at https://gitter.im/clibutl/Lobby](https://badges.gitter.im/clibutl/Lobby.svg)](https://gitter.im/clibutl/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+# utl [![Build Status](https://travis-ci.org/rdentato/clibutl.svg?branch=master)](https://travis-ci.org/rdentato/clibutl) [![Join the chat at https://gitter.im/clibutl/Lobby](https://badges.gitter.im/clibutl/Lobby.svg)](https://gitter.im/clibutl/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
   This library provides functions that could, hopefully, speed up the
 developemnt of a C program.
