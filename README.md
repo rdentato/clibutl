@@ -9,6 +9,7 @@ The functions are related to:
  - [*Finite State Machines*](https://github.com/rdentato/clibutl/blob/master/doc/fsm.md)
  - *Memory check*
  - *Containers*
+ - *Parsing Regular Expressions (PEG)*
  - [*Pattern matching*](https://github.com/rdentato/clibutl/blob/master/doc/pmx.md) over string
  - [*Try/Catch* exceptions](https://github.com/rdentato/clibutl/blob/master/doc/try.md)
 
@@ -77,6 +78,8 @@ one or more of the following symbols before including `utl.h`:
  - `UTL_NOFSM` will make the finite state machines `fsmxxx` constructors unavailble.
  
  - `UTL_NOPMX` will make the pattern matching functions `pmxyyy` unavailble.
+ 
+ - `UTL_NOPEG` will make the parsing expression grammars fnctions `pegxxx` constructors unavailble.
  
  - `UTL_NOVEC` will make the containers functions (`vecxxx`, `bufxxx`, ...) unavailble.
 
