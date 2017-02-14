@@ -1,3 +1,13 @@
 *.[ao]
 *.exe
 *.x
+*.obj
+*.lib
+*.dll
+*.so
+*.so.*
+*.log
+t_*
+support/**
+tmp/**
+*.pdf
