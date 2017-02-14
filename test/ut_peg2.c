@@ -15,176 +15,104 @@
 */
 
 #include "utl.h"
-#if 0
-/* 
-   S = upper* digit
-*/
 
-pegrule(S1) {
-  pegdo(prt) {
-    pegmore { pegupper; }
+
+pegrule(test1) { //test1 = digit* upper
+  pegstar {
     pegdigit;
   }
+  pegupper;
 }
 
-pegrule(S2) {
-  pegmore {
-    pegdo(prt) {
-      pegupper;
-    }
-  }
-  pegdo(prt) {
+pegrule(test2) { //test2 = digit+ upper
+  pegplus {
     pegdigit;
   }
+  pegupper;
 }
 
-/*
-   S = upper S | digit
-   
-*/
-
-pegrule(S3) {
-  pegdo(prt) {
-    pegalt { 
-      pegor {
-        pegupper;
-        pegref(S3);
-      }
-      pegor {
-        pegdigit;
-      }
-    }
+pegrule(test3) { //test3 = digit? upper
+  pegopt {
+    pegdigit;
   }
+  pegupper;
 }
 
-pegrule(S4) {
-  pegalt{
-    pegor {
-      pegupper;
-      pegdo(prt) {
-        pegref(S4);
-      }
+pegrule(test4) { // test4 = (AB){2,3}
+  pegrpt(2,3) {
+    pegstr("AB");
+  }  
+}
+
+pegrule(lvowel) { // lower wovel
+  pegswitch {
+    pegcase {
+      pegoneof("aeiou");
     }
-    pegor {
-      pegdigit;
+    pegcase {
+      pegpmx("<=àèìòù>");
     }
-  }
+  }  
 }
-
-pegrule(S5) {
-  // PIPPO | PLUTO
-  pegstr("P");
-  pegalt {
-    pegor{ pegstr("IPPO"); }
-    pegor{ pegstr("LUTO"); }
-  }
-}
-
-/*
-   A = '(' A ')' | ('+'|'-')? B
-   B = NUM
-*/
-
-pegrule(A) {
-  pegalt {
-    pegeither {
-      pegstr("("); pegref(A); pegstr(")");
-    }
-    pegor {
-      pegopt{
-        pegoneof("+-");
-      }
-      pegref(B);
-    }
-  }
-}
-
-pegrule(B) {
-  pegmore { pegdigit; }
-}
-
-int prt(const char *from, const char *to, void *aux)
-{
-  logprintf("(%.*s)",(int)(to-from),from);
-  return 0;
-}
-#endif
-
-
 
 int main(int argc, char *argv[])
 {
-#if 0  
-  char *q;
+  const char *q;
+  const char *p;
+//  int ret;
   peg_t pg;
   
   logopen("l_peg2.log","w");
- 
-  pg = pegnew();
- 
-  q = "ABCD4";
-  
-  logcheck(pegparse(pg,S1,q));
-  logcheck(*(pg->pos) == '\0');
-  
-  logcheck(pegparse(pg,S2,q));
-  logprintf("q:%p p:%p m:%p c:%d",q,pg->pos,pg->errpos,*pg->errpos);
 
-  logcheck(pegparse(pg,S3,q));
+  logcheck((pg = pegnew())); 
 
-  logcheck(pegparse(pg,S4,q));
-  logprintf("q:%p p:%p m:%p c:%d",q,pg->pos,pg->errpos,*pg->errpos);
+  /* *** Check repetitions *** */
   
-  q = "ABCD";
-  logcheck(!pegparse(pg,S2,q));
-  logprintf("q:%p p:%p m:%p c:%d line:%d col:%d rule:%s ",q,pg->pos,pg->errpos,*pg->errpos,pg->errln, pg->errcn,pg->errrule);
+  logcheck(pegparse(pg,test1,"12488B"));
+  logcheck(pegparse(pg,test1,"B"));
+  logcheck(!pegparse(pg,test1,"12488z"));
+  logcheck(!pegparse(pg,test1,"124889"));
+  logcheck(!pegparse(pg,test1,"z"));
   
-  q = "PIPPO";
-  logcheck(pegparse(pg,S5,q));
-  logprintf("q:%p p:%p m:%p c:%d",q,pg->pos,pg->errpos,*pg->errpos);
+  logcheck(pegparse(pg,test2,"12488B"));
+  logcheck(!pegparse(pg,test2,"B"));
+  logcheck(!pegparse(pg,test2,"12488z"));
+  logcheck(!pegparse(pg,test2,"124889"));
+  logcheck(!pegparse(pg,test2,"z"));
   
-  q = "PLUTO";
-  logcheck(pegparse(pg,S5,q));
-  logprintf("q:%p p:%p m:%p c:%d",q,pg->pos,pg->errpos,*pg->errpos);
+  logcheck(pegparse(pg,test3,"1B"));
+  logcheck(pegparse(pg,test3,"B"));
+  logcheck(!pegparse(pg,test3,"12488z"));
+  logcheck(!pegparse(pg,test3,"124889"));
+  logcheck(!pegparse(pg,test3,"z"));
   
-  q = "PLUKA";
-  logcheck(!pegparse(pg,S5,q));
-  logprintf("q:%p p:%p m:%p c:%d line:%d col:%d rule:%s ",q,pg->pos,pg->errpos,*pg->errpos,pg->errln, pg->errcn,pg->errrule);
+  logcheck(!pegparse(pg,test4,"PIPPO"));
+  logcheck(!pegparse(pg,test4,"AB"));
+  logcheck(pegparse(pg,test4,"ABAB"));
   
-  q="34";
-  logcheck(pegparse(pg,A,q));
-  logprintf("q:%p p:%p m:%p c:%d",q,pg->pos,pg->errpos,*pg->errpos);
-  logprintf("match: %.*s",(int)(pg->pos - q),q);
+  q = "ABABAB"; 
+  logcheck(pegparse(pg,test4,q) && (pegfailpos(pg)[0]=='\0'));
   
-  q="(34)";
-  logcheck(pegparse(pg,A,q));
-  logprintf("q:%p p:%p m:%p c:%d",q,pg->pos,pg->errpos,*pg->errpos);
-  logprintf("match: %.*s",(int)(pg->pos - q),q);
-  
-  q="(34)-43+65";
-  logcheck(pegparse(pg,A,q));
-  logprintf("q:%p p:%p m:%p c:%d",q,pg->pos,pg->errpos,*pg->errpos);
-  logprintf("match: %.*s",(int)(pg->pos - q),q);
-  
-  q="3+4";
-  
-  logcheck(pegparse(pg,expr,q));
-  logprintf("q:%p p:%p m:%p c:%d",q,pg->pos,pg->errpos,*pg->errpos);
-  logprintf("match: %.*s",(int)(pg->pos - q),q);
+  // Only the first six characters are parsed correctly
+  // The parse succeeds but *pegfailpos() is not '\0'
+  q = "ABABABAB";
+  logcheck(pegparse(pg,test4,q) && (pegfailpos(pg)[0]!='\0'));
 
-  fprintf(stderr,"\n****\n");
-  char *e[] = {"3+2","3-4*2",NULL};
-  char **qe;
-  qe = e; 
-  for (q = *qe; q; q=*(++qe)) {
-    fprintf(stderr,"\n%s\n",q);
-    logcheck(pegparse(pg,expr,q));
-    logprintf("q:%p p:%p m:%p c:%d",q,pg->pos,pg->errpos,*pg->errpos);
-    logprintf("match: %.*s",(int)(pg->pos - q),q);
-  }
+  
+  /* *** Check alternatives *** */
+  q=pmxmatch("<utf>",""); // Set pmx to utf8
+  
+  logcheck(pegparse(pg,lvowel,"a"));
+  logcheck(pegparse(pg,lvowel,"à"));
+  logcheck(pegparse(pg,lvowel,"i"));
+  logcheck(pegparse(pg,lvowel,"ù"));
+  logcheck(!pegparse(pg,lvowel,"c"));
+  logcheck(!pegparse(pg,lvowel,"ç"));
+
+
   
   pg = pegfree(pg);
   logclose();
-  #endif
+
   exit(0);
 }

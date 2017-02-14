@@ -38,6 +38,17 @@ int utl_peg_lower(const char *str)
   return (islower((int)*str))? 1:-1;
 }
 
+int utl_peg_eol(const char *str)
+{
+  int ret = -1;
+  if (*str == '\0' ) {ret = 0;}
+  else {
+    if (*str == '\r') {ret = 1; str++;}
+    if (*str == '\n') {ret++;}
+  }
+  return ret;
+}
+
 static peg_t utl_peg_init(peg_t p, const char *s)
 {
   if (p) {
@@ -109,10 +120,15 @@ void utl_peg_ref(peg_t parser, const char *rule_name, pegrule_t rule)
   }
 }
 
+
+static void peg_defer_func_NULL(const char *from, const char *to, void *aux)
+{ return ; }
+
 static void utl_peg_seterrln(peg_t parser)
 {
   const char *s;
-  if (parser->fail) { // calc err line & col
+  
+  if (*parser->errpos) {
     s = parser->start;
     parser->errln = 1;
     parser->errcn = 1;
@@ -124,30 +140,36 @@ static void utl_peg_seterrln(peg_t parser)
       }
       s++;
       parser->errcn++;
-    }
+    }  
   }
 }
 
-static void peg_defer_func_NULL(const char *from, const char *to, void *aux)
-{ return ; }
+static void utl_peg_execdeferred(peg_t parser)
+{
+  pegdefer_t defer;
+  pegdefer_t defer_NULL = {peg_defer_func_NULL, NULL, NULL};
+  
+  defer = vecfirst(pegdefer_t, parser->defer, defer_NULL);
+  while (defer.func != peg_defer_func_NULL) {
+    defer.func(defer.from, defer.to, parser->aux);
+    defer = vecnext(pegdefer_t, parser->defer, defer_NULL);
+  }
+}
 
 int utl_peg_parse(peg_t parser, pegrule_t start_rule, 
                 const char *txt,const char *rule_name, void *aux)
 {
-  pegdefer_t defer;
-  pegdefer_t defer_NULL = {peg_defer_func_NULL, NULL, NULL};
   if (parser && start_rule && txt) {
     utl_peg_init(parser,txt);
     parser->aux = aux;
     utl_peg_ref(parser, rule_name, start_rule);
-    utl_peg_seterrln(parser);
-    if (!parser->fail) { // exec deferred actions
-      defer = vecfirst(pegdefer_t, parser->defer, defer_NULL);
-      while (defer.func != peg_defer_func_NULL) {
-        defer.func(defer.from, defer.to, parser->aux);
-        defer = vecnext(pegdefer_t, parser->defer, defer_NULL);
-      }
+    if (!parser->fail) {
+      parser->errpos  = parser->pos;
+      parser->errrule = rule_name;
+      utl_peg_execdeferred(parser);
     }
+    utl_peg_seterrln(parser);
+    
     return !parser->fail;
   }
   return 0;

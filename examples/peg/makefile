@@ -20,7 +20,7 @@ _EXE=
 endif
 
 RM=rm -f
-CFLAGS = -O2 -I../../src
+CFLAGS = -std=c99 -O2 -I../../src
 
 all: calculator$(_EXE)
 

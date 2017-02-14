@@ -63,9 +63,15 @@ typedef struct {
 int utl_peg_lower(const char *str);
 int utl_peg_oneof(const char *pat, const char *str);
 int utl_peg_str(const char *pat, const char *str);
+int utl_peg_eol(const char *str);
 
 int utl_peg_parse(peg_t, pegrule_t, const char *, const char *, void *);
-#define pegparse(p,f,s,a) utl_peg_parse(p,PeG_##f,s,#f,a)
+
+#define peg_parse(p,f,s,a) utl_peg_parse(p,PeG_##f,s,#f,a)
+#define pegparse(p,f,...) \
+           peg_parse(p, f, \
+                     utl_expand(utl_arg0(__VA_ARGS__,utl_emptystring)), \
+                     utl_expand(utl_arg1(__VA_ARGS__,NULL,NULL))  ) 
 
 const char *utl_peg_back(peg_t ,const char *, const char *,int32_t);
 void utl_peg_ref(peg_t parser, const char *rule_name, pegrule_t rule);
@@ -91,14 +97,20 @@ peg_t utl_peg_new(void);
                           } \
                         } else (void)0
 
-#define pegis(s_)        utl_peg_reg(s_(PEG_POS,PEG_AUX))
-#define pegstr(s_)       utl_peg_rec(utl_peg_str(s_,PEG_POS))
-#define pegoneof(s_)     utl_peg_rec(utl_peg_oneof(s_,PEG_POS))
-#define peglower         utl_peg_rec(utl_peg_lower(PEG_POS))
-#define pegupper         utl_peg_rec((isupper((int)(*PEG_POS))?1:-1))
-#define pegdigit         utl_peg_rec((isdigit((int)(*PEG_POS))?1:-1))
-#define pegany           utl_peg_rec(((*PEG_POS)?1:-1))
+#define pegis(s_)       utl_peg_reg(s_(PEG_POS,PEG_AUX))
+#define pegstr(s_)      utl_peg_rec(utl_peg_str(s_,PEG_POS))
+#define pegoneof(s_)    utl_peg_rec(utl_peg_oneof(s_,PEG_POS))
+#define peglower        utl_peg_rec((islower((int)(*PEG_POS))?1:-1))
+#define pegupper        utl_peg_rec((isupper((int)(*PEG_POS))?1:-1))
+#define pegdigit        utl_peg_rec((isdigit((int)(*PEG_POS))?1:-1))
+#define pegany          utl_peg_rec(((*PEG_POS)?1:-1))
+#define pegeol          utl_peg_rec((utl_peg_eol(PEG_POS)))
+#define pegsol          utl_peg_rec(((PEG_POS == p->start \
+                                      || PEG_POS[-1] == '\n' \
+                                      || PEG_POS[-1] == '\r')?0:-1))
 
+#define pegpmx(s_)      utl_peg_rec((pmxmatch(s_,PEG_POS)?pmxlen(0):-1))
+                                       
 // PEG_BACK() is needed to ensure that errpos is updated (if it needs to be)
 #define pegfail        (PEG_FAIL=!PEG_BACK(PEG_POS,PEG_DCNT))
 #define pegempty       (PEG_FAIL=!PEG_POS)
@@ -161,8 +173,12 @@ const char *utl_peg_defer(peg_t, pegaction_t, const char *, const char *);
 #define pegopt   pegrpt(0,1)
 #define pegstar  pegrpt(0,INT_MAX)
 #define pegmore  pegrpt(1,INT_MAX)
+#define pegplus  pegrpt(1,INT_MAX)
 
 #define pegsetaux(p_,a_) (p_->aux = (void *)(a_))
+
+#define pegfailpos(p_)  ((p_)->errpos)
+#define pegfailrule(p_) ((p_)->errrule)
 
 #endif
 //>>>//

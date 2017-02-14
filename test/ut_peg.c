@@ -19,7 +19,6 @@
 /* 
    S =  (('+'|'-')? V)+
    V = upper+ | digit+
-
 */
 
 pegrule(S) {
