@@ -80,5 +80,28 @@ extern const char *utl_emptystring;
 int utl_unpow2(int n);
 
 //uint32_t utl_rnd();
+
+// Extended to include the full Latin-1 characters
+int utlisdigit(int ch);
+int utlisalpha(int ch);
+int utlisalnum(int ch);
+int utlislower(int ch);
+int utlisupper(int ch);
+int utlisblank(int ch);
+int utlisspace(int ch);
+int utliscntrl(int ch);
+int utlisgraph(int ch);
+int utlispunct(int ch);
+int utlisprint(int ch);
+int utlisxdigit(int ch);
+
+int utlfoldchar(int ch);
   
+int utl_next_utf8(const char *txt, int32_t *ch);
+#define utlnextutf8(...) \
+                 utl_next_utf8(utl_expand(utl_arg0(__VA_ARGS__,NULL)),\
+                               utl_expand(utl_arg1(__VA_ARGS__,NULL,NULL)))
+
+typedef int (*utl_txt_action_t)(const char *, const char *, void *);
+                               
 //>>>//
