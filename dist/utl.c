@@ -13,9 +13,9 @@
 **          (____,__/(_____(__/
 **    https://github.com/rdentato/clibutl
 */
-#line 92 "src/utl_hdr.c"
-#include "utl.h"
+#line 93 "src/utl_hdr.c"
 #define UTL_MAIN
+#include "utl.h"
 
 const char *utl_emptystring = "";
 
@@ -98,6 +98,171 @@ int utl_unpow2(int n)
 
 
 
+/*
+  Dealing with text encoding is a complex business. The most basic
+issue for pmx is to deal with lower/upper case characters.
+
+  Even just restricting to the main scripts that have the lower/upper
+case distinction (Latin, Greek and Cyrillic) and the major encodings
+(Unicode, ISO/IEC, Windows code pages, ...) would result in providinge
+something that could be of little use for somebody and of no use for many.
+
+  So, I went for the easiest solution: the Latin-1
+characters in the iso-8859-1 and Unicode Latin-1 supplement.
+In other words: the characters encoded in a single byte.
+
+  We need to extend the functions `islower()`, `isupper()`, `isalpha()`,
+`isalnum()` to include the letters in the range 0xA0-0xFF.
+
+  I've decided to not include the "numeric" caharacters for
+superscript or fractions, It seeems counterintuitive to me that
+`isdigit(0xBD); // 1/2` returns true. 
+  
+  To represent this encoding, we need four bits for each character:
+
+    xxxx
+    \\\
+     \\\_____ isupper 
+      \\_____ islower
+       \_____ isdigit     
+       
+  This allows using a table with 128 bytes rather than 256.
+*/
+
+static unsigned char utl_ENCODING[] = {
+       /*  10   32   54   76   98   BA   DC   FE */
+/* 0_ */ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+/* 1_ */ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+/* 2_ */ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+/* 3_ */ 0x88,0x88,0x88,0x88,0x88,0x00,0x00,0x00,
+/* 4_ */ 0x20,0x22,0x22,0x22,0x22,0x22,0x22,0x22,
+/* 5_ */ 0x22,0x22,0x22,0x22,0x22,0x02,0x00,0x00,
+/* 6_ */ 0x40,0x44,0x44,0x44,0x44,0x44,0x44,0x44,
+/* 7_ */ 0x44,0x44,0x44,0x44,0x44,0x04,0x00,0x00,
+/* 8_ */ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+/* 9_ */ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+/* A_ */ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+/* B_ */ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+/* C_ */ 0x22,0x22,0x22,0x22,0x22,0x22,0x22,0x22,
+/* D_ */ 0x22,0x22,0x22,0x02,0x22,0x22,0x22,0x42,
+/* E_ */ 0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,
+/* F_ */ 0x44,0x44,0x44,0x04,0x44,0x44,0x44,0x44
+};
+
+/*
+  Note that the table above is arranged so to make easy writing the
+macro below.
+Characters with odd code (i.e. ending with 1) are represented in the
+higher half of the byte. So, the last bit of the code can be used to
+shift right the byte and pick the higher half.
+
+  To make the macro below a little bit less obscure:
+  
+    - The byte to pick from the table for character c is c/2 (i.e. c>>1)
+    - If the character code is odd c&1 is 1 and the byteis shifted 4 bits right  
+
+*/
+
+#define utl_ENC(c) (utl_ENCODING[c>>1] >> ((c&1) << 2))
+
+int utlisdigit(int ch) {return (ch <= 0xFF) && (utl_ENC(ch) & 0x08);}
+int utlisalpha(int ch) {return (ch <= 0xFF) && (utl_ENC(ch) & 0x06);}
+int utlisalnum(int ch) {return (ch <= 0xFF) && (utl_ENC(ch) & 0x0E);}
+int utlislower(int ch) {return (ch <= 0xFF) && (utl_ENC(ch) & 0x04);}
+int utlisupper(int ch) {return (ch <= 0xFF) && (utl_ENC(ch) & 0x02);}
+int utlisblank(int ch) {return (ch == 0xA0) || ((ch <= 0xFF) && isblank(ch));}
+
+int utlisspace(int ch)  {return (ch <= 0xFF) && isspace(ch);}
+int utliscntrl(int ch)  {return (ch <= 0xFF) && iscntrl(ch);}
+int utlisgraph(int ch)  {return (ch <= 0xFF) && isgraph(ch);} 
+int utlispunct(int ch)  {return (ch <= 0xFF) && ispunct(ch);}
+int utlisprint(int ch)  {return (ch <= 0xFF) && isprint(ch);}
+int utlisxdigit(int ch) {return (ch <= 0xFF) && isxdigit(ch);}
+
+int utlfoldchar(int ch)
+{
+  if (utlisupper(ch)) ch += 32; 
+  return ch;
+}
+
+// Returns the length of the next UTF8 character and stores in ch
+// (if it's not null) the corresponding codepoint.
+// It is based on a work by Bjoern Hoehrmann:
+//            http://bjoern.hoehrmann.de/utf-8/decoder/dfa
+//
+int utl_next_utf8(const char *txt, int32_t *ch)
+{
+  int len;
+  uint8_t *s = (uint8_t *)txt;
+  uint8_t first = *s;
+  int32_t val;
+  
+  _logdebug("About to get UTF8: %s in %p",txt,ch);  
+  fsm {
+    fsmSTART {
+      if (*s <= 0xC1) { val = *s; len = (*s > 0); fsmGOTO(end);    }
+      if (*s <= 0xDF) { val = *s & 0x1F; len = 2; fsmGOTO(len2);   }
+      if (*s == 0xE0) { val = *s & 0x0F; len = 3; fsmGOTO(len3_0); }
+      if (*s <= 0xEC) { val = *s & 0x0F; len = 3; fsmGOTO(len3_1); }
+      if (*s == 0xED) { val = *s & 0x0F; len = 3; fsmGOTO(len3_2); }
+      if (*s <= 0xEF) { val = *s & 0x0F; len = 3; fsmGOTO(len3_1); }
+      if (*s == 0xF0) { val = *s & 0x07; len = 4; fsmGOTO(len4_0); }
+      if (*s <= 0xF3) { val = *s & 0x07; len = 4; fsmGOTO(len4_1); }
+      if (*s == 0xF4) { val = *s & 0x07; len = 4; fsmGOTO(len4_2); }
+      fsmGOTO(invalid);
+    } 
+    
+    fsmSTATE(len4_0) {
+      s++; if ( *s < 0x90 || 0xBF < *s) fsmGOTO(invalid);
+      val = (val << 6) | (*s & 0x3F);
+      fsmGOTO(len3_1);
+    }
+    
+    fsmSTATE(len4_1) {
+      s++; if ( *s < 0x80 || 0xBF < *s) fsmGOTO(invalid);
+      val = (val << 6) | (*s & 0x3F);
+      fsmGOTO(len3_1);
+    }
+    
+    fsmSTATE(len4_2) {
+      s++; if ( *s < 0x80 || 0x8F < *s) fsmGOTO(invalid);
+      val = (val << 6) | (*s & 0x3F);
+      fsmGOTO(len3_1);
+    }
+    
+    fsmSTATE(len3_0) {
+      s++; if ( *s < 0xA0 || 0xBF < *s) fsmGOTO(invalid);
+      val = (val << 6) | (*s & 0x3F);
+      fsmGOTO(len2);
+    }
+    
+    fsmSTATE(len3_1) {
+      s++; if ( *s < 0x80 || 0xBF < *s) fsmGOTO(invalid);
+      val = (val << 6) | (*s & 0x3F);
+      fsmGOTO(len2);
+    }
+
+    fsmSTATE(len3_2) {
+      s++; if ( *s < 0x80 || 0x9F < *s) fsmGOTO(invalid);
+      val = (val << 6) | (*s & 0x3F);
+      fsmGOTO(len2);
+    }
+    
+    fsmSTATE(len2) {
+      s++; if ( *s < 0x80 || 0xBF < *s) fsmGOTO(invalid);
+      val = (val << 6) | (*s & 0x3F);
+      fsmGOTO(end);
+    }
+    
+    // Return 1 character if the sequence is invalid
+    fsmSTATE(invalid) {val = first; len = 1;}
+    
+    fsmSTATE(end)   { }
+  }
+  if (ch) *ch = val;
+  return len;
+}
+
 
 #line 286 "src/utl_log.c"
 #ifndef UTL_NOLOG
@@ -108,8 +273,9 @@ uint32_t utl_log_check_num   = 0;
 uint32_t utl_log_check_fail  = 0;
 int16_t utl_log_dbglvl = 0;
 int16_t utl_log_prdlvl = 0;
+const char *utl_log_w = "w";
 
-char *utl_log_watch[1] = {"\1"};
+log_watch_t *utl_log_watch = NULL;
 
 int utl_log_close(const char *msg)
 {
@@ -181,22 +347,30 @@ void utl_log_assert(int res, const char *test, const char *file, int32_t line)
   }
 }
 
-void utl_log_watch_check(char *buf, char *watch[], const char *file, int32_t line)
+void utl_log_watch_check(char *buf, log_watch_t *lwatch, const char *file, int32_t line)
 { 
   int k=0;
   char *p;
   int expected = 1;
   int res = 1;
-  _logprintf("XXX %s",buf);
+  pmx_t pmx_state;
+  char **watch;
+  
+  logprintf("XXX %s",buf);
+  if (!lwatch) return;
+  watch = lwatch->watch;
   for (k=0; k<UTL_LOG_WATCH_SIZE; k++) {
     expected = 1;
     p = watch[k];
+    logprintf(">>> %s",p?p:"");
     if (p) {
       if (p[0] == '\1' && p[1] == '\0') break;
       if (p[0] == '!') {p++; expected = (p[0]=='!'); }
      
-      _logprintf("?? err:%d exp:%d %s %s",utl_log_check_fail,expected,watch[k],p);
+      logprintf("?? err:%d exp:%d %s %s",utl_log_check_fail,expected,(char *)watch[k],p);
+      pmxclear(&pmx_state);
     	res = pmxsearch(p,buf) != NULL;
+      pmxrestore(&pmx_state);
       if (res) {
         utl_log_check(expected,watch[k],file,line);
         if (expected) watch[k] = NULL;
@@ -205,43 +379,49 @@ void utl_log_watch_check(char *buf, char *watch[], const char *file, int32_t lin
   }
 }
 
-void utl_log_watch_last(char *watch[], const char *file, int32_t line)
+void utl_log_watch_last(log_watch_t *lwatch, const char *file, int32_t line)
 { 
   /* The  only tests in `watch[]` should be the ones with `!` at the beginning */
   int k;
   int expected = 0;
   char *p;
+  char **watch;
   
+  if (!lwatch) return;
+  watch = lwatch->watch;
   for (k=0; k<UTL_LOG_WATCH_SIZE;k++) {
     p = watch[k];
     expected = 0;
     if (p) {
       if (p[0] == '\1' && p[1] == '\0') break;
       if (p[0] != '!') expected = 1;
-      utl_log_check(!expected,watch[k],file,line);
+      utl_log_check(!expected,(char *)(watch[k]),file,line);
     }
   }
 }
 
-void utl_log_setlevel(const char *prd, const char *dev) {
+void utl_log_setlevel(const char *lvl) {
   int l = 0;
-  if (prd) {
+  if (lvl) {
     l = 2;
-    switch (toupper(*prd)) {
+    switch (toupper(*lvl)) {
       case 'N' : l++; 
       case 'E' : l++; 
       case 'W' : l++; 
       case 'I' : utl_log_prdlvl = l; 
                  break;
     }
-  }
-  if (dev) {
-    l = 0;
-    switch (toupper(*dev)) {
-      case 'N' : l+=4; 
-      case 'D' : l++; 
-      case 'T' : utl_log_dbglvl = l; 
-                 break;
+
+    while (*lvl && *lvl!=',') lvl++;
+    if (*lvl) {
+      lvl++;
+      l = 0;
+      switch (toupper(*lvl)) {
+        case 'N' : l+=4; 
+        case 'D' : l++; 
+        case 'T' : utl_log_dbglvl = l; 
+                   break;
+      }
     }
   }
 }
@@ -483,7 +663,7 @@ int16_t utl_vec_delrange(vec_t v, uint32_t i,  uint32_t j)
   return utl_vec_delgap(v,i,j-i+1);  
 }
 
-vec_t utl_vec_new(uint16_t esz, int (*cmp)(void *, void *,void *), uint32_t (*hsh)(void *, void *))
+vec_t utl_vec_new(uint16_t esz, utl_cmp_t cmp, utl_hsh_t hsh)
 {
   vec_t v = NULL;
   uint32_t sz;
@@ -495,7 +675,7 @@ vec_t utl_vec_new(uint16_t esz, int (*cmp)(void *, void *,void *), uint32_t (*hs
   }
   
   sz = sizeof(vec_s)+(esz-4); // 4 is the size of the elm array
-  v = (vec_t)malloc(sz);
+  v = malloc(sz);
   if (v) {
     memset(v,0,sz);
     v->esz = esz;
@@ -530,6 +710,91 @@ vec_t utl_vec_free(vec_t v)
   return NULL;
 }
 
+#define VEC_MAGIC(x) (((uint32_t)'V')<<24 | ((uint32_t)'E')<<16 | ((uint32_t)'C') << 8| (uint32_t)x)
+
+int utl_vec_freeze(FILE *f,vec_t v)
+{
+  uint32_t sz;
+  uint32_t max;
+  int ret = 0;
+  char *magic = "VEC1";
+  
+  if (f && v) {
+    if (fwrite(magic,4,1,f)) {
+      if (fwrite(&(v->esz),sizeof(uint16_t),1,f)) {
+        sz = sizeof(vec_s)+(v->esz-4);
+        max = v->max;
+        // You can't shrink hashtable nor que (TODO!)
+        //if (!v->hsh) v->max = v->cnt;
+        if (fwrite(v,sz,1,f)) {
+          if (fwrite(v->vec,v->esz*v->max,1,f)) {
+            v->max = max;
+            ret = 1;
+          }
+        }
+        v->max = max;
+      }
+    }
+  }
+  
+  return ret;
+}
+
+vec_t utl_vec_unfreeze(FILE *f, utl_cmp_t cmp, utl_hsh_t hsh)
+{
+  vec_t v = NULL;
+  char magic[8];
+  uint16_t esz;
+  uint32_t sz;
+  
+  if (f) {
+    if (fread(&magic,4,1,f)) {
+      if (strncmp(magic,"VEC1",4) == 0) {
+        if (fread(&esz,sizeof(uint16_t),1,f)) {
+          sz = sizeof(vec_s)+(esz-4);
+          if ((v = malloc(sz))) {
+            v->vec = NULL;
+            if (fread(v,sz,1,f)) {
+              v->vec = malloc(v->esz*v->max);
+              if (v->vec) {
+                if (fread(v->vec,v->esz*v->max,1,f)) {
+                  _logtrace("VEC UNFRZ: %p %p",cmp,hsh);
+                  v->elm = ((char *)v) + offsetof(vec_s,eld);
+                  v->cmp = cmp;
+                  v->hsh = hsh;
+                  return v;
+                } } } } } } } }
+  if (v) {
+    if (v->vec) free(v->vec);
+    free(v);
+  }
+  return NULL;
+}
+
+int utl_frz(char *fname, vec_t t, int (*fun)(FILE *, vec_t))
+{
+  int ret = 0;
+  FILE *f;
+  f = fopen(fname,"wb");
+  if (f) {
+    ret = fun(f,t);
+    fclose(f);
+  }
+  return ret;
+}
+
+vec_t utl_unfrz(char *fname, utl_cmp_t cmp, utl_hsh_t hsh, vec_t (*fun)(FILE *, utl_cmp_t, utl_hsh_t))
+{
+  sym_t t = NULL;
+  FILE *f;
+  f = fopen(fname,"rb");
+  if (f) {
+    t = fun(f, cmp, hsh);
+    fclose(f);
+  }
+  return t;
+}
+
 void *utl_vec_get(vec_t v, uint32_t i)
 {
   uint8_t *elm=NULL;
@@ -542,17 +807,25 @@ void *utl_vec_get(vec_t v, uint32_t i)
   return elm;
 }
 
-void *utl_vec_set(vec_t v, uint32_t i)
+void *utl_vec_alloc(vec_t v, uint32_t i)
 {
   uint8_t *elm=NULL;
   
   if (i == vec_MAX_CNT) i = v->cnt;
   if (utl_vec_makeroom(v,i)) {
     elm = v->vec + (i*v->esz);
-    memcpy(elm, v->elm, v->esz);
     if (i >= v->cnt) v->cnt = i+1;
     vecunsorted(v);
   }
+  return elm;
+}
+
+void *utl_vec_set(vec_t v, uint32_t i)
+{
+  uint8_t *elm=NULL;
+  
+  elm = utl_vec_alloc(v,i);
+  if (elm) memcpy(elm, v->elm, v->esz);
   return elm;
 }
 
@@ -681,7 +954,7 @@ static inline uint32_t utl_dpqrand(void)
 #define utl_dpqpush(l,r) do {stack[stack_top][0]=(l); stack[stack_top][1]=(r); stack_top++; } while(0)
 #define utl_dpqpop(l,r)  do {stack_top--; l=stack[stack_top][0]; r=stack[stack_top][1];} while(0)
 
-void utl_dpqsort(void *base, uint32_t nel, uint32_t esz, int (*cmp)(const void *, const void *, const void *), void *aux)
+void utl_dpqsort(void *base, uint32_t nel, uint32_t esz, utl_cmp_t cmp, void *aux)
 {
   int32_t left,right;
   uint8_t *leftptr, *rightptr; 
@@ -777,7 +1050,7 @@ void utl_vec_sort(vec_t v, int (*cmp)(void *, void *, void *))
   else if (!vecissorted(v)) {
     if (v->cnt > 1) {
       //qsort(v->vec,v->cnt,v->esz,(int (*)(const void *, const void *))(v->cmp));  
-      utl_dpqsort(v->vec,v->cnt,v->esz,(int (*)(const void *, const void *, const void *))(v->cmp),v);  
+      utl_dpqsort(v->vec,v->cnt,v->esz,v->cmp,v);  
     }
     vecsorted(v);
   }
@@ -1039,18 +1312,22 @@ void *utl_vec_first(vec_t v)
     return NULL;
   }
   elm = v->vec;
+  v->cur = 0;
   if (v->hsh) {
     // Since there is at lease 1 element, we will
     // eventually exit the loop.
-     while (utl_h(elm,v->esz) == 0xFFFFFFFF) {
-       elm += v->esz;
-     }
+    while (utl_h(elm,v->esz) == 0xFFFFFFFF) {
+      _logtrace("   checking %d",v->cur);
+      elm += v->esz;
+      v->cur++;
+    }
   }
   else if (v->fst != vec_MAX_CNT) {
     elm = v->vec + v->fst * v->esz ;
   }
   
   v->cur = (elm - v->vec) / v->esz;
+  _logtrace("found (first) %d, %d",v->cur, *((uint32_t *)elm));
   memcpy(v->elm,elm,v->esz);
   return elm;
 }
@@ -1083,6 +1360,7 @@ void *utl_vec_next(vec_t v)
   uint32_t max = v->cnt;
   uint8_t *elm = NULL;
   
+  _logtrace("Initial cnt:%d cur:%d",v->cnt,v->cur);
   if (v->cnt == 0) v->cur = vec_MAX_CNT;
   if (v->cur == v->lst) v->cur = vec_MAX_CNT;
   if (v->cur == vec_MAX_CNT) return NULL;
@@ -1091,6 +1369,7 @@ void *utl_vec_next(vec_t v)
   max = v->max;
   if (v->hsh) {  // Hash table
     while (v->cur < max) {
+      _logtrace("   checking %d",v->cur);
       elm = v->vec + v->cur * v->esz;
       if (utl_h(elm,v->esz) != 0xFFFFFFFF) break;
       v->cur++;
@@ -1106,6 +1385,7 @@ void *utl_vec_next(vec_t v)
   
   if (v->cur != vec_MAX_CNT) {
     elm = v->vec + v->cur * v->esz;
+    _logtrace("found (next) %d, %d",v->cur, *((uint32_t *)elm));
     memcpy(v->elm,elm,v->esz);
   }
   return elm;
@@ -1332,9 +1612,49 @@ sym_t utl_sym_new(void)
 
 sym_t utl_sym_free(sym_t t)
 {
-  buffree(utl_sym_buf(t));
-  vecfree(utl_sym_tbl(t));
+  if (t) {
+    buffree(utl_sym_buf(t));
+    vecfree(utl_sym_tbl(t));
+  }
   return NULL; 
+}
+
+int utl_sym_freeze(FILE *f, sym_t t)
+{
+  int ret = 0;
+  ret = utl_vec_freeze(f,t);
+  _logifdebug {
+    logtrace("FREEZE VEC: %p",t->vec);
+    for (int k=0; k<32; k+=2) {
+      logtrace("%2d [%8X] -> %8X",k,((uint32_t *)(t->vec))[k],((uint32_t *)(t->vec))[k+1]);
+    }
+  }
+  if (ret) {
+     ret = utl_vec_freeze(f,t->aux);
+  }
+  return ret;
+}
+
+sym_t utl_sym_unfreeze(FILE *f, utl_cmp_t cmp, utl_hsh_t hsh)
+{
+  sym_t t;
+  _logtrace("SYM UNFRZ: %p %p",utl_sym_cmp,utl_sym_hash);
+  t = utl_vec_unfreeze(f,utl_sym_cmp,utl_sym_hash);
+  _logifdebug {
+    logtrace("UNFREEZE VEC: %p",t->vec);
+    for (int k=0; k<32; k+=2) {
+      logtrace("%2d [%8X] -> %8X",k,((uint32_t *)(t->vec))[k],((uint32_t *)(t->vec))[k+1]);
+    }
+  }
+  if (t) {
+    t->aux = utl_vec_unfreeze(f,NULL,NULL);
+    if (t->aux) {
+      utl_sym_buf(t)->aux = NULL;
+      return t;
+    }
+  }
+  t=vecfree(t);
+  return NULL;
 }
 
 static uint32_t utl_sym_store(sym_t t,const char *sym)
@@ -1348,7 +1668,7 @@ static uint32_t utl_sym_store(sym_t t,const char *sym)
   bufsets(b,id,sym);
   *((int32_t *)(buf(b)+k)) = 0; // set data to 0
   do { // Ensure the next pointer will be 4-bytes aligned
-    b->cnt++;
+    buf(b)[b->cnt++] = '\0';
   } while (b->cnt & 0x3);
   return id;
 }
@@ -1369,7 +1689,7 @@ uint32_t utl_sym_search(sym_t t, const char *sym)
 {
   uint32_t k = symNULL;
   uint32_t *p;
-
+  _logtrace("SYM SEARCH: %s %p",sym,t->cmp);
   utl_sym_buf(t)->aux = (void *)sym;
   p=vecsearch(uint32_t,t,symNULL);
   utl_sym_buf(t)->aux = NULL;
@@ -1380,7 +1700,10 @@ uint32_t utl_sym_search(sym_t t, const char *sym)
 char *utl_sym_get(sym_t t,uint32_t id)
 {
   char *s;
-  if (id == vec_MAX_CNT) return utl_sym_buf(t)->aux;
+  if (id == vec_MAX_CNT) {
+    _logtrace("id==MAX %s",(char *)utl_sym_buf(t)->aux);
+    return utl_sym_buf(t)->aux;
+  }
   if (id >= utl_sym_buf(t)->cnt) return NULL;
   s = buf(utl_sym_buf(t)) + id;
   if (*s == '\0') s = NULL;
@@ -1439,59 +1762,43 @@ int32_t utl_sym_getdata(sym_t t,uint32_t id)
   return *s;
 }
 
+
 #endif
-#line 376 "src/utl_pmx.c"
+#line 19 "src/utl_pmx.c"
 #ifndef UTL_NOPMX
-#ifdef UTL_MAIN
+
+
+pmx_t utl_pmx_ ;
+
 
 int(*utl_pmx_ext)(const char *pat, const char *txt, int, int32_t ch) = NULL;
 
-const char *utl_pmx_capt[utl_pmx_MAXCAPT][2] = {{0}} ;
-uint8_t     utl_pmx_capnum                   =   0   ;
-const char *utl_pmx_error                    = NULL  ;
-
-
-#define utl_pmx_set_paterror(t) do {if (!utl_pmx_error) {utl_pmx_error = t;}} while (0)
-
-static int utl_pmx_utf8 = 0;
-static int utl_pmx_case = 1; // assume case sensitive
+#define utl_pmx_set_paterror(t) do {if (!utl_pmx_.error) {utl_pmx_.error = t;}} while (0)
 
 #define utl_pmx_FAIL       goto fail
 
 #define utl_pmx_newcap(t) do {                                       \
-                            if (utl_pmx_capnum < utl_pmx_MAXCAPT) {  \
-                              utl_pmx_capt[utl_pmx_capnum][0] =      \
-                              utl_pmx_capt[utl_pmx_capnum][1] = (t); \
-                              utl_pmx_capnum++;                      \
+                            if (utl_pmx_.capnum < utl_pmx_MAXCAPT) {  \
+                              utl_pmx_.capt[utl_pmx_.capnum][0] =      \
+                              utl_pmx_.capt[utl_pmx_.capnum][1] = (t); \
+                              utl_pmx_.capnum++;                      \
                             }                                        \
                           } while(0)
 
-typedef struct {
-  const char *pat;
-  const char *txt;
-  int32_t min_n;
-  int32_t max_n;
-  int32_t n;
-  int16_t inv;
-  int16_t cap; 
-} utl_pmx_state_s;
-
-utl_pmx_state_s utl_pmx_stack[utl_pmx_MAXCAPT];
-uint8_t utl_pmx_stack_ptr = 0;
 
 static void utl_pmx_state_reset(void)
 {
-  utl_pmx_stack_ptr = 0;
-  utl_pmx_capnum = 0;
+  utl_pmx_.stack_ptr = 0;
+  utl_pmx_.capnum = 0;
 }
 
 static int utl_pmx_state_push(const char *pat, const char *txt, int32_t min_n, int32_t max_n, int16_t inv)
 {
   utl_pmx_state_s *state;
   
-  if (utl_pmx_stack_ptr >= utl_pmx_MAXCAPT) return 0;
+  if (utl_pmx_.stack_ptr >= utl_pmx_MAXCAPT) return 0;
   
-  state = utl_pmx_stack + utl_pmx_stack_ptr;
+  state = utl_pmx_.stack + utl_pmx_.stack_ptr;
   
   state->pat   = pat;
   state->txt   = txt;
@@ -1499,107 +1806,35 @@ static int utl_pmx_state_push(const char *pat, const char *txt, int32_t min_n, i
   state->max_n = max_n;
   state->n     = 0;
   state->inv   = inv;
-  state->cap   = utl_pmx_capnum;
+  state->cap   = utl_pmx_.capnum;
   
   utl_pmx_newcap(txt);
-  utl_pmx_stack_ptr++;
+  utl_pmx_.stack_ptr++;
   
   return 1;
 }
 
 static int utl_pmx_state_pop(void)
 {
-  if (utl_pmx_stack_ptr == 0) return 0;
-  utl_pmx_stack_ptr--;
+  if (utl_pmx_.stack_ptr == 0) return 0;
+  utl_pmx_.stack_ptr--;
   return 1;
 }
 
 static utl_pmx_state_s *utl_pmx_state_top(void)
 {
-  if (utl_pmx_stack_ptr == 0) return NULL;
-  return utl_pmx_stack + (utl_pmx_stack_ptr-1);
+  if (utl_pmx_.stack_ptr == 0) return NULL;
+  return utl_pmx_.stack + (utl_pmx_.stack_ptr-1);
 }
 
 int utl_pmx_len(uint8_t n) {return (int)(pmxend(n)-pmxstart(n));}
-
-static int utl_pmx_get_utf8(const char *txt, int32_t *ch)
-{
-  int len;
-  uint8_t *s = (uint8_t *)txt;
-  uint8_t first = *s;
-  int32_t val;
-  
-  _logdebug("About to get UTF8: %s in %p",txt,ch);  
-  fsm {
-    fsmSTART {
-      if (*s <= 0xC1) { val = *s; len = (*s > 0); fsmGOTO(end);    }
-      if (*s <= 0xDF) { val = *s & 0x1F; len = 2; fsmGOTO(len2);   }
-      if (*s == 0xE0) { val = *s & 0x0F; len = 3; fsmGOTO(len3_0); }
-      if (*s <= 0xEC) { val = *s & 0x0F; len = 3; fsmGOTO(len3_1); }
-      if (*s == 0xED) { val = *s & 0x0F; len = 3; fsmGOTO(len3_2); }
-      if (*s <= 0xEF) { val = *s & 0x0F; len = 3; fsmGOTO(len3_1); }
-      if (*s == 0xF0) { val = *s & 0x07; len = 4; fsmGOTO(len4_0); }
-      if (*s <= 0xF3) { val = *s & 0x07; len = 4; fsmGOTO(len4_1); }
-      if (*s == 0xF4) { val = *s & 0x07; len = 4; fsmGOTO(len4_2); }
-      fsmGOTO(invalid);
-    } 
-    
-    fsmSTATE(len4_0) {
-      s++; if ( *s < 0x90 || 0xbf < *s) fsmGOTO(invalid);
-      val = (val << 6) | (*s & 0x3F);
-      fsmGOTO(len3_1);
-    }
-    
-    fsmSTATE(len4_1) {
-      s++; if ( *s < 0x80 || 0xbf < *s) fsmGOTO(invalid);
-      val = (val << 6) | (*s & 0x3F);
-      fsmGOTO(len3_1);
-    }
-    
-    fsmSTATE(len4_2) {
-      s++; if ( *s < 0x80 || 0x8f < *s) fsmGOTO(invalid);
-      val = (val << 6) | (*s & 0x3F);
-      fsmGOTO(len3_1);
-    }
-    
-    fsmSTATE(len3_0) {
-      s++; if ( *s < 0xA0 || 0xbf < *s) fsmGOTO(invalid);
-      val = (val << 6) | (*s & 0x3F);
-      fsmGOTO(len2);
-    }
-    
-    fsmSTATE(len3_1) {
-      s++; if ( *s < 0x80 || 0xbf < *s) fsmGOTO(invalid);
-      val = (val << 6) | (*s & 0x3F);
-      fsmGOTO(len2);
-    }
-
-    fsmSTATE(len3_2) {
-      s++; if ( *s < 0x80 || 0x9f < *s) fsmGOTO(invalid);
-      val = (val << 6) | (*s & 0x3F);
-      fsmGOTO(len2);
-    }
-    
-    fsmSTATE(len2) {
-      s++; if ( *s < 0x80 || 0xbf < *s) fsmGOTO(invalid);
-      val = (val << 6) | (*s & 0x3F);
-      fsmGOTO(end);
-    }
-    
-    fsmSTATE(invalid) {val = first; len = 1;}
-    
-    fsmSTATE(end)   { }
-  }
-  if (ch) *ch = val;
-  return len;
-}
 
 // Returns the length in bytes of the character or 0 if it is '\0'
 static int32_t utl_pmx_nextch(const char *t, int32_t *c_ptr)
 {
   int32_t len = 0;
   
-  if (utl_pmx_utf8) len = utl_pmx_get_utf8(t, c_ptr);
+  if (utl_pmx_.utf8) len = utlnextutf8(t, c_ptr);
   else if ((*c_ptr = (uint8_t)(*t)) != 0) len = 1;
   
   return len;
@@ -1652,8 +1887,8 @@ static int32_t utl_pmx_iscapt(const char *pat, const char *txt)
   
   if ('1' <= *pat && *pat <= '9') {
     capnum = *pat - '0';
-    _logdebug("capt: %d %d",capnum,utl_pmx_capnum);
-    if (capnum < utl_pmx_capnum) {
+    _logdebug("capt: %d %d",capnum,utl_pmx_.capnum);
+    if (capnum < utl_pmx_.capnum) {
       cap = pmxstart(capnum);
       while (cap < pmxend(capnum) && *cap && (*cap == *txt)) {
         len++; txt++; cap++;
@@ -1700,21 +1935,24 @@ static int utl_pmx_get_limits(const char *pat, const char *pat_end, const char *
       else if (ch == '[')    {c_beg=ch; c_end=']';}
       else if (ch == '{')    {c_beg=ch; c_end='}';}
       else if (ch == '<')    {c_beg=ch; c_end='>';}
-      else if (ch == 0x2039) {c_beg=ch; c_end=0x203A;} /* Unicode single quotes */
-      else if (ch == 0x27E8) {c_beg=ch; c_end=0x27E9;} /* Unicode MATHEMATICAL ANGLE BRACKETS */
-      else if (ch == 0x27EA) {c_beg=ch; c_end=0x27EB;} /* Unicode MATHEMATICAL DOUBLE ANGLE BRACKETS */
     }
     else { // Quoted string
       c_esc = '\\';
            if (ch == '"')    {c_beg=ch; c_end=ch;}
       else if (ch == '\'')   {c_beg=ch; c_end=ch;}
       else if (ch == '`')    {c_beg=ch; c_end=ch;}
+      else if (ch == 0x91)   {c_beg=ch; c_end=0x92;}   /* ANSI single quotes */
+      else if (ch == 0x93)   {c_beg=ch; c_end=0x94;}   /* ANSI double quotes */
       else if (ch == 0x2018) {c_beg=ch; c_end=0x2019;} /* Unicode single quotes */
       else if (ch == 0x201C) {c_beg=ch; c_end=0x201D;} /* Unicode double quotes */
     }
-    if (c_beg=='\0') {
+    if (c_beg=='\0') { /* Valid both as quoted string or braces */
            if (ch == '\xAB') {c_beg=ch; c_end='\xBB';} /* Unicode and ISO-8859-1 "<<" and ">>" */
+      else if (ch == '\x8B') {c_beg=ch; c_end='\x9B';} /* Unicode and ISO-8859-1 "<"  and ">"  */
+      else if (ch == 0x2039) {c_beg=ch; c_end=0x203A;} /* Unicode Single pointing Angle Quotation */
       else if (ch == 0x2329) {c_beg=ch; c_end=0x232A;} /* Unicode ANGLE BRACKETS */
+      else if (ch == 0x27E8) {c_beg=ch; c_end=0x27E9;} /* Unicode MATHEMATICAL ANGLE BRACKETS */
+      else if (ch == 0x27EA) {c_beg=ch; c_end=0x27EB;} /* Unicode MATHEMATICAL DOUBLE ANGLE BRACKETS */
       else return 0;
     }
   }
@@ -1761,93 +1999,6 @@ static int utl_pmx_delimited(const char *pat, const char *pat_end, const char *t
   return utl_pmx_get_delimited(pat,txt,c_beg,c_end,c_esc);  
 }
 
-
-/*
-  Dealing with text encoding is a complex business. The most basic
-issue for pmx is to deal with lower/upper case characters.
-
-  Even just restricting to the main scripts that have the lower/upper
-case distinction (Latin, Greek and Cyrillic) and the major encodings
-(Unicode, ISO/IEC, Windows code pages, ...) would provide something
-that could be of little use for somebody and of no use for many.
-
-  So, I went for the easiest solution: the Latin-1
-characters in the iso-8859-1 and Unicode Latin-1 supplement.
-In other words: the characters encoded in a single byte.
-
-  We need to extend the functions `islower()`, `isupper()`, `isalpha()`,
-`isalnum()` to include the letters in the range 0xA0-0xFF.
-
-  I've decided to not include the "numeric" caharacters for
-superscript or fractions, It seeems counterintuitive to me that
-`isdigit(0xBD); // 1/2` returns true. 
-  
-  To represent this encoding, we need four bits for each character:
-
-    xxxx
-    \\\
-     \\\_____ isupper 
-      \\_____ islower
-       \_____ isdigit     
-       
-  This allows using a table with 128 bytes rather than 256.
-*/
-
-static unsigned char utl_ENCODING[] = {
-       /*  10   32   54   76   98   BA   DC   FE */
-/* 0_ */ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-/* 1_ */ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-/* 2_ */ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-/* 3_ */ 0x88,0x88,0x88,0x88,0x88,0x00,0x00,0x00,
-/* 4_ */ 0x20,0x22,0x22,0x22,0x22,0x22,0x22,0x22,
-/* 5_ */ 0x22,0x22,0x22,0x22,0x22,0x02,0x00,0x00,
-/* 6_ */ 0x40,0x44,0x44,0x44,0x44,0x44,0x44,0x44,
-/* 7_ */ 0x44,0x44,0x44,0x44,0x44,0x04,0x00,0x00,
-/* 8_ */ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-/* 9_ */ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-/* A_ */ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-/* B_ */ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-/* C_ */ 0x22,0x22,0x22,0x22,0x22,0x22,0x22,0x22,
-/* D_ */ 0x22,0x22,0x22,0x02,0x22,0x22,0x22,0x22,
-/* E_ */ 0x44,0x44,0x44,0x44,0x44,0x44,0x44,0x44,
-/* F_ */ 0x44,0x44,0x44,0x04,0x44,0x44,0x44,0x44
-};
-
-/*
-  Note that the table above is arranged so to make easy writing the
-macro below.
-Characters with odd code (i.e. ending with 1) are represented in the
-higher half of the byte. So, the last bit of the code can be used to
-shift right the byte and pick the higher half.
-
-  To make the macro below a little bit less obscure:
-  
-    - The byte to pick from the table for character c is c/2 (i.e. c>>1)
-    - If the character code is odd c&1 is 1 and the byteis shifted 4 bits right  
-
-*/
-
-#define utl_ENC(c) (utl_ENCODING[c>>1] >> ((c&1) << 2))
-
-static int utl_isdigit(int ch) {return (ch <= 0xFF) && (utl_ENC(ch) & 0x08);}
-static int utl_isalpha(int ch) {return (ch <= 0xFF) && (utl_ENC(ch) & 0x06);}
-static int utl_isalnum(int ch) {return (ch <= 0xFF) && (utl_ENC(ch) & 0x0E);}
-static int utl_islower(int ch) {return (ch <= 0xFF) && (utl_ENC(ch) & 0x04);}
-static int utl_isupper(int ch) {return (ch <= 0xFF) && (utl_ENC(ch) & 0x02);}
-static int utl_isblank(int ch) {return (ch == 0xA0) || ((ch <= 0xFF) && isblank(ch));}
-
-static int utl_isspace(int ch)  {return (ch <= 0xFF) && isspace(ch);}
-static int utl_iscntrl(int ch)  {return (ch <= 0xFF) && iscntrl(ch);}
-static int utl_isgraph(int ch)  {return (ch <= 0xFF) && isgraph(ch);} 
-static int utl_ispunct(int ch)  {return (ch <= 0xFF) && ispunct(ch);}
-static int utl_isprint(int ch)  {return (ch <= 0xFF) && isprint(ch);}
-static int utl_isxdigit(int ch) {return (ch <= 0xFF) && isxdigit(ch);}
-
-static int utl_pmx_fold(int ch)
-{
-  if (utl_isupper(ch)) ch += 32; 
-  return ch;
-}
 
 static int utl_pmx_class(const char **pat_ptr, const char **txt_ptr)
 {
@@ -1917,18 +2068,18 @@ static int utl_pmx_class(const char **pat_ptr, const char **txt_ptr)
   // {{ Matches a pattern n times
   #define utl_W(tst) while ((len = utl_pmx_nextch(txt,&ch)) && ((!tst) == inv) && (n<max_n)) {n++; txt+=len;}
   switch (*pat) {
-    case 'a' : utl_W(( utl_isalpha(ch) )); break;
-    case 's' : utl_W(( utl_isspace(ch) )); break;
-    case 'u' : utl_W(( utl_isupper(ch) )); break;
-    case 'l' : utl_W(( utl_islower(ch) )); break;
-    case 'd' : utl_W(( utl_isdigit(ch) )); break;
-    case 'k' : utl_W(( utl_isblank(ch) )); break;
-    case 'x' : utl_W(( utl_isxdigit(ch))); break;
-    case 'w' : utl_W(( utl_isalnum(ch) )); break;
-    case 'c' : utl_W(( utl_iscntrl(ch) )); break;
-    case 'g' : utl_W(( utl_isgraph(ch) )); break;
-    case 'p' : utl_W(( utl_ispunct(ch) )); break;
-    case 'r' : utl_W(( utl_isprint(ch) )); break;
+    case 'a' : utl_W(( utlisalpha(ch) )); break;
+    case 's' : utl_W(( utlisspace(ch) )); break;
+    case 'u' : utl_W(( utlisupper(ch) )); break;
+    case 'l' : utl_W(( utlislower(ch) )); break;
+    case 'd' : utl_W(( utlisdigit(ch) )); break;
+    case 'k' : utl_W(( utlisblank(ch) )); break;
+    case 'x' : utl_W(( utlisxdigit(ch))); break;
+    case 'w' : utl_W(( utlisalnum(ch) )); break;
+    case 'c' : utl_W(( utliscntrl(ch) )); break;
+    case 'g' : utl_W(( utlisgraph(ch) )); break;
+    case 'p' : utl_W(( utlispunct(ch) )); break;
+    case 'r' : utl_W(( utlisprint(ch) )); break;
 
     case 'i' : utl_W((ch < 0x80))               ; break;
     
@@ -1944,8 +2095,8 @@ static int utl_pmx_class(const char **pat_ptr, const char **txt_ptr)
     case 'Q' : utl_W((len=utl_pmx_delimited(pat+1,pat_end,txt, UTL_PMX_QUOTED))); break;
     case 'B' : utl_W((len=utl_pmx_delimited(pat+1,pat_end,txt, UTL_PMX_BRACED))); break;
     
-    case 'I' : utl_pmx_case = 0; n=min_n; break;
-    case 'C' : utl_pmx_case = 1; n=min_n; break;
+    case 'I' : utl_pmx_.csens = 0; n=min_n; break;
+    case 'C' : utl_pmx_.csens = 1; n=min_n; break;
                             
     case '$' : if (*txt == '\0') n=min_n; break;
     
@@ -2012,7 +2163,7 @@ static const char *utl_pmx_alt(const char *pat, const char **txt_ptr)
   const char *ret = utl_emptystring;
   
   while (*pat) {
-    _logdebug("ALT: %s (%d)",pat,utl_pmx_stack_ptr);
+    _logdebug("ALT: %s (%d)",pat,utl_pmx_.stack_ptr);
     switch (*pat++) {
       case '%': if (*pat) pat++; /* works for utf8 as well */
                 break;
@@ -2025,7 +2176,7 @@ static const char *utl_pmx_alt(const char *pat, const char **txt_ptr)
                   paren--;
                   break;
                 }
-                if (utl_pmx_stack_ptr < 2) {
+                if (utl_pmx_.stack_ptr < 2) {
                   utl_pmx_set_paterror(pat);
                   break;
                 }
@@ -2040,8 +2191,8 @@ static const char *utl_pmx_alt(const char *pat, const char **txt_ptr)
                   return ret;
                 }
                 if (state->n >= state->min_n) {       /* It's ok, we matched enough times */
-                  utl_pmx_capt[state->cap][0] = state->txt;
-                  utl_pmx_capt[state->cap][1] = *txt_ptr;
+                  utl_pmx_.capt[state->cap][0] = state->txt;
+                  utl_pmx_.capt[state->cap][1] = *txt_ptr;
                   utl_pmx_state_pop();
                   return ret;
                 }
@@ -2088,8 +2239,8 @@ static const char *utl_pmx_match(const char *pat, const char *txt)
                  break;
       
       case ')' : pat++;
-                 _logdebug(")->%d",utl_pmx_stack_ptr);
-                 if (utl_pmx_stack_ptr < 2) {
+                 _logdebug(")->%d",utl_pmx_.stack_ptr);
+                 if (utl_pmx_.stack_ptr < 2) {
                    utl_pmx_set_paterror(pat-1); 
                    break;
                  }
@@ -2102,16 +2253,16 @@ static const char *utl_pmx_match(const char *pat, const char *txt)
                    utl_pmx_FAIL;
                  }
                  
-                 utl_pmx_capt[state->cap][1] = txt;  
+                 utl_pmx_.capt[state->cap][1] = txt;  
                  state->n++;
                  _logdebug("match #%d min:%d max:%d",state->n,state->min_n, state->max_n);
                  
                  if (state->n < state->max_n) { 
-                   utl_pmx_capt[state->cap][0] = txt;
+                   utl_pmx_.capt[state->cap][0] = txt;
                    pat = state->pat; /* try to match once more */
                  }
                  else {
-                   utl_pmx_capt[state->cap][0] = state->txt;  
+                   utl_pmx_.capt[state->cap][0] = state->txt;  
                    utl_pmx_state_pop();
                  }
                  
@@ -2124,9 +2275,9 @@ static const char *utl_pmx_match(const char *pat, const char *txt)
 
       default  : if (c1 == 0) len = utl_pmx_nextch(pat, &c1);
                  len = utl_pmx_nextch(txt, &ch);
-                 if (!utl_pmx_case) {
-                   ch = utl_pmx_fold(ch);
-                   c1 = utl_pmx_fold(c1);
+                 if (!utl_pmx_.csens) {
+                   ch = utlfoldchar(ch);
+                   c1 = utlfoldchar(c1);
                  }
                  if (ch != c1) {
                    _logdebug("FAIL: %d %d",c1,ch);
@@ -2137,38 +2288,73 @@ static const char *utl_pmx_match(const char *pat, const char *txt)
                  break;
                  
       fail     : pat = utl_pmx_alt(pat, &txt) ; /* search for an alternative */
-                 if (*pat == '\0') utl_pmx_capnum = 0;
+                 if (*pat == '\0') utl_pmx_.capnum = 0;
                  break;
     }
   }
-  utl_pmx_capt[0][1] = txt;
+  utl_pmx_.capt[0][1] = txt;
   
-  for (len = utl_pmx_capnum; len < utl_pmx_MAXCAPT; len++) {
-    utl_pmx_capt[len][0] = utl_pmx_capt[len][1] = NULL;
+  for (len = utl_pmx_.capnum; len < utl_pmx_MAXCAPT; len++) {
+    utl_pmx_.capt[len][0] = utl_pmx_.capt[len][1] = NULL;
   }
-  _logdebug("res: %p - %p",utl_pmx_capt[0][0],utl_pmx_capt[0][1]);
-  return utl_pmx_capt[0][0];
+  _logdebug("res: %p - %p",utl_pmx_.capt[0][0],utl_pmx_.capt[0][1]);
+  return utl_pmx_.capt[0][0];
 }
 
 const char *utl_pmx_search(const char *pat, const char *txt, int fromstart)
 {
   const char *ret=NULL;
   
-  utl_pmx_error = NULL;
-  utl_pmx_case = 1;
+  utl_pmx_.error = NULL;
+  utl_pmx_.csens = 1;
   
-       if (strncmp(pat,"<utf>",5) == 0) {pat+=5; utl_pmx_utf8=1;}
-  else if (strncmp(pat,"<iso>",5) == 0) {pat+=5; utl_pmx_utf8=0;}
+       if (strncmp(pat,"<utf>",5) == 0) {pat+=5; utl_pmx_.utf8=1;}
+  else if (strncmp(pat,"<iso>",5) == 0) {pat+=5; utl_pmx_.utf8=0;}
     
   if (*pat == '^')  ret = utl_pmx_match(pat+1,txt);
   else while (!(ret = utl_pmx_match(pat,txt)) && *txt && !fromstart) {
-         txt += utl_pmx_utf8 ? utl_pmx_get_utf8(txt, NULL) : 1;
+         txt += utl_pmx_.utf8 ? utlnextutf8(txt) : 1;
        }
   _logdebug("ret: %p",ret);
   return ret;
 }
 
-#endif
+const char *utl_pmx_scan(const char *pat, const char *txt, pmxaction_t func, void *aux)
+{
+  const char *ret =NULL;  
+  utl_pmx_.error = NULL;
+  utl_pmx_.csens = 1;
+ 
+       if (strncmp(pat,"<utf>",5) == 0) {pat+=5; utl_pmx_.utf8=1;}
+  else if (strncmp(pat,"<iso>",5) == 0) {pat+=5; utl_pmx_.utf8=0;}
+      
+  while (*txt)  {
+     if ((ret = utl_pmx_match(pat,txt))) {
+       if (func(utl_pmx_.capt[0][0],utl_pmx_.capt[0][1],aux))
+         break;
+       txt = utl_pmx_.capt[0][1];
+     }
+     else {
+       txt += utl_pmx_.utf8 ? utlnextutf8(txt) : 1;
+     }
+  }
+
+  return txt;
+}
+
+void utl_pmx_save(pmx_t *p)
+{ 
+  if (p) memcpy(p,&utl_pmx_,sizeof(pmx_t));
+  utl_pmx_state_reset();
+}
+
+void utl_pmx_restore(pmx_t *p)
+{
+  if (p) memcpy(&utl_pmx_,p,sizeof(pmx_t));  
+}
+
+
+
 #endif
 #line 20 "src/utl_peg.c"
 #ifndef UTL_NOPEG
@@ -2190,6 +2376,17 @@ int utl_peg_lower(const char *str)
 {
   if (!(str && *str)) return -1;
   return (islower((int)*str))? 1:-1;
+}
+
+int utl_peg_eol(const char *str)
+{
+  int ret = -1;
+  if (*str == '\0' ) {ret = 0;}
+  else {
+    if (*str == '\r') {ret = 1; str++;}
+    if (*str == '\n') {ret++;}
+  }
+  return ret;
 }
 
 static peg_t utl_peg_init(peg_t p, const char *s)
@@ -2263,10 +2460,15 @@ void utl_peg_ref(peg_t parser, const char *rule_name, pegrule_t rule)
   }
 }
 
+
+static int peg_defer_func_NULL(const char *from, const char *to, void *aux)
+{ return 1; }
+
 static void utl_peg_seterrln(peg_t parser)
 {
   const char *s;
-  if (parser->fail) { // calc err line & col
+  
+  if (*parser->errpos) {
     s = parser->start;
     parser->errln = 1;
     parser->errcn = 1;
@@ -2278,30 +2480,37 @@ static void utl_peg_seterrln(peg_t parser)
       }
       s++;
       parser->errcn++;
-    }
+    }  
   }
 }
 
-static void peg_defer_func_NULL(const char *from, const char *to, void *aux)
-{ return ; }
+static void utl_peg_execdeferred(peg_t parser)
+{
+  pegdefer_t defer;
+  pegdefer_t defer_NULL = {peg_defer_func_NULL, NULL, NULL};
+  
+  defer = vecfirst(pegdefer_t, parser->defer, defer_NULL);
+  while (defer.func != peg_defer_func_NULL) {
+    if (defer.func(defer.from, defer.to, parser->aux))
+      break;
+    defer = vecnext(pegdefer_t, parser->defer, defer_NULL);
+  }
+}
 
 int utl_peg_parse(peg_t parser, pegrule_t start_rule, 
                 const char *txt,const char *rule_name, void *aux)
 {
-  pegdefer_t defer;
-  pegdefer_t defer_NULL = {peg_defer_func_NULL, NULL, NULL};
   if (parser && start_rule && txt) {
     utl_peg_init(parser,txt);
     parser->aux = aux;
     utl_peg_ref(parser, rule_name, start_rule);
-    utl_peg_seterrln(parser);
-    if (!parser->fail) { // exec deferred actions
-      defer = vecfirst(pegdefer_t, parser->defer, defer_NULL);
-      while (defer.func != peg_defer_func_NULL) {
-        defer.func(defer.from, defer.to, parser->aux);
-        defer = vecnext(pegdefer_t, parser->defer, defer_NULL);
-      }
+    if (!parser->fail) {
+      parser->errpos  = parser->pos;
+      parser->errrule = rule_name;
+      utl_peg_execdeferred(parser);
     }
+    utl_peg_seterrln(parser);
+    
     return !parser->fail;
   }
   return 0;
