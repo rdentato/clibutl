@@ -31,7 +31,7 @@ logging, for instance) and directly jump into solving your problem.
 ## How to use `clibutl`
 
  The only requirement for clibutl to work is compliancy to C99 standard.
-I've tested it with gcc, clang, g++, Pelles C and Microsoft C/C++
+I've tested it with gcc, clang, Pelles C and Microsoft C/C++
 
  All you need is in the `dist` directory:
 
