@@ -85,18 +85,19 @@ extern utl_jb_t *utl_jmp_list; // Defined in utl_hdr.c
                            !utl_jb.flg; \
                             utl_jb.flg=1) 
 
-#define utl_throw(x,y)  do { \
-                          int ex_ = x; \
-                          if (ex_ > 0 && utl_jmp_list) {\
-                            utl_jmp_list->fn = __FILE__; \
-                            utl_jmp_list->ln = __LINE__;\
-                            utl_jmp_list->id = y;\
-                            longjmp(utl_jmp_list->jmp,ex_); \
-                          }\
-                        } while (0)
+#define utl_throw(x,y)    do { \
+                            int ex_ = x; \
+                            if (ex_ > 0 && utl_jmp_list) {\
+                              logwarning("Exception: %d (%d)",utl_unpow2(x),y);\
+                              utl_jmp_list->fn = __FILE__; \
+                              utl_jmp_list->ln = __LINE__;\
+                              utl_jmp_list->id = y;\
+                              longjmp(utl_jmp_list->jmp,ex_); \
+                            }\
+                          } while (0)
 
 #define throw(...) utl_throw(1<<(utl_expand(utl_arg0(__VA_ARGS__,0)) & 0xF),\
-                                 utl_expand(utl_arg1(__VA_ARGS__,0,0)))\
+                                 utl_expand(utl_arg1(__VA_ARGS__,0,0)))
 
 #define rethrow()    utl_throw(utl_jb.ex,utl_jb.id)
 
