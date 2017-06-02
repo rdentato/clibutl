@@ -291,8 +291,9 @@ uint32_t utl_log_check_num   = 0;
 uint32_t utl_log_check_fail  = 0;
 int16_t utl_log_dbglvl = 0;
 int16_t utl_log_prdlvl = 0;
+const char *utl_log_w = "w";
 
-char *utl_log_watch[1] = {"\1"};
+log_watch_t *utl_log_watch = NULL;
 
 int utl_log_close(const char *msg)
 {
@@ -364,22 +365,30 @@ void utl_log_assert(int res, const char *test, const char *file, int32_t line)
   }
 }
 
-void utl_log_watch_check(char *buf, char *watch[], const char *file, int32_t line)
+void utl_log_watch_check(char *buf, log_watch_t *lwatch, const char *file, int32_t line)
 { 
   int k=0;
   char *p;
   int expected = 1;
   int res = 1;
-  _logprintf("XXX %s",buf);
+  pmx_t pmx_state;
+  char **watch;
+  
+  logprintf("XXX %s",buf);
+  if (!lwatch) return;
+  watch = lwatch->watch;
   for (k=0; k<UTL_LOG_WATCH_SIZE; k++) {
     expected = 1;
     p = watch[k];
+    logprintf(">>> %s",p?p:"");
     if (p) {
       if (p[0] == '\1' && p[1] == '\0') break;
       if (p[0] == '!') {p++; expected = (p[0]=='!'); }
      
-      _logprintf("?? err:%d exp:%d %s %s",utl_log_check_fail,expected,watch[k],p);
+      logprintf("?? err:%d exp:%d %s %s",utl_log_check_fail,expected,(char *)watch[k],p);
+      pmxclear(&pmx_state);
     	res = pmxsearch(p,buf) != NULL;
+      pmxrestore(&pmx_state);
       if (res) {
         utl_log_check(expected,watch[k],file,line);
         if (expected) watch[k] = NULL;
@@ -388,43 +397,49 @@ void utl_log_watch_check(char *buf, char *watch[], const char *file, int32_t lin
   }
 }
 
-void utl_log_watch_last(char *watch[], const char *file, int32_t line)
+void utl_log_watch_last(log_watch_t *lwatch, const char *file, int32_t line)
 { 
   /* The  only tests in `watch[]` should be the ones with `!` at the beginning */
   int k;
   int expected = 0;
   char *p;
+  char **watch;
   
+  if (!lwatch) return;
+  watch = lwatch->watch;
   for (k=0; k<UTL_LOG_WATCH_SIZE;k++) {
     p = watch[k];
     expected = 0;
     if (p) {
       if (p[0] == '\1' && p[1] == '\0') break;
       if (p[0] != '!') expected = 1;
-      utl_log_check(!expected,watch[k],file,line);
+      utl_log_check(!expected,(char *)(watch[k]),file,line);
     }
   }
 }
 
-void utl_log_setlevel(const char *prd, const char *dev) {
+void utl_log_setlevel(const char *lvl) {
   int l = 0;
-  if (prd) {
+  if (lvl) {
     l = 2;
-    switch (toupper(*prd)) {
+    switch (toupper(*lvl)) {
       case 'N' : l++; 
       case 'E' : l++; 
       case 'W' : l++; 
       case 'I' : utl_log_prdlvl = l; 
                  break;
     }
-  }
-  if (dev) {
-    l = 0;
-    switch (toupper(*dev)) {
-      case 'N' : l+=4; 
-      case 'D' : l++; 
-      case 'T' : utl_log_dbglvl = l; 
-                 break;
+
+    while (*lvl && *lvl!=',') lvl++;
+    if (*lvl) {
+      lvl++;
+      l = 0;
+      switch (toupper(*lvl)) {
+        case 'N' : l+=4; 
+        case 'D' : l++; 
+        case 'T' : utl_log_dbglvl = l; 
+                   break;
+      }
     }
   }
 }
