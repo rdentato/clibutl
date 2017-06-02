@@ -132,7 +132,7 @@ void calc_op(stack_t *stk, int val)
   }
 }
 
-void op(const char *from, const char *to, void *aux)
+int op(const char *from, const char *to, void *aux)
 {
   stack_t *stk = aux;
   
@@ -140,25 +140,28 @@ void op(const char *from, const char *to, void *aux)
     stack_top(stk).op = *from;
   }
   printf("%c",*from);
+  return 0;
 }
 
-void arg(const char *from, const char *to, void *aux)
+int arg(const char *from, const char *to, void *aux)
 {
   stack_t *stk = aux;
   int val;
   val = atoi(from);
   calc_op(stk,val);
   printf("%d",val);
+  return 0;
 }
 
-void open(const char *from, const char *to, void *aux)
+int open(const char *from, const char *to, void *aux)
 {
   stack_t *stk = aux;
   stack_push(&stack,0,'=');
   printf("(");
+  return 0;
 }
 
-void close(const char *from, const char *to, void *aux)
+int close(const char *from, const char *to, void *aux)
 {
   stack_t *stk = aux;
   int val;
@@ -166,6 +169,7 @@ void close(const char *from, const char *to, void *aux)
   stack_drop(stk);
   calc_op(stk,val);
   printf(")");
+  return 0;
 }
 
 /*             _     
