@@ -52,7 +52,8 @@ typedef struct  {
   int rdcnt;
 } pegsave_t;
  
-typedef void (*pegaction_t)(const char *, const char *, void *);
+//  void (*)(const char *, const char *, void *);
+#define pegaction_t utl_txt_action_t
  
 typedef struct {
   pegaction_t func;
@@ -122,7 +123,7 @@ peg_t utl_peg_new(void);
                        } while (0)
                               
 const char *utl_peg_defer(peg_t, pegaction_t, const char *, const char *);
-#define pegaction(f_)   void f_(const char *, const char *, void *); \
+#define pegaction(f_)   int f_(const char *, const char *, void *); \
                         for(const char *tmp=PEG_POS; \
                             !PEG_FAIL && tmp; \
                               tmp=utl_peg_defer(peg_,f_,tmp,PEG_POS))

@@ -121,8 +121,8 @@ void utl_peg_ref(peg_t parser, const char *rule_name, pegrule_t rule)
 }
 
 
-static void peg_defer_func_NULL(const char *from, const char *to, void *aux)
-{ return ; }
+static int peg_defer_func_NULL(const char *from, const char *to, void *aux)
+{ return 1; }
 
 static void utl_peg_seterrln(peg_t parser)
 {
@@ -151,7 +151,8 @@ static void utl_peg_execdeferred(peg_t parser)
   
   defer = vecfirst(pegdefer_t, parser->defer, defer_NULL);
   while (defer.func != peg_defer_func_NULL) {
-    defer.func(defer.from, defer.to, parser->aux);
+    if (defer.func(defer.from, defer.to, parser->aux))
+      break;
     defer = vecnext(pegdefer_t, parser->defer, defer_NULL);
   }
 }
