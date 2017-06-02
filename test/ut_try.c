@@ -199,7 +199,23 @@ int main(int argc, char *argv[])
   }
   logcheck(k==110);
   
+  k = 0;
+  try {
+    throw(NOFILE,4);
+  }
+  catch(NOFILE) {
+    k = 20;  logprintf("    NO FILE FOUND");
+  }  
+  catch(OUTOFMEM) {
+    k = 10;  logprintf("    OUTOFMEM");
+  }  
+  catchall {
+    k = 30;  logprintf("    DON'T KNOW WHAT'S WRONG!");
+  }
+  logcheck(k==20);
 
+  
+  
   logclose();
   exit(0);
 }

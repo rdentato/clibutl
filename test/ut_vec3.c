@@ -145,7 +145,25 @@ int main(int argc, char *argv[])
   kk = vectop(int,v,-1);
   logexpect(kk==-1, "expect: -1 top: %d",kk);
   logexpect(veccount(v) == 0, "count: %d", veccount(v));
+  v = vecfree(v);
   
+  logclose();
+  
+  logopen("l_vec3.log","a");
+  v = vecnew(int);
+  vecadd(int,v,2);
+  vecadd(int,v,4);
+  vecadd(int,v,8);
+  logcheck(veccount(v)==3);
+
+  logcheck (vecfreeze("l_vec3.frz",v));
+  v = vecfree(v);
+  logcheck(!v);
+  v = vecunfreeze("l_vec3.frz");
+  
+  logcheck(v);
+  logcheck(veccount(v) == 3);
+  logcheck(vec(int,v)[0] == 2 && vec(int,v)[1] == 4  && vec(int,v)[2] == 8);
   
   logclose();
   exit(0);

@@ -66,20 +66,47 @@ int main(int argc, char *argv[])
   i = symgetdata(tbl,k);
   logcheck(i == -213);
   
- 
+  k = symfirst(tbl);
+  while (k != symNULL) {
+    logtrace("%d <-> %s (%d)",k,symget(tbl,k),symgetdata(tbl,k));
+    k = symnext(tbl);
+  }
+  logtrace("count:%d max:%d",tbl->cnt,tbl->max);
+  
+  k = symfirst(tbl);
+  while (k != symNULL) {
+    logtrace("%d <-> %s (%d)",k,symget(tbl,k),symgetdata(tbl,k));
+    k = symnext(tbl);
+  }
+  logtrace("count:%d max:%d esz:%d",tbl->cnt,tbl->max,tbl->esz);
+  /* START OF FREEZE TEST */
+  logcheck(symfreeze("l_sym.frz",tbl));
+  #if 1
+  tbl=symfree(tbl);
+  logassert(tbl == NULL);
+
+  tbl=symunfreeze("l_sym.frz");
+  logassert(tbl);
+  logassert(tbl->hsh);
+  logassert(tbl->cmp);
+  b = tbl->aux;
+#endif
+  /* END OF FREEZE TEST */
+  
+  k = symfirst(tbl);
+  logcheck(symfreeze("l_sym2.frz",tbl));
+  while (k != symNULL) {
+    logtrace("%d <-> %s (%d)",k,symget(tbl,k),symgetdata(tbl,k));
+    k = symnext(tbl);
+  }
+  logtrace("count:%d max:%d esz:%d",tbl->cnt,tbl->max,tbl->esz);
+  
+  loginfo("searching");
   k = symsearch(tbl,"pluto");
   logcheck(k != symNULL);
   logtrace("%s: %d",symget(tbl,k),k);
   logcheck(buf(b)[k] == 'p');
   
-  k = symfirst(tbl);
-  while (k != symNULL) {
-    logtrace("%d <-> %s",k,symget(tbl,k));
-    k = symnext(tbl);
-  }
-  
-  
-  k = symsearch(tbl,"pluto");
   j = symdel(tbl,"pluto");
   logcheck(j);
   

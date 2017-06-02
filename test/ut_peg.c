@@ -47,75 +47,16 @@ pegrule(SPC) {
 }
 
 
-  /*
-  expr   := term ('+' | '-') expr | term
-  term   := fact ('*' | '/') term | fact
-  fact   := '(' expr ')' | num
-  */
-  
-pegrule(expr) {
-  pegaction(PUSH);
-  pegswitch {
-    pegcase {
-      pegref(term);
-      pegaction(op) {
-        pegoneof("+-");
-      }
-      pegref(expr);
-    }
-    pegcase {
-      pegref(term);
-    }
-  }
-  pegaction(POP);
-}
-
-pegrule(term) {
-  pegswitch {
-    pegcase {
-      pegref(fact);
-      pegaction(op) {
-        pegoneof("*/");
-      }
-      pegref(term);
-    }
-    pegcase {
-      pegref(fact);
-    }
-  }
-}
-
-pegrule(fact) {
-  pegswitch {
-    pegcase {
-      pegstr("("); pegref(expr); pegstr(")");
-    }
-    pegcase {
-      pegaction(arg) {
-        pegstar{ pegdigit; } 
-      }
-    }
-  }
-}
-
-void op(const char *from, const char *to, void *aux)
+int op(const char *from, const char *to, void *aux)
 {
-  fprintf(stderr,"op(%.*s)",(int)(to-from),from);
+  fprintf(stderr,"op: %c",*from);
+  return 0;
 }
 
-void arg(const char *from, const char *to, void *aux)
+int arg(const char *from, const char *to, void *aux)
 {
-  fprintf(stderr,"arg(%.*s)",(int)(to-from),from);
-}
-
-void PUSH(const char *from, const char *to, void *aux)
-{
-  fprintf(stderr,"[");
-}
-
-void POP(const char *from, const char *to, void *aux)
-{
-  fprintf(stderr,"]");
+  fprintf(stderr,"arg: %.*s",(int)(to-from),from);
+  return 0;
 }
 
 int main(int argc, char *argv[])
@@ -127,27 +68,6 @@ int main(int argc, char *argv[])
   pg = pegnew();
   
   q = "ABCDE+FEG-43+AA";
-  fprintf(stderr,"\nexpr: '%s'\n",q);
-  logcheck(pegparse(pg,S,q,NULL));
-  logprintf("q:%p p:%p m:%p c:%d",q,pg->pos,pg->errpos,*pg->errpos);
-  logprintf("match: %.*s",(int)(pg->pos - q),q);
-
-  q = "ABCDE + FEG - 43+AA";
-  fprintf(stderr,"\nexpr: '%s'\n",q);
-  logcheck(pegparse(pg,S,q,NULL));
-  logprintf("q:%p p:%p m:%p c:%d",q,pg->pos,pg->errpos,*pg->errpos);
-  logprintf("match: %.*s",(int)(pg->pos - q),q);
-  
-  fprintf(stderr,"\n****\n");
-  char *e[] = {"3+2","3-4*2","(3-2)*(4/2)","1-2-3",NULL};
-  char **qe;
-  qe = e; 
-  for (q = *qe; q; q=*(++qe)) {
-    fprintf(stderr,"\n%s\n",q);
-    logcheck(pegparse(pg,expr,q,NULL));
-    logprintf("q:%p p:%p m:%p c:%d",q,pg->pos,pg->errpos,*pg->errpos);
-    logprintf("match: %.*s",(int)(pg->pos - q),q);
-  }
   
   pg = pegfree(pg);
   logclose();

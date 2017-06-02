@@ -121,6 +121,15 @@ int main(int argc, char *argv[])
   bufaddf(b,"%02X",32);
   logexpect(strcmp(buf(b),"3220")==0,"   [%s]",buf(b));
   
+  logcheck(buffreeze("l_buf.frz",b));
+  b = vecfree(b);
+  logcheck(!b);
+  
+  b = bufunfreeze("l_buf.frz");
+  logassert(b);
+  
+  logexpect(strcmp(buf(b),"3220")==0,"   [%s]",buf(b));
+  
   b = buffree(b);
   logclose();
   exit(0);

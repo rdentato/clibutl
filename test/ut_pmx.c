@@ -29,11 +29,18 @@ void prtnote(char *s)
            );
 }
 
+int trc(const char *from, const char *to, void *aux)
+{
+  logtrace("Scan: %c",*from);
+  return 0;
+}
+
 int main(int argc, char *argv[])
 {
   const char *s;
   
   logopen("l_pmx.log","w");
+  loglevel("N,N");
   
   s=pmxsearch("田","電田説");
   logcheck(s);
@@ -65,9 +72,13 @@ int main(int argc, char *argv[])
   s=pmxsearch("<utf>電田説モ","電田説モ");
   logcheck(s);
   
-   s=pmxsearch("<+.>","z電");
+  s=pmxsearch("<+.>","z電");
   logcheck(s);
 
+  logwatch ("A","B","C","!<d>") {
+    s = pmxscan("<u>","1A2B3C4",trc,NULL);
+  }
+  
   logclose();
   exit(0);
 }

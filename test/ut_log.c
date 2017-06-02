@@ -18,7 +18,7 @@
 
 int main(int argc, char *argv[])
 {
-  logopen("l_log.log","w");
+  logopen("l_log.log");
 
   logprintf("This line will always be printed");
   
