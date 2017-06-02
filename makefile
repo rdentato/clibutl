@@ -46,8 +46,9 @@ all: src dist tst
 #     (__  )/ /   / /__ _    
 #    /____//_/    \___/(_)   
 
-HDRS = src/utl_hdr.h src/utl_log.h src/utl_mem.h src/utl_vec.h src/utl_peg.h \
-       src/utl_pmx.h src/utl_pmx.h src/utl_fsm.h src/utl_try.h src/utl_end.h 
+HDRS = src/utl_hdr.h src/utl_log.h src/utl_mem.h src/utl_vec.h \
+       src/utl_pmx.h src/utl_peg.h src/utl_fsm.h \
+       src/utl_try.h src/utl_end.h 
 
 CSRC = src/utl_hdr.c src/utl_log.c src/utl_mem.c src/utl_vec.c \
        src/utl_pmx.c src/utl_peg.c 
@@ -164,7 +165,8 @@ test/t_logassert$(_EXE): test/x_chk.x src/utl.o test/ut_logassert.o
 #	$(CC) $(LNFLAGS) -o $@ test/ut_buf2.o
 
 runtest: tst
-	@echo "'l_logassert' is expected to abort and generate a coredump" 
+	@echo "'l_logassert' is expected to abort and generate a coredump"
+	@echo ""  
 	@cd test; for f in t_*; do ./$$f ; done ; grep -a "#KO:" l_*.log
 
 
@@ -175,9 +177,9 @@ runtest: tst
 #     \___//_/ \___/ \__,_//_/ /_/(_)    
 
 clean:
-	cd src;  $(RM) utl.c utl.h utl_single.h libutl.a *.o *.obj *.gc?? utl_unc utl_unc.exe
-	cd test; $(RM) t_* *.o *.obj *.tmp *.log gmon.out *.gc?? utl.c x_chk.x
-	$(RM) *.log
+	cd src;  $(RM) utl.c utl.h l_* libutl.a *.o *.obj *.gc?? utl_unc utl_unc.exe
+	cd test; $(RM) t_* *.o *.obj *.tmp l_* gmon.out *.gc?? utl.c x_chk.x
+	$(RM) l_*
 
 gcov:
 	make "CCFLAGS=-O0 -coverage" "LDFLAGS=--coverage -lgcov"
