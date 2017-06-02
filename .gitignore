@@ -11,3 +11,5 @@ t_*
 support/**
 tmp/**
 *.pdf
+*.doc
+*.docx
