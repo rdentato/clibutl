@@ -21,6 +21,10 @@
 #define vec_MAX_ELEM (UINT32_MAX-1)
 #define vec_MAX_CNT  UINT32_MAX
 
+
+typedef int (*utl_cmp_t)(void *, void *, void *);
+typedef uint32_t (*utl_hsh_t)(void *, void *);
+
 typedef struct vec_s {
   uint32_t   fst; 
   uint32_t   lst; 
@@ -29,13 +33,14 @@ typedef struct vec_s {
   uint32_t   cnt;
   uint16_t   esz;  /* each element max size: 64K */
   uint16_t   flg;
-  int      (*cmp)(void *, void *, void *);
-  uint32_t (*hsh)(void *, void *);
+  utl_cmp_t  cmp;
+  utl_hsh_t  hsh;
   uint8_t   *vec;
   void      *aux;
   void      *elm; // this will always point to eld
   uint8_t    eld[4];
 } vec_s, *vec_t;
+
 
 #define vecDO(type,v,i,e,x)  do {vec_t v_=v;  *((type *)(v_->elm)) = (e); x(v_,i);} while (0)
 
@@ -44,9 +49,12 @@ typedef struct vec_s {
 #define vecins(type,v,i,e)   vecDO(type,v,i,e,utl_vec_ins)
 #define vecget(type,v,i,d)   (*((type *)((v)->elm))=(d),utl_vec_get((v),i),*((type *)((v)->elm)))
 
-#define vecsetptr(v,i,p)     (memset((v)->elm,p,(v)->esz),vecset(v,i))
-#define vecinsptr(v,i,p)     (memset((v)->elm,p,(v)->esz),vecins(v,i))
+#define vecsetptr(v,i,p)     (memset((v)->elm,p,(v)->esz),utl_vec_set(v,i))
+#define vecinsptr(v,i,p)     (memset((v)->elm,p,(v)->esz),utl_vec_ins(v,i))
 #define vecgetptr(v,i)       utl_vec_get(v,i)
+
+#define vecalloc(...)  utl_vec_alloc utl_expand((utl_arg0(__VA_ARGS__,NULL), \
+                                                 utl_arg1(__VA_ARGS__,vec_MAX_CNT,vec_MAX_CNT)))
 
 #define vecdel(v,i)          utl_vec_del(v,i)
 
@@ -87,6 +95,11 @@ typedef struct vec_s {
 #define vecread(v,i,n,f)  utl_vec_read(v,i,n,f)
 #define vecwrite(v,i,n,f) utl_vec_write(v,i,n,f)
 
+#define vecfreeze(f,v)    utl_frz(f,v,utl_vec_freeze)
+#define vecunfreeze(...)  \
+          utl_unfrz utl_expand((utl_arg0(__VA_ARGS__,NULL),\
+                                    utl_arg1(__VA_ARGS__,NULL,NULL), \
+                                    utl_arg2(__VA_ARGS__,NULL,NULL,NULL),utl_vec_unfreeze))
 // Info
 
 #define vecnew(...)       utl_vec_new utl_expand((sizeof(utl_arg0(__VA_ARGS__,int)),\
@@ -108,10 +121,12 @@ typedef struct vec_s {
 
 #define vecfirst(type,v,d)  (utl_vec_first(v)? *((type *)((v)->elm)):d)
 #define vecnext(type,v,d)   (utl_vec_next(v)? *((type *)((v)->elm)):d)
+
 #define vecprev(type,v,d)   (utl_vec_prev(v)? *((type *)((v)->elm)):d)
 #define veclast(type,v,d)   (utl_vec_last(v)? *((type *)((v)->elm)):d)
 
 // Protypes
+void *utl_vec_alloc(vec_t v, uint32_t i);
 void *utl_vec_set(vec_t v, uint32_t i);
 void *utl_vec_ins(vec_t v, uint32_t i);
 void *utl_vec_add(vec_t v, uint32_t i);
@@ -125,13 +140,20 @@ void *utl_vec_last(vec_t v) ;
 int16_t utl_vec_del(vec_t v,  uint32_t i);
 int16_t utl_vec_delrange(vec_t v, uint32_t i,  uint32_t j);
 
-vec_t utl_vec_new(uint16_t esz, int (*cmp)(void *, void *, void *), uint32_t (*hsh)(void *, void *));
+vec_t utl_vec_new(uint16_t esz, utl_cmp_t cmp, utl_hsh_t hsh);
 vec_t utl_vec_free(vec_t v);
 
 size_t utl_vec_read(vec_t v,uint32_t i, size_t n,FILE *f);
 size_t utl_vec_write(vec_t v, uint32_t i, size_t n, FILE *f);
 
-void utl_vec_sort(vec_t v, int (*cmp)(void *, void *, void *));
+vec_t utl_unfrz(char *fname, utl_cmp_t cmp, utl_hsh_t hsh, 
+                           vec_t (*fun)(FILE *, utl_cmp_t, utl_hsh_t));
+int utl_frz(char *fname, vec_t t, int (*fun)(FILE *, vec_t));
+
+int utl_vec_freeze(FILE *f,vec_t v);
+vec_t utl_vec_unfreeze(FILE *f, utl_cmp_t cmp, utl_hsh_t hsh);
+
+void utl_vec_sort(vec_t v, utl_cmp_t cmp);
 void *utl_vec_search(vec_t v,int x);
 int utl_vec_remove(vec_t v, int x);
 
@@ -143,6 +165,8 @@ void utl_vec_deq(vec_t v);
 // Character buffer
 #define buf_t                 vec_t
 #define bufnew()              vecnew(char)
+#define buffreeze(f,b)        vecfreeze(f,b)
+#define bufunfreeze(f)        vecunfreeze(f)
 #define buffree(b)            vecfree(b)
 #define bufaddc(b,c)          utl_buf_addc(b,c)
 #define bufsetc(b,i,c)        vecset(char,b,i,c)
@@ -177,7 +201,7 @@ char   *utl_buf_addc(buf_t b, char c);
 int16_t utl_buf_del(buf_t b, uint32_t i,  uint32_t j);
 int     utl_buf_fmt(buf_t b, uint32_t i, const char *fmt, ...);
 
-void utl_dpqsort(void *base, uint32_t nel, uint32_t esz, int (*cmp)(const void *, const void *, const void *), void *aux);
+void utl_dpqsort(void *base, uint32_t nel, uint32_t esz, utl_cmp_t cmp, void *aux);
 #define utlqsort(b,n,s,c,x) utl_dpqsort(b,n,s,c,x)
 
 #define utlqseacrch(b)
@@ -195,9 +219,13 @@ void utl_dpqsort(void *base, uint32_t nel, uint32_t esz, int (*cmp)(const void *
 #define symcount(t)        veccount(t)
 #define symsetdata(t,i,n)  utl_sym_setdata(t,i,n)
 #define symgetdata(t,i)    utl_sym_getdata(t,i)
-#define symfirst(t)        vecfirst(int32_t,t,symNULL)
-#define symnext(t)         vecnext(int32_t,t,symNULL)
+#define symfirst(t)        vecfirst(uint32_t,t,symNULL)
+#define symnext(t)         vecnext(uint32_t,t,symNULL)
+#define symfreeze(f,t)     utl_frz(f,t,utl_sym_freeze)
+#define symunfreeze(f)     utl_unfrz(f,NULL,NULL,utl_sym_unfreeze)
 
+sym_t    utl_sym_unfreeze(FILE *f, utl_cmp_t cmp, utl_hsh_t hsh);
+int      utl_sym_freeze(FILE *f, sym_t t);
 int16_t  utl_sym_del(sym_t t, const char *sym);
 uint32_t utl_sym_search(sym_t t, const char *sym);
 uint32_t utl_sym_add(sym_t t, const char *sym);

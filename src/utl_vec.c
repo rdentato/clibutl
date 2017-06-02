@@ -89,7 +89,7 @@ int16_t utl_vec_delrange(vec_t v, uint32_t i,  uint32_t j)
   return utl_vec_delgap(v,i,j-i+1);  
 }
 
-vec_t utl_vec_new(uint16_t esz, int (*cmp)(void *, void *,void *), uint32_t (*hsh)(void *, void *))
+vec_t utl_vec_new(uint16_t esz, utl_cmp_t cmp, utl_hsh_t hsh)
 {
   vec_t v = NULL;
   uint32_t sz;
@@ -101,7 +101,7 @@ vec_t utl_vec_new(uint16_t esz, int (*cmp)(void *, void *,void *), uint32_t (*hs
   }
   
   sz = sizeof(vec_s)+(esz-4); // 4 is the size of the elm array
-  v = (vec_t)malloc(sz);
+  v = malloc(sz);
   if (v) {
     memset(v,0,sz);
     v->esz = esz;
@@ -136,6 +136,91 @@ vec_t utl_vec_free(vec_t v)
   return NULL;
 }
 
+#define VEC_MAGIC(x) (((uint32_t)'V')<<24 | ((uint32_t)'E')<<16 | ((uint32_t)'C') << 8| (uint32_t)x)
+
+int utl_vec_freeze(FILE *f,vec_t v)
+{
+  uint32_t sz;
+  uint32_t max;
+  int ret = 0;
+  char *magic = "VEC1";
+  
+  if (f && v) {
+    if (fwrite(magic,4,1,f)) {
+      if (fwrite(&(v->esz),sizeof(uint16_t),1,f)) {
+        sz = sizeof(vec_s)+(v->esz-4);
+        max = v->max;
+        // You can't shrink hashtable nor que (TODO!)
+        //if (!v->hsh) v->max = v->cnt;
+        if (fwrite(v,sz,1,f)) {
+          if (fwrite(v->vec,v->esz*v->max,1,f)) {
+            v->max = max;
+            ret = 1;
+          }
+        }
+        v->max = max;
+      }
+    }
+  }
+  
+  return ret;
+}
+
+vec_t utl_vec_unfreeze(FILE *f, utl_cmp_t cmp, utl_hsh_t hsh)
+{
+  vec_t v = NULL;
+  char magic[8];
+  uint16_t esz;
+  uint32_t sz;
+  
+  if (f) {
+    if (fread(&magic,4,1,f)) {
+      if (strncmp(magic,"VEC1",4) == 0) {
+        if (fread(&esz,sizeof(uint16_t),1,f)) {
+          sz = sizeof(vec_s)+(esz-4);
+          if ((v = malloc(sz))) {
+            v->vec = NULL;
+            if (fread(v,sz,1,f)) {
+              v->vec = malloc(v->esz*v->max);
+              if (v->vec) {
+                if (fread(v->vec,v->esz*v->max,1,f)) {
+                  _logtrace("VEC UNFRZ: %p %p",cmp,hsh);
+                  v->elm = ((char *)v) + offsetof(vec_s,eld);
+                  v->cmp = cmp;
+                  v->hsh = hsh;
+                  return v;
+                } } } } } } } }
+  if (v) {
+    if (v->vec) free(v->vec);
+    free(v);
+  }
+  return NULL;
+}
+
+int utl_frz(char *fname, vec_t t, int (*fun)(FILE *, vec_t))
+{
+  int ret = 0;
+  FILE *f;
+  f = fopen(fname,"wb");
+  if (f) {
+    ret = fun(f,t);
+    fclose(f);
+  }
+  return ret;
+}
+
+vec_t utl_unfrz(char *fname, utl_cmp_t cmp, utl_hsh_t hsh, vec_t (*fun)(FILE *, utl_cmp_t, utl_hsh_t))
+{
+  sym_t t = NULL;
+  FILE *f;
+  f = fopen(fname,"rb");
+  if (f) {
+    t = fun(f, cmp, hsh);
+    fclose(f);
+  }
+  return t;
+}
+
 void *utl_vec_get(vec_t v, uint32_t i)
 {
   uint8_t *elm=NULL;
@@ -148,17 +233,25 @@ void *utl_vec_get(vec_t v, uint32_t i)
   return elm;
 }
 
-void *utl_vec_set(vec_t v, uint32_t i)
+void *utl_vec_alloc(vec_t v, uint32_t i)
 {
   uint8_t *elm=NULL;
   
   if (i == vec_MAX_CNT) i = v->cnt;
   if (utl_vec_makeroom(v,i)) {
     elm = v->vec + (i*v->esz);
-    memcpy(elm, v->elm, v->esz);
     if (i >= v->cnt) v->cnt = i+1;
     vecunsorted(v);
   }
+  return elm;
+}
+
+void *utl_vec_set(vec_t v, uint32_t i)
+{
+  uint8_t *elm=NULL;
+  
+  elm = utl_vec_alloc(v,i);
+  if (elm) memcpy(elm, v->elm, v->esz);
   return elm;
 }
 
@@ -287,7 +380,7 @@ static inline uint32_t utl_dpqrand(void)
 #define utl_dpqpush(l,r) do {stack[stack_top][0]=(l); stack[stack_top][1]=(r); stack_top++; } while(0)
 #define utl_dpqpop(l,r)  do {stack_top--; l=stack[stack_top][0]; r=stack[stack_top][1];} while(0)
 
-void utl_dpqsort(void *base, uint32_t nel, uint32_t esz, int (*cmp)(const void *, const void *, const void *), void *aux)
+void utl_dpqsort(void *base, uint32_t nel, uint32_t esz, utl_cmp_t cmp, void *aux)
 {
   int32_t left,right;
   uint8_t *leftptr, *rightptr; 
@@ -383,7 +476,7 @@ void utl_vec_sort(vec_t v, int (*cmp)(void *, void *, void *))
   else if (!vecissorted(v)) {
     if (v->cnt > 1) {
       //qsort(v->vec,v->cnt,v->esz,(int (*)(const void *, const void *))(v->cmp));  
-      utl_dpqsort(v->vec,v->cnt,v->esz,(int (*)(const void *, const void *, const void *))(v->cmp),v);  
+      utl_dpqsort(v->vec,v->cnt,v->esz,v->cmp,v);  
     }
     vecsorted(v);
   }
@@ -645,18 +738,22 @@ void *utl_vec_first(vec_t v)
     return NULL;
   }
   elm = v->vec;
+  v->cur = 0;
   if (v->hsh) {
     // Since there is at lease 1 element, we will
     // eventually exit the loop.
-     while (utl_h(elm,v->esz) == 0xFFFFFFFF) {
-       elm += v->esz;
-     }
+    while (utl_h(elm,v->esz) == 0xFFFFFFFF) {
+      _logtrace("   checking %d",v->cur);
+      elm += v->esz;
+      v->cur++;
+    }
   }
   else if (v->fst != vec_MAX_CNT) {
     elm = v->vec + v->fst * v->esz ;
   }
   
   v->cur = (elm - v->vec) / v->esz;
+  _logtrace("found (first) %d, %d",v->cur, *((uint32_t *)elm));
   memcpy(v->elm,elm,v->esz);
   return elm;
 }
@@ -689,6 +786,7 @@ void *utl_vec_next(vec_t v)
   uint32_t max = v->cnt;
   uint8_t *elm = NULL;
   
+  _logtrace("Initial cnt:%d cur:%d",v->cnt,v->cur);
   if (v->cnt == 0) v->cur = vec_MAX_CNT;
   if (v->cur == v->lst) v->cur = vec_MAX_CNT;
   if (v->cur == vec_MAX_CNT) return NULL;
@@ -697,6 +795,7 @@ void *utl_vec_next(vec_t v)
   max = v->max;
   if (v->hsh) {  // Hash table
     while (v->cur < max) {
+      _logtrace("   checking %d",v->cur);
       elm = v->vec + v->cur * v->esz;
       if (utl_h(elm,v->esz) != 0xFFFFFFFF) break;
       v->cur++;
@@ -712,6 +811,7 @@ void *utl_vec_next(vec_t v)
   
   if (v->cur != vec_MAX_CNT) {
     elm = v->vec + v->cur * v->esz;
+    _logtrace("found (next) %d, %d",v->cur, *((uint32_t *)elm));
     memcpy(v->elm,elm,v->esz);
   }
   return elm;
@@ -938,9 +1038,49 @@ sym_t utl_sym_new(void)
 
 sym_t utl_sym_free(sym_t t)
 {
-  buffree(utl_sym_buf(t));
-  vecfree(utl_sym_tbl(t));
+  if (t) {
+    buffree(utl_sym_buf(t));
+    vecfree(utl_sym_tbl(t));
+  }
   return NULL; 
+}
+
+int utl_sym_freeze(FILE *f, sym_t t)
+{
+  int ret = 0;
+  ret = utl_vec_freeze(f,t);
+  _logifdebug {
+    logtrace("FREEZE VEC: %p",t->vec);
+    for (int k=0; k<32; k+=2) {
+      logtrace("%2d [%8X] -> %8X",k,((uint32_t *)(t->vec))[k],((uint32_t *)(t->vec))[k+1]);
+    }
+  }
+  if (ret) {
+     ret = utl_vec_freeze(f,t->aux);
+  }
+  return ret;
+}
+
+sym_t utl_sym_unfreeze(FILE *f, utl_cmp_t cmp, utl_hsh_t hsh)
+{
+  sym_t t;
+  _logtrace("SYM UNFRZ: %p %p",utl_sym_cmp,utl_sym_hash);
+  t = utl_vec_unfreeze(f,utl_sym_cmp,utl_sym_hash);
+  _logifdebug {
+    logtrace("UNFREEZE VEC: %p",t->vec);
+    for (int k=0; k<32; k+=2) {
+      logtrace("%2d [%8X] -> %8X",k,((uint32_t *)(t->vec))[k],((uint32_t *)(t->vec))[k+1]);
+    }
+  }
+  if (t) {
+    t->aux = utl_vec_unfreeze(f,NULL,NULL);
+    if (t->aux) {
+      utl_sym_buf(t)->aux = NULL;
+      return t;
+    }
+  }
+  t=vecfree(t);
+  return NULL;
 }
 
 static uint32_t utl_sym_store(sym_t t,const char *sym)
@@ -954,7 +1094,7 @@ static uint32_t utl_sym_store(sym_t t,const char *sym)
   bufsets(b,id,sym);
   *((int32_t *)(buf(b)+k)) = 0; // set data to 0
   do { // Ensure the next pointer will be 4-bytes aligned
-    b->cnt++;
+    buf(b)[b->cnt++] = '\0';
   } while (b->cnt & 0x3);
   return id;
 }
@@ -975,7 +1115,7 @@ uint32_t utl_sym_search(sym_t t, const char *sym)
 {
   uint32_t k = symNULL;
   uint32_t *p;
-
+  _logtrace("SYM SEARCH: %s %p",sym,t->cmp);
   utl_sym_buf(t)->aux = (void *)sym;
   p=vecsearch(uint32_t,t,symNULL);
   utl_sym_buf(t)->aux = NULL;
@@ -986,7 +1126,10 @@ uint32_t utl_sym_search(sym_t t, const char *sym)
 char *utl_sym_get(sym_t t,uint32_t id)
 {
   char *s;
-  if (id == vec_MAX_CNT) return utl_sym_buf(t)->aux;
+  if (id == vec_MAX_CNT) {
+    _logtrace("id==MAX %s",(char *)utl_sym_buf(t)->aux);
+    return utl_sym_buf(t)->aux;
+  }
   if (id >= utl_sym_buf(t)->cnt) return NULL;
   s = buf(utl_sym_buf(t)) + id;
   if (*s == '\0') s = NULL;
@@ -1044,6 +1187,7 @@ int32_t utl_sym_getdata(sym_t t,uint32_t id)
   if (s == NULL) return 0;
   return *s;
 }
+
 
 #endif
 //>>>//
