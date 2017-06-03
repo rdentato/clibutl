@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
   const char *s;
   
   logopen("l_pmx.log","w");
-  loglevel("N,N");
+  loglevel("I,T");
   
   s=pmxsearch("田","電田説");
   logcheck(s);
@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
   logcheck(s);
 
   logwatch ("A","B","C","!<d>") {
-    s = pmxscan("<u>","1A2B3C4",trc,NULL);
+    s = pmxscan("<u>","1B2A3C4",trc,NULL);
   }
   
   logclose();

@@ -374,18 +374,18 @@ void utl_log_watch_check(char *buf, log_watch_t *lwatch, const char *file, int32
   pmx_t pmx_state;
   char **watch;
   
-  logprintf("XXX %s",buf);
+  _logprintf("XXX %s (%p)",buf,(void*)lwatch);
   if (!lwatch) return;
   watch = lwatch->watch;
   for (k=0; k<UTL_LOG_WATCH_SIZE; k++) {
     expected = 1;
     p = watch[k];
-    logprintf(">>> %s",p?p:"");
+    _logprintf(">>> %s",p?p:"");
     if (p) {
       if (p[0] == '\1' && p[1] == '\0') break;
       if (p[0] == '!') {p++; expected = (p[0]=='!'); }
      
-      logprintf("?? err:%d exp:%d %s %s",utl_log_check_fail,expected,(char *)watch[k],p);
+      _logprintf("?? err:%d exp:%d %s %s",utl_log_check_fail,expected,(char *)watch[k],p);
       pmxclear(&pmx_state);
     	res = pmxsearch(p,buf) != NULL;
       pmxrestore(&pmx_state);
