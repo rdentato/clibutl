@@ -367,7 +367,7 @@ void utl_log_watch_check(char *buf, log_watch_t *lwatch, const char *file, int32
       if (p[0] == '\1' && p[1] == '\0') break;
       if (p[0] == '!') {p++; expected = (p[0]=='!'); }
      
-      _logprintf("?? err:%d exp:%d %s %s",utl_log_check_fail,expected,(char *)watch[k],p);
+      _logprintf("?? err:%d exp:%d %s %s [%s]",utl_log_check_fail,expected,(char *)watch[k],p,buf);
       pmxclear(&pmx_state);
     	res = pmxsearch(p,buf) != NULL;
       pmxrestore(&pmx_state);
