@@ -44,7 +44,7 @@
                                 snprintf(utl_log_buf+4,UTL_LOG_BUF_SIZE-4,__VA_ARGS__);\
                                 fputs(utl_log_buf,utl_log_file);\
                                 fprintf(utl_log_file,"\x09:%s:%d\x09\n",__FILE__,__LINE__);\
-                                utl_log_watch_check(utl_log_buf,utl_log_watch,__FILE__,__LINE__);\
+                                utl_log_watch_check(utl_log_buf+4,utl_log_watch,__FILE__,__LINE__);\
                                 fflush(utl_log_file);\
                               } else (void)0
 
