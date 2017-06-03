@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
   logcheck(s);
 
   logwatch ("A","B","C","!<d>") {
-    s = pmxscan("<u>","1B2A3Y4",trc,NULL);
+    s = pmxscan("<u>","1B2A3C4",trc,NULL);
   }
   
   logclose();
