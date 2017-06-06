@@ -32,22 +32,44 @@ int utl_peg_oneof(const char *pat, const char *str)
   return (strchr(pat,*str)?1:-1);
 }
 
-int utl_peg_lower(const char *str)
-{
-  if (!(str && *str)) return -1;
-  return (islower((int)*str))? 1:-1;
-}
-
 int utl_peg_eol(const char *str)
 {
-  int ret = -1;
-  if (*str == '\0' ) {ret = 0;}
-  else {
-    if (*str == '\r') {ret = 1; str++;}
-    if (*str == '\n') {ret++;}
+  int ret;
+  switch (*str) {
+    case '\0' : ret = 0; break;
+    case '\n' : ret = 1; break;
+    case '\r' : ret = (str[1] == '\n') ? 2 : 1;    
+    default   : ret = -1;
   }
   return ret;
 }
+
+int utl_peg_wspace(const char *str)
+{
+  int ret = 0;
+  while (1) {
+    switch (*str) {
+      case '\b' : case '\a':
+      case ' ' : case '\t': case '\xA0' : ret++; str++; break;
+      default: return ret;
+    }
+  }
+  return ret;
+}
+
+int utl_peg_vspace(const char *str)
+{
+  int ret = 0;
+  while (1) {
+    switch (*str) {
+      case '\r' : case '\n': case '\v' : case '\f': case '\b' : case '\a':
+      case ' ' : case '\t': case '\xA0' : ret++; str++; break;
+      default: return ret;
+    }
+  }
+  return ret;
+}
+
 
 static peg_t utl_peg_init(peg_t p, const char *s)
 {
@@ -119,7 +141,6 @@ void utl_peg_ref(peg_t parser, const char *rule_name, pegrule_t rule)
       (void)utl_peg_back(parser,rule_name,tmp,cnt);
   }
 }
-
 
 static int peg_defer_func_NULL(const char *from, const char *to, void *aux)
 { return 1; }

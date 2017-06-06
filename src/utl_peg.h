@@ -50,6 +50,7 @@ typedef struct  {
   const char *rpos; 
   int dcnt;
   int rdcnt;
+  int rlen;
 } pegsave_t;
  
 //  void (*)(const char *, const char *, void *);
@@ -65,6 +66,8 @@ int utl_peg_lower(const char *str);
 int utl_peg_oneof(const char *pat, const char *str);
 int utl_peg_str(const char *pat, const char *str);
 int utl_peg_eol(const char *str);
+int utl_peg_wspace(const char *str);
+int utl_peg_vspace(const char *str);
 
 int utl_peg_parse(peg_t, pegrule_t, const char *, const char *, void *);
 
@@ -104,7 +107,12 @@ peg_t utl_peg_new(void);
 #define peglower        utl_peg_rec((islower((int)(*PEG_POS))?1:-1))
 #define pegupper        utl_peg_rec((isupper((int)(*PEG_POS))?1:-1))
 #define pegdigit        utl_peg_rec((isdigit((int)(*PEG_POS))?1:-1))
+#define pegspace        utl_peg_rec((isspace((int)(*PEG_POS))?1:-1))
+#define pegwspace       utl_peg_rec(utl_peg_wspace(PEG_POS))
+#define pegvspace       utl_peg_rec(utl_peg_wspace(PEG_POS))
+
 #define pegany          utl_peg_rec(((*PEG_POS)?1:-1))
+#define pegeot          utl_peg_rec(((*PEG_POS)?-1:0))
 #define pegeol          utl_peg_rec((utl_peg_eol(PEG_POS)))
 #define pegsol          utl_peg_rec(((PEG_POS == p->start \
                                       || PEG_POS[-1] == '\n' \
@@ -123,6 +131,7 @@ peg_t utl_peg_new(void);
                        } while (0)
                               
 const char *utl_peg_defer(peg_t, pegaction_t, const char *, const char *);
+
 #define pegaction(f_)   int f_(const char *, const char *, void *); \
                         for(const char *tmp=PEG_POS; \
                             !PEG_FAIL && tmp; \
@@ -137,6 +146,7 @@ const char *utl_peg_defer(peg_t, pegaction_t, const char *, const char *);
                                      ? PEG_BACK(peg_save.pos,peg_save.dcnt) \
                                      : NULL)
                        
+#define pegchoice  pegalt
 #define pegeither  pegor
 #define pegor   if (PEG_FAIL && !(PEG_FAIL=0) && \
                     !PEG_BACK(peg_save.pos,peg_save.dcnt))
@@ -160,16 +170,16 @@ const char *utl_peg_defer(peg_t, pegaction_t, const char *, const char *);
 #define pegrpt(m_,M_) \
   if (PEG_FAIL) (void)0; else \
   for(pegsave_t peg_save = PEG_RPT_SAVE(m_,M_); \
-       peg_save.max > 0; \
-         peg_save.rpt++,(PEG_FAIL \
-                         ? 0 \
-                         :(peg_save.rpos=PEG_POS,peg_save.rdcnt=PEG_DCNT)), \
-         ((PEG_FAIL || peg_save.rpt >= peg_save.max) \
-           ? (((PEG_FAIL=(peg_save.rpt<=peg_save.min)) \
-                ? PEG_BACK(peg_save.pos,peg_save.dcnt) \
-                : ((PEG_DCNT=peg_save.rdcnt),(PEG_POS=peg_save.rpos))) \
-             , peg_save.max=0) \
-           : 0)) 
+        peg_save.max > 0; \
+          peg_save.rpt++,(PEG_FAIL \
+                          ? 0 \
+                          :(peg_save.rlen = PEG_POS - peg_save.rpos, peg_save.rpos=PEG_POS,peg_save.rdcnt=PEG_DCNT)), \
+          ((PEG_FAIL || peg_save.rpt >= peg_save.max || peg_save.rlen == 0) \
+            ? (((PEG_FAIL=(peg_save.rpt<=peg_save.min)) \
+                 ? PEG_BACK(peg_save.pos,peg_save.dcnt) \
+                 : ((PEG_DCNT=peg_save.rdcnt),(PEG_POS=peg_save.rpos))) \
+              , peg_save.max=0) \
+            : 0)) 
             
 #define pegopt   pegrpt(0,1)
 #define pegstar  pegrpt(0,INT_MAX)
@@ -178,8 +188,9 @@ const char *utl_peg_defer(peg_t, pegaction_t, const char *, const char *);
 
 #define pegsetaux(p_,a_) (p_->aux = (void *)(a_))
 
-#define pegfailpos(p_)  ((p_)->errpos)
-#define pegfailrule(p_) ((p_)->errrule)
-
+#define pegfailpos(p_)   ((p_)->errpos)
+#define pegfailrule(p_)  ((p_)->errrule)
+#define pegerrline(p_)   ((p_)->errln)
+#define pegerrcolumn(p_) ((p_)->errcn)
 #endif
 //>>>//
