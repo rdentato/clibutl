@@ -19,27 +19,26 @@
  
    expr = (term ('+' / '-'))* term
    term = (fact ('*' / '/'))* fact
-   fact = '(' expr ')' / num
+   fact = '-' fact / '(' expr ')' / num
 
  to better handle left associativity of '-' and '/' operators.
  
 */
   
 pegrule(expr) {  // expr = (term ('+' / '-'))* term
-  pegref(SPC); 
-  pegstar {
-    pegref(term);
-    pegaction(op) {
-      pegoneof("+-");
-    }
+  pegwspace; 
+  pegstar { pegref(term);
+            pegaction(op) {
+              pegoneof("+-");
+            }
   }
   pegref(term);
-  pegref(SPC); 
+  pegwspace; 
 }
 
 pegrule(term) { // term = (fact ('*' / '/'))* fact
   pegaction(open);
-  pegref(SPC); 
+  pegwspace; 
   pegstar {
     pegref(fact);
     pegaction(op) {
@@ -48,31 +47,38 @@ pegrule(term) { // term = (fact ('*' / '/'))* fact
   }
   pegref(fact);
   pegaction(close);
-  pegref(SPC); 
+  pegwspace; 
 }
 
-pegrule(fact) { // fact = '(' expr ')' / num
-  pegref(SPC); 
-  pegswitch {
-    pegcase {
+pegrule(fact) { // fact = '-' fact / '(' expr ')' / num
+  pegwspace; 
+  pegchoice {
+    pegeither {
+      pegaction(op) {
+        pegstr("-");
+      }
+      pegwspace;
+      pegaction(open);
+      pegref(fact);
+      pegaction(close);
+    }
+    pegor {
       pegstr("(");
       pegaction(open);
       pegref(expr);
       pegaction(close);
       pegstr(")");
     }
-    pegcase {
+    pegor {
       pegaction(arg) {
         pegmore{ pegdigit; } 
       }
     }
   }
-  pegref(SPC); 
+  pegwspace; 
 }
 
-pegrule(SPC) {
-  pegstar{ pegoneof(" \t\r\n");}
-}
+
 
 /*  ___ _           _   
    / __| |_ __ _ __| |__
@@ -122,11 +128,11 @@ void calc_op(stack_t *stk, int val)
 {
   if (!stack_isempty(stk) > 0) {
     switch(stack_top(stk).op) {
-      case '+' : stack_top(stk).val += val; break;
-      case '-' : stack_top(stk).val -= val; break;
-      case '*' : stack_top(stk).val *= val; break;
-      case '/' : stack_top(stk).val /= val; break;
-      default  : stack_top(stk).val  = val; break;
+      case '+' : stack_top(stk).val +=  val; break;
+      case '-' : stack_top(stk).val -=  val; break;
+      case '*' : stack_top(stk).val *=  val; break;
+      case '/' : stack_top(stk).val /=  val; break;
+      default  : stack_top(stk).val  =  val; break;
     }
     stack_top(stk).op = '=';
   }
@@ -156,7 +162,7 @@ int arg(const char *from, const char *to, void *aux)
 int open(const char *from, const char *to, void *aux)
 {
   stack_t *stk = aux;
-  stack_push(&stack,0,'=');
+  stack_push(stk,0,'=');
   printf("(");
   return 0;
 }

@@ -1,0 +1,37 @@
+
+
+line ::= label? statement
+
+label :: number 
+
+statement ::= "PRINT" expr-list
+              "INPUT" var-list
+              "LET"? var "=" expr
+              "GOTO" label
+              "GOSUB" label
+              "FOR" var "=" expr "TO" expr
+              "NEXT"
+              "RETURN"
+              "IF" expr relop expr "THEN" statement
+              "END"
+              "REM"
+
+var ::= "A" | "B" | ... | "Z"
+string ::= '"' char* '"'
+
+expr-list ::= (string|expression) (, (string|expression) )*
+var-list ::= var (, var)*
+
+expr = (term ('+' / '-'))* term
+term = (fact ('*' / '/'))* fact
+fact = '-' fact / '(' expr ')' / num / var
+
+relop ::= '<' ('>' | '=')? | '>' '='? | '='
+
+number ::= digit digit*
+   
+digit ::= '0' | '1' | '2' | '3' | ... | '8' | '9'
+
+   
+ 
+ 

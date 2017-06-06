@@ -20,11 +20,11 @@ _EXE=
 endif
 
 RM=rm -f
-CFLAGS = -std=c99 -O2 -I../../src
+CFLAGS = -std=c99 -O2 -Wall -pedantic -I../../src
 
-all: calculator$(_EXE)
+all: calculator$(_EXE) 
 
-calculator$(_EXE): utl.o calculator.o calculator.o
+calculator$(_EXE): utl.o calculator.o
 	$(CC) $(LNFLAGS) -o calculator.exe calculator.o utl.o
   
 utl.o: ../../src/utl.c
