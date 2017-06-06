@@ -421,6 +421,7 @@ void utl_log_watch_last(log_watch_t *lwatch, const char *file, int32_t line)
 void utl_log_setlevel(const char *lvl) {
   int l = 0;
   if (lvl) {
+    if (*lvl == '*') lvl = "I,T";
     l = 2;
     switch (toupper(*lvl)) {
       case 'N' : l++; 
