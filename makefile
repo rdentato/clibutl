@@ -130,6 +130,9 @@ test/t_peg$(_EXE): test/x_chk.x src/utl.o test/ut_peg.o
 test/t_peg2$(_EXE): test/x_chk.x src/utl.o test/ut_peg2.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_peg2.o src/utl.o
   
+test/t_peg3$(_EXE): test/x_chk.x src/utl.o test/ut_peg3.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_peg3.o src/utl.o
+  
 test/t_pmx$(_EXE): test/x_chk.x src/utl.o test/ut_pmx.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_pmx.o src/utl.o
   
