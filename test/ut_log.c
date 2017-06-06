@@ -28,12 +28,6 @@ int main(int argc, char *argv[])
     logerror("This line is expected to be in the log (error)");
   }
 
-  logwatch("INF ","WRN ","ERR ") {
-    loginfo("This line is expected to be in the log (info)");
-    logwarning("This line is expected to be in the log (warning)");
-    logerror("This line is expected to be in the log (error)");
-  }
-  
   loglevel("INFO");
   logexpect(utl_log_prdlvl == UTL_LOG_I,"Log Level: %d",utl_log_prdlvl);
   
