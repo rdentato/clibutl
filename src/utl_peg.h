@@ -38,6 +38,9 @@ struct peg_s {
   vec_t        memoize; // hashtable
   const char  *errpos;
   const char  *errrule;
+  const char  *errptr;
+  const char  *errmsg;
+  const char  *errmsgtmp;
   int32_t      errln;
   int32_t      errcn;
 };
@@ -98,10 +101,11 @@ peg_t utl_peg_new(void);
                           if (PEG_FAIL > 0) { \
                             PEG_POS += PEG_FAIL; \
                             PEG_FAIL = 0;\
-                          } \
+                          } else {PEG_FAIL = -PEG_FAIL;} \
+                          if (PEG_FAIL) {PEG_BACK(PEG_POS,PEG_DCNT);}\
                         } else (void)0
 
-#define pegis(s_)       utl_peg_reg(s_(PEG_POS,PEG_AUX))
+#define pegis(s_)       utl_peg_rec(s_(PEG_POS,PEG_AUX))
 #define pegstr(s_)      utl_peg_rec(utl_peg_str(s_,PEG_POS))
 #define pegoneof(s_)    utl_peg_rec(utl_peg_oneof(s_,PEG_POS))
 #define peglower        utl_peg_rec((islower((int)(*PEG_POS))?1:-1))
@@ -109,7 +113,7 @@ peg_t utl_peg_new(void);
 #define pegdigit        utl_peg_rec((isdigit((int)(*PEG_POS))?1:-1))
 #define pegspace        utl_peg_rec((isspace((int)(*PEG_POS))?1:-1))
 #define pegwspace       utl_peg_rec(utl_peg_wspace(PEG_POS))
-#define pegvspace       utl_peg_rec(utl_peg_wspace(PEG_POS))
+#define pegvspace       utl_peg_rec(utl_peg_vspace(PEG_POS))
 
 #define pegany          utl_peg_rec(((*PEG_POS)?1:-1))
 #define pegeot          utl_peg_rec(((*PEG_POS)?-1:0))
@@ -123,6 +127,8 @@ peg_t utl_peg_new(void);
 // PEG_BACK() is needed to ensure that errpos is updated (if it needs to be)
 #define pegfail        (PEG_FAIL=!PEG_BACK(PEG_POS,PEG_DCNT))
 #define pegempty       (PEG_FAIL=!PEG_POS)
+#define pegerror       (PEG_FAIL=-(!PEG_BACK(PEG_POS,PEG_DCNT)))
+#define pegfailed()    (peg_->fail)
 
 #define pegrule(x_)    void PeG_##x_(peg_t peg_, const char *pegr_)
 #define pegref(x_)     do { \
@@ -145,10 +151,10 @@ const char *utl_peg_defer(peg_t, pegaction_t, const char *, const char *);
                         peg_save.pos=PEG_FAIL \
                                      ? PEG_BACK(peg_save.pos,peg_save.dcnt) \
                                      : NULL)
-                       
+
 #define pegchoice  pegalt
 #define pegeither  pegor
-#define pegor   if (PEG_FAIL && !(PEG_FAIL=0) && \
+#define pegor   if (PEG_FAIL > 0 && !(PEG_FAIL=0) && \
                     !PEG_BACK(peg_save.pos,peg_save.dcnt))
       
 #define pegnot  for (pegsave_t peg_save={.pos=PEG_POS, .dcnt=PEG_DCNT}; \
@@ -166,7 +172,7 @@ const char *utl_peg_defer(peg_t, pegaction_t, const char *, const char *);
 #define PEG_RPT_SAVE(m_,M_) { .min=m_, .max=M_, .rpt=0, \
                               .pos=PEG_POS, .rpos=PEG_POS, \
                               .dcnt=PEG_DCNT, .rdcnt=PEG_DCNT }
-
+#if 0
 #define pegrpt(m_,M_) \
   if (PEG_FAIL) (void)0; else \
   for(pegsave_t peg_save = PEG_RPT_SAVE(m_,M_); \
@@ -180,7 +186,17 @@ const char *utl_peg_defer(peg_t, pegaction_t, const char *, const char *);
                  : ((PEG_DCNT=peg_save.rdcnt),(PEG_POS=peg_save.rpos))) \
               , peg_save.max=0) \
             : 0)) 
-            
+#else
+ 
+void utl_peg_repeat(peg_t peg_, const char *pegr_, pegsave_t *peg_save);
+#define pegrpt(m_,M_) \
+  if (PEG_FAIL) (void)0; else \
+  for(pegsave_t peg_save = PEG_RPT_SAVE(m_,M_); \
+        peg_save.max > 0; \
+          utl_peg_repeat(peg_, pegr_, &peg_save)) 
+
+#endif
+          
 #define pegopt   pegrpt(0,1)
 #define pegstar  pegrpt(0,INT_MAX)
 #define pegmore  pegrpt(1,INT_MAX)
@@ -188,9 +204,14 @@ const char *utl_peg_defer(peg_t, pegaction_t, const char *, const char *);
 
 #define pegsetaux(p_,a_) (p_->aux = (void *)(a_))
 
-#define pegfailpos(p_)   ((p_)->errpos)
-#define pegfailrule(p_)  ((p_)->errrule)
-#define pegerrline(p_)   ((p_)->errln)
-#define pegerrcolumn(p_) ((p_)->errcn)
+#define pegpos(p_)            ((p_)->pos)
+#define pegstartpos(p_)       ((p_)->start)
+#define pegfailpos(p_)        ((p_)->errpos)
+#define pegfailrule(p_)       ((p_)->errrule)
+#define pegfaillinenum(p_)    ((p_)->errln)
+#define pegfailline(p_)       ((p_)->errptr)
+#define pegfailcolumn(p_)     ((p_)->errcn)
+#define pegfailsetmessage(s_) if (PEG_FAIL) (void)0; else (peg_->errmsgtmp = (s_))
+#define pegfailmessage(p_)    (((p_)->errmsg) ? ((p_)->errmsg) :  ((p_)->errrule))
 #endif
 //>>>//
