@@ -1,5 +1,10 @@
-10 INPUT A
-20 PRINT "Value of A:", F A ;
-
-
-
+ 5 GOTO 15+3
+10 PRINT "Value of X? ","";
+15 INPUT X
+18 LET A = X + (30/3)
+20 PRINT "Value of A:" ,  A , "X: ";X
+30 LET X = X * 2 /3
+40 PRINT "New X    ", X
+50 POKE 321,1
+60 PRINT 1+PEEK(321)
+70 PRINT "HELLO WORLD!",32767+1

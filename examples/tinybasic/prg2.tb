@@ -1,0 +1,14 @@
+01 REM Example of a useless program
+10 PRINT "A? " ;
+20 INPUT A 
+30 PRINT "B? " ;
+40 INPUT B
+50 LET X = A
+60 GOSUB 200
+70 PRINT "f("; A; ")=" ;X
+80 LET X = B
+90 GOSUB 200
+100 PRINT "f("; B; ")=" ;X
+199 END
+200 LET X = X /3
+210 RETURN
