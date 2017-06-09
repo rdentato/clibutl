@@ -65,6 +65,8 @@ int main(int argc, char *argv[])
   peg_t pg;
   
   logopen("l_peg.log","w");
+  loglevel("*");
+  
   pg = pegnew();
   
   q = "ABCDE+FEG-43+AA";

@@ -91,12 +91,12 @@ int main(int argc, char *argv[])
   logcheck(pegparse(pg,test4,"ABAB"));
   
   q = "ABABAB"; 
-  logcheck(pegparse(pg,test4,q) && (pegfailpos(pg)[0]=='\0'));
+  logcheck(pegparse(pg,test4,q) && (pegpos(pg)[0]=='\0'));
   
   // Only the first six characters are parsed correctly
-  // The parse succeeds but *pegfailpos() is not '\0'
+  // The parse succeeds but *pegpos() is not '\0' (text not consumed)
   q = "ABABABAB";
-  logcheck(pegparse(pg,test4,q) && (pegfailpos(pg)[0]!='\0'));
+  logcheck(pegparse(pg,test4,q) && (pegpos(pg)[0]!='\0'));
 
   
   /* *** Check alternatives *** */
