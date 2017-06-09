@@ -2422,8 +2422,9 @@ static peg_t utl_peg_init(peg_t p, const char *s)
     p->fail     = 0;
     p->errpos   = s;
     p->errrule  = NULL;
-    p->errln    = 0;
-    p->errcn    = 0;
+    p->errln    = 1;
+    p->errcn    = 1;
+    p->errmsg   = NULL;
     p->defer    = vecnew(pegdefer_t);
   }
   return p;
@@ -2459,9 +2460,10 @@ const char *utl_peg_defer(peg_t parser, pegaction_t func,const char *from, const
 const char *utl_peg_back(peg_t parser,const char *rule_name, const char *pos,int32_t dcnt)
 {
   int32_t cnt;
-  if (parser->errpos < pos) {
+  if (parser->errpos <= pos) {
      parser->errpos  = pos;
      parser->errrule = rule_name;
+     parser->errmsg = parser->errmsgtmp;
   }
   parser->pos = pos;
   cnt = veccount(parser->defer);
@@ -2470,6 +2472,43 @@ const char *utl_peg_back(peg_t parser,const char *rule_name, const char *pos,int
     vecdrop(parser->defer,cnt);
   }
   return NULL;  
+}
+
+/*
+          peg_save.rpt++,(PEG_FAIL \
+                          ? 0 \
+                          :(peg_save.rlen = PEG_POS - peg_save.rpos,
+                            peg_save.rpos=PEG_POS,
+                            peg_save.rdcnt=PEG_DCNT)
+                          ), \
+          ((PEG_FAIL || peg_save.rpt >= peg_save.max || peg_save.rlen == 0) \
+            ? (((PEG_FAIL=(peg_save.rpt<=peg_save.min)) \
+                 ? PEG_BACK(peg_save.pos,peg_save.dcnt) \
+                 : ((PEG_DCNT=peg_save.rdcnt),
+                    (PEG_POS=peg_save.rpos))) \
+              , peg_save.max=0) \
+            : 0)
+
+  */          
+
+void utl_peg_repeat(peg_t peg_, const char *pegr_, pegsave_t *peg_save)
+{
+  peg_save->rpt++;
+  if (!PEG_FAIL) {
+    peg_save->rlen  = PEG_POS - peg_save->rpos;
+    peg_save->rpos  = PEG_POS;
+    peg_save->rdcnt = PEG_DCNT;
+  }
+  if (PEG_FAIL || peg_save->rpt >= peg_save->max || peg_save->rlen == 0) {
+      if ((PEG_FAIL = (peg_save->rpt <= peg_save->min))) {
+        PEG_BACK(peg_save->pos,peg_save->dcnt);
+      }
+      else {
+        PEG_DCNT = peg_save->rdcnt;
+        PEG_POS = peg_save->rpos;
+      }
+      peg_save->max = 0;
+  }
 }
 
 void utl_peg_ref(peg_t parser, const char *rule_name, pegrule_t rule)
@@ -2494,9 +2533,11 @@ static void utl_peg_seterrln(peg_t parser)
     s = parser->start;
     parser->errln = 1;
     parser->errcn = 1;
+    parser->errptr = s;
     while (*s && s < parser->errpos) {
       if (s[0] == '\r' && s[1] == '\n') s++;
       if (*s == '\r' || *s == '\n') {
+        parser->errptr=s+1;
         parser->errln++;
         parser->errcn=0;
       }
@@ -2526,9 +2567,13 @@ int utl_peg_parse(peg_t parser, pegrule_t start_rule,
     utl_peg_init(parser,txt);
     parser->aux = aux;
     utl_peg_ref(parser, rule_name, start_rule);
+
     if (!parser->fail) {
-      parser->errpos  = parser->pos;
-      parser->errrule = rule_name;
+      if (parser->errpos <= parser->pos) {
+        parser->errpos  = parser->pos;
+        parser->errrule = rule_name;
+        parser->errmsg = parser->errmsgtmp;
+      }
       utl_peg_execdeferred(parser);
     }
     utl_peg_seterrln(parser);
