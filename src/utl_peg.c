@@ -133,23 +133,6 @@ const char *utl_peg_back(peg_t parser,const char *rule_name, const char *pos,int
   return NULL;  
 }
 
-/*
-          peg_save.rpt++,(PEG_FAIL \
-                          ? 0 \
-                          :(peg_save.rlen = PEG_POS - peg_save.rpos,
-                            peg_save.rpos=PEG_POS,
-                            peg_save.rdcnt=PEG_DCNT)
-                          ), \
-          ((PEG_FAIL || peg_save.rpt >= peg_save.max || peg_save.rlen == 0) \
-            ? (((PEG_FAIL=(peg_save.rpt<=peg_save.min)) \
-                 ? PEG_BACK(peg_save.pos,peg_save.dcnt) \
-                 : ((PEG_DCNT=peg_save.rdcnt),
-                    (PEG_POS=peg_save.rpos))) \
-              , peg_save.max=0) \
-            : 0)
-
-  */          
-
 void utl_peg_repeat(peg_t peg_, const char *pegr_, pegsave_t *peg_save)
 {
   peg_save->rpt++;
@@ -159,7 +142,7 @@ void utl_peg_repeat(peg_t peg_, const char *pegr_, pegsave_t *peg_save)
     peg_save->rdcnt = PEG_DCNT;
   }
   if (PEG_FAIL || peg_save->rpt >= peg_save->max || peg_save->rlen == 0) {
-      if ((PEG_FAIL = (peg_save->rpt <= peg_save->min))) {
+      if (PEG_FAIL < 0 || (PEG_FAIL = (peg_save->rpt <= peg_save->min))) {
         PEG_BACK(peg_save->pos,peg_save->dcnt);
       }
       else {
