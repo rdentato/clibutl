@@ -573,7 +573,7 @@ int main (int argc, char *argv[])
   parser = pegnew();
   tbaux.f = outfile;
   tbaux.n = 0;
-  if (!pegparse(parser,tinyprg,buf(source_code),&tbaux) || (pegfailpos(parser)[0] != '\0' )) { 
+  if (!pegparse(parser,tinyprg,buf(source_code),&tbaux) || (pegpos(parser)[0] != '\0' )) { 
     const char *t;
     t = pegfailline(parser);
     while (*t && *t != '\r' && *t != '\n') fputc(*t++,stderr);
@@ -585,9 +585,9 @@ int main (int argc, char *argv[])
     fclose(outfile); outfile=NULL;
     if (!source_only) sprintf(cmd,"cc -o %s %s ",outfname,tmpfname);
     if (source_only || system(cmd)) {
-      int c;
       outfile = fopen(tmpfname,"rb");
       if (outfile) {
+        int c;
         while ((c=fgetc(outfile)) != EOF) {
           fputc(c,stdout);
         }

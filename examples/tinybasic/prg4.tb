@@ -1,8 +1,9 @@
-10 PRINT "How many numbers? "
+10 PRINT "How many dice? ";
 20 INPUT N
 30 IF N > 0 THEN GOTO 50
 40 PRINT "Must be a positive number"
 45 GOTO 10
+49 REM RND(0) will set a seed according to current time
 50 LET X = RND(0)
 60 PRINT 1+RND(6)
 70 LET N = N-1
