@@ -713,7 +713,7 @@ const char *utl_peg_defer(peg_t, pegaction_t, const char *, const char *);
       
 #define pegnot  for (pegsave_t peg_save={.pos=PEG_POS, .dcnt=PEG_DCNT}; \
                      !PEG_FAIL && peg_save.pos; \
-                        peg_save.pos=(PEG_FAIL=!PEG_FAIL) \
+                        peg_save.pos=((PEG_FAIL<0) || (PEG_FAIL=!PEG_FAIL)) \
                                       ? PEG_BACK(peg_save.pos,peg_save.dcnt) \
                                       : NULL)
                            
@@ -726,30 +726,13 @@ const char *utl_peg_defer(peg_t, pegaction_t, const char *, const char *);
 #define PEG_RPT_SAVE(m_,M_) { .min=m_, .max=M_, .rpt=0, \
                               .pos=PEG_POS, .rpos=PEG_POS, \
                               .dcnt=PEG_DCNT, .rdcnt=PEG_DCNT }
-#if 0
-#define pegrpt(m_,M_) \
-  if (PEG_FAIL) (void)0; else \
-  for(pegsave_t peg_save = PEG_RPT_SAVE(m_,M_); \
-        peg_save.max > 0; \
-          peg_save.rpt++,(PEG_FAIL \
-                          ? 0 \
-                          :(peg_save.rlen = PEG_POS - peg_save.rpos, peg_save.rpos=PEG_POS,peg_save.rdcnt=PEG_DCNT)), \
-          ((PEG_FAIL || peg_save.rpt >= peg_save.max || peg_save.rlen == 0) \
-            ? (((PEG_FAIL=(peg_save.rpt<=peg_save.min)) \
-                 ? PEG_BACK(peg_save.pos,peg_save.dcnt) \
-                 : ((PEG_DCNT=peg_save.rdcnt),(PEG_POS=peg_save.rpos))) \
-              , peg_save.max=0) \
-            : 0)) 
-#else
- 
+
 void utl_peg_repeat(peg_t peg_, const char *pegr_, pegsave_t *peg_save);
 #define pegrpt(m_,M_) \
   if (PEG_FAIL) (void)0; else \
   for(pegsave_t peg_save = PEG_RPT_SAVE(m_,M_); \
         peg_save.max > 0; \
           utl_peg_repeat(peg_, pegr_, &peg_save)) 
-
-#endif
           
 #define pegopt   pegrpt(0,1)
 #define pegstar  pegrpt(0,INT_MAX)
