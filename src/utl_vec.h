@@ -41,7 +41,6 @@ typedef struct vec_s {
   uint8_t    eld[4];
 } vec_s, *vec_t;
 
-
 #define vecDO(type,v,i,e,x)  do {vec_t v_=v;  *((type *)(v_->elm)) = (e); x(v_,i);} while (0)
 
 // Array
@@ -49,8 +48,8 @@ typedef struct vec_s {
 #define vecins(type,v,i,e)   vecDO(type,v,i,e,utl_vec_ins)
 #define vecget(type,v,i,d)   (*((type *)((v)->elm))=(d),utl_vec_get((v),i),*((type *)((v)->elm)))
 
-#define vecsetptr(v,i,p)     (memset((v)->elm,p,(v)->esz),utl_vec_set(v,i))
-#define vecinsptr(v,i,p)     (memset((v)->elm,p,(v)->esz),utl_vec_ins(v,i))
+#define vecsetptr(v,i,p)     (memcpy((v)->elm,p,(v)->esz),utl_vec_set(v,i))
+#define vecinsptr(v,i,p)     (memcpy((v)->elm,p,(v)->esz),utl_vec_ins(v,i))
 #define vecgetptr(v,i)       utl_vec_get(v,i)
 
 #define vecalloc(...)  utl_vec_alloc utl_expand((utl_arg0(__VA_ARGS__,NULL), \
@@ -60,6 +59,7 @@ typedef struct vec_s {
 
 // Set (sorted or unsorted) 
 #define vecadd(type,v,e)     vecDO(type,v,vec_MAX_CNT,e,utl_vec_add)
+#define vecaddptr(v,p)       vecinsptr(v,vec_MAX_CNT,p)
 
 #define vecsearch(type,v,e)  (*((type *)(v->elm)) = (e), (type *)utl_vec_search(v, 0))
 #define vecremove(type,v,e)  utl_vec_remove(v, (*((type *)(v->elm)) = (e), 0))  
@@ -100,8 +100,8 @@ typedef struct vec_s {
           utl_unfrz utl_expand((utl_arg0(__VA_ARGS__,NULL),\
                                     utl_arg1(__VA_ARGS__,NULL,NULL), \
                                     utl_arg2(__VA_ARGS__,NULL,NULL,NULL),utl_vec_unfreeze))
+                                    
 // Info
-
 #define vecnew(...)       utl_vec_new utl_expand((sizeof(utl_arg0(__VA_ARGS__,int)),\
                                       utl_arg1(__VA_ARGS__,NULL,NULL), \
                                       utl_arg2(__VA_ARGS__,NULL,NULL,NULL)))
