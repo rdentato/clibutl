@@ -84,14 +84,28 @@ static peg_t utl_peg_init(peg_t p, const char *s)
     p->errln    = 1;
     p->errcn    = 1;
     p->errmsg   = NULL;
-    p->defer    = vecnew(pegdefer_t);
+    if (s == utl_emptystring) {
+      p->defer = NULL;
+      p->mmz   = NULL;
+    }
+    if (p->defer)  vecclear(p->defer);
+             else  p->defer = vecnew(pegdefer_t);
+             
+    if (p->mmz)  vecclear(p->mmz);
+           else  p->mmz = vecnew(utl_peg_mmz_t *);
   }
   return p;
 }
 
 peg_t utl_peg_new()
 {
-  return utl_peg_init(malloc(sizeof(struct peg_s)),utl_emptystring); 
+  peg_t p;
+  p = malloc(sizeof(struct peg_s));
+  if (p) {
+    p->defer = NULL;
+    utl_peg_init(p,utl_emptystring);
+  }
+  return p; 
 }
 
 peg_t utl_peg_free(peg_t parser)
@@ -112,6 +126,7 @@ const char *utl_peg_defer(peg_t parser, pegaction_t func,const char *from, const
     defer.from = from;
     defer.to   = to;
     vecpush(pegdefer_t, parser->defer, defer);
+    //logdebug("Deferd: %p %p %p",(void *)func,(void *)from, (void *)to);
   }
   return NULL;
 }
@@ -153,14 +168,90 @@ void utl_peg_repeat(peg_t peg_, const char *pegr_, pegsave_t *peg_save)
   }
 }
 
-void utl_peg_ref(peg_t parser, const char *rule_name, pegrule_t rule)
+static void utl_peg_memoize(peg_t parser, const char *startpos, int32_t startcnt, 
+                                                 const char *rule_name, utl_peg_mmz_t *mmz)
+{
+  int i;
+  pegdefer_t *defer;
+  
+  if (mmz) {
+    if (mmz[0].startpos == NULL && mmz[0].startpos == mmz[1].startpos) {
+      // First time
+      vecpush(utl_peg_mmz_t *, parser->mmz, mmz); // to be cleaned at the end of parsing
+      mmz[0].defer = vecnew(pegdefer_t);
+      mmz[1].defer = vecnew(pegdefer_t);
+      // logdebug("Added: %p",(void *)mmz);
+    }
+    
+    i = (mmz[0].startpos < mmz[1].startpos)? 0:1;
+    mmz[i].fail = parser->fail;
+    mmz[i].startpos = startpos;
+    mmz[i].endpos = parser->pos;
+    vecclear(mmz[i].defer);
+    while (startcnt < veccount(parser->defer)) {
+      defer = vecgetptr(parser->defer,startcnt);
+      vecaddptr(mmz[i].defer, defer);
+      startcnt++;
+    }
+    // logdebug("Stored: %s@%p %d %p %d %d",rule_name,mmz[i].startpos,mmz[i].fail,mmz[i].endpos,0,veccount(mmz[i].defer));
+  }
+}
+
+static void utl_peg_cleanmmz(peg_t parser)
+{
+  utl_peg_mmz_t *mmz;
+  
+  while (veccount(parser->mmz) > 0) {
+    mmz = vectop(utl_peg_mmz_t *,parser->mmz,NULL);
+    mmz[0].startpos = NULL;
+    mmz[1].startpos = NULL;
+    mmz[0].defer = vecfree(mmz[0].defer);
+    mmz[1].defer = vecfree(mmz[1].defer);
+    // logdebug("Cleared: %p",(void *)mmz);
+    vecdrop(parser->mmz);
+  }
+}
+
+static int utl_peg_gotmmz(peg_t parser, const char *startpos, int32_t startcnt, const char *rule_name, utl_peg_mmz_t *mmz)
+{
+  pegdefer_t *defer;
+  
+  if (mmz) {
+    for (int i=0; i<2; i++) {
+      if (mmz[i].startpos == parser->pos) {
+        parser->fail = mmz[i].fail;
+        parser->pos  = mmz[i].endpos;
+        for (int k = 0; k < veccount(mmz[i].defer); k++) {
+          defer = vecgetptr(mmz[i].defer,k);
+          vecaddptr(parser->defer,defer);
+        }
+        // logdebug("Restor: %s@%p %d %p %d %d",rule_name,startpos,parser->fail,parser->pos,startcnt,veccount(parser->defer));
+        return 1;
+      }
+    }
+  }
+  return 0;
+}
+
+void utl_peg_ref(peg_t parser, const char *rule_name, pegrule_t rule, utl_peg_mmz_t *mmz)
 {
   const char *tmp = parser->pos;
   int32_t cnt = veccount(parser->defer);
+  // int i = 0;
+  // pegdefer_t *defer;
+  
   if (!parser->fail) {
-    rule(parser,rule_name);
-    if (parser->fail) 
-      (void)utl_peg_back(parser,rule_name,tmp,cnt);
+    //logdebug("Start:  %s@%p",rule_name,parser->pos);
+    /* check result */
+    if (!utl_peg_gotmmz(parser, tmp, cnt, rule_name, mmz)) {
+      rule(parser,rule_name);
+      if (parser->fail) {
+        (void)utl_peg_back(parser,rule_name,tmp,cnt);
+      }
+      //logdebug("Result: %s@%p %d %p %d %d",rule_name,tmp,parser->fail,parser->pos,cnt,veccount(parser->defer));
+      /* store result */
+      utl_peg_memoize(parser,tmp,cnt,rule_name,mmz);
+    }
   }
 }
 
@@ -194,21 +285,23 @@ static void utl_peg_execdeferred(peg_t parser)
   pegdefer_t defer;
   pegdefer_t defer_NULL = {peg_defer_func_NULL, NULL, NULL};
   
+  //logdebug("Deferred actions: %d",veccount(parser->defer));
   defer = vecfirst(pegdefer_t, parser->defer, defer_NULL);
   while (defer.func != peg_defer_func_NULL) {
+    //logdebug("Execd: %p %p %p",(void *)defer.func,(void *)defer.from, (void *)defer.to);
     if (defer.func(defer.from, defer.to, parser->aux))
       break;
     defer = vecnext(pegdefer_t, parser->defer, defer_NULL);
   }
 }
 
-int utl_peg_parse(peg_t parser, pegrule_t start_rule, 
+int utl_peg_parse(peg_t parser, pegrule_t start_rule, utl_peg_mmz_t *mmzptr, 
                 const char *txt,const char *rule_name, void *aux)
 {
   if (parser && start_rule && txt) {
     utl_peg_init(parser,txt);
     parser->aux = aux;
-    utl_peg_ref(parser, rule_name, start_rule);
+    utl_peg_ref(parser, rule_name, start_rule, NULL);
 
     if (!parser->fail) {
       if (parser->errpos <= parser->pos) {
@@ -219,7 +312,7 @@ int utl_peg_parse(peg_t parser, pegrule_t start_rule,
       utl_peg_execdeferred(parser);
     }
     utl_peg_seterrln(parser);
-    
+    utl_peg_cleanmmz(parser);
     return !parser->fail;
   }
   return 0;
