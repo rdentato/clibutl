@@ -14,10 +14,10 @@
 **
 [[[
 # Memory trace
-**      ______   ______  ______ 
-**     /      \ / ___  )/      \
-**    /  ) )  //   ___//  ) )  /
-**   (__/_/__/ \_____/(__/_/__/ 
+**      ______  ______ ______ 
+**     /      \/ ___  )      \
+**    /  ) )  /   ___/  ) )  /
+**   (__/_/__/\_____(__/_/__/ 
 **   
 **   
 
@@ -39,7 +39,6 @@
 
 //<<<//
 #ifndef UTL_NOMEM
-#ifdef UTL_MAIN
 
 #ifndef memINVALID
 #define memINVALID    -2
@@ -197,6 +196,118 @@ void *utl_strdup(const char *ptr, const char *file, int32_t line)
 
 size_t utl_mem_used(void) {return utl_mem_allocated;}
 
-#endif
+
+mpl_t utl_mpl_new()
+{
+  mpl_t mp = NULL;
+  mp = malloc(sizeof(mpl_s));
+  if (mp) {
+    mp->used.next   = NULL;
+    mp->unused.next = NULL;
+    mp->used.size   = 0;
+    mp->unused.size = 0;
+  }
+  return mp;
+}
+
+static utl_mpl_node_s *utl_mpl_getparent(utl_mpl_node_s *s, utl_mpl_node_s *p)
+{
+  while (s->next && s->next != p) {
+    s = s->next;
+  }
+  return (s->next == p)? s : NULL;
+}
+
+static utl_mpl_node_s *utl_mpl_searchfit(utl_mpl_node_s *s, uint32_t sz)
+{
+   while (s->next && s->next->size < sz) {
+     s = s->next;
+   }
+   return s->next ? s : NULL;
+}
+
+static utl_mpl_node_s *utl_mpl_searchpos(utl_mpl_node_s *s, uint32_t sz)
+{
+   while (s->next && s->next->size < sz) {
+     s = s->next;
+   }
+   return s;
+}
+
+void *utl_mpl_malloc(mpl_t mp, uint32_t sz)
+{
+  utl_mpl_node_s *p = NULL;
+  utl_mpl_node_s *parent;
+  if (mp) {
+    if (sz <= sizeof(utl_mpl_node_s *)) sz = sizeof(utl_mpl_node_s *);
+    /* Search suitable block in the pool (sorted list) */
+    parent = utl_mpl_searchfit(&mp->unused,sz);
+    if (parent && parent->next->size < (sz*2)) {
+      p = parent->next;
+      parent->next = p->next;   // remove from "unused"
+    }
+    else { /* Otherwise alloc a new block */
+      p = malloc(offsetof(utl_mpl_node_s,blk)+sz);
+      //p = utl_malloc(offsetof(utl_mpl_node_s,blk)+sz,__FILE__,__LINE__);
+      if (p) p->size = sz;
+    }
+    //logdebug("POOL MALLOC: %u result -> %p",sz, (void *)p);
+    if (p) { /* add to the "used" list */
+      p->next = mp->used.next;
+      mp->used.next = p;
+      p = (void *)(&p->blk);
+    }
+  }
+  return p;
+}
+
+void *utl_mpl_free(mpl_t mp, void *e,int clean)
+{
+  utl_mpl_node_s *p;
+  utl_mpl_node_s *parent;
+  
+  if (mp) { 
+    if (clean) {  // release everything
+      while (mp->used.next != NULL) {
+        p = mp->used.next;
+        mp->used.next = p->next; // remove from used
+        parent = utl_mpl_searchpos(&mp->unused,p->size);
+        //logdebug("POOL CLEAN BLOCK: %p %p",(void *)parent, (void *)p);
+        p->next = parent->next; 
+        parent->next = p;       // add to unused
+      }
+    }
+    else if (e) { // release (move from "used" to "unused")
+      // Search in "used"
+      p = (utl_mpl_node_s *)(((char *)e) - offsetof(utl_mpl_node_s,blk));
+      parent = utl_mpl_getparent(&mp->used,p);
+      //logdebug("POOL FREE ELEM: %p %p",(void *) parent,(void *)p);
+      if (parent) {
+        parent->next = p->next; // Remove from used
+        parent = utl_mpl_searchpos(&mp->unused,p->size);
+        p->next = parent->next;
+        p->blk  = NULL;
+        parent->next = p;       // add to unused
+      }
+    }
+    else { // free everything!
+      parent = &mp->used;
+      while (1) {
+        while (parent->next != NULL) {
+          p = parent->next;
+          parent->next = p->next; // remove from list
+          //logdebug("POOL FREE BLOCK: %p %p",(void *)parent, (void *)p);
+          //utl_free(p,__FILE__,__LINE__);
+          free(p);
+        }
+        if (parent == &mp->unused ) break;
+        parent = &mp->unused;
+      }
+      free(mp);
+    }
+  }
+  return NULL;
+}
+
 #endif
 //>>>//
