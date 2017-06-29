@@ -188,12 +188,27 @@ int close(const char *from, const char *to, void *aux)
 #define MAX_EXPR_LEN 256
 char expression[MAX_EXPR_LEN];
 
+char *cleaneol(char *s)
+{
+  char *t = s;
+  if (s) {
+    while (*t) {
+      if (*t == '\r' || *t == '\n') { *t = '\0'; break; }
+      t++;
+    }
+  }
+  return s;
+}
+
 int main(int argc, char *argv[])
 {
    peg_t parser;
+   logopen("calculator.log");
+   loglevel("*");
    parser = pegnew();
-   while (fgets(expression,MAX_EXPR_LEN,stdin)) {
+   while (cleaneol(fgets(expression,MAX_EXPR_LEN,stdin))) {
      stack_clean(&stack);
+     loginfo("expr: %s",expression);
      printf("\n\n%s=",expression);
      stack_push(&stack,0,'=');
      if (pegparse(parser,expr,expression,&stack)) {

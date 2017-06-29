@@ -50,8 +50,8 @@ HDRS = src/utl_hdr.h src/utl_log.h src/utl_mem.h src/utl_vec.h \
        src/utl_pmx.h src/utl_peg.h src/utl_fsm.h \
        src/utl_try.h src/utl_end.h 
 
-CSRC = src/utl_hdr.c src/utl_log.c src/utl_mem.c src/utl_vec.c \
-       src/utl_pmx.c src/utl_peg.c 
+CSRC = src/utl_hdr.c src/utl_log.c src/utl_mem.c \
+       src/utl_vec.c src/utl_pmx.c src/utl_peg.c 
 
 
 src: src/libutl.a
@@ -151,6 +151,12 @@ test/t_pmx5$(_EXE): test/x_chk.x src/utl.o test/ut_pmx5.o
 test/t_mem$(_EXE): test/x_chk.x src/utl.o test/ut_mem.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_mem.o src/utl.o
   
+test/t_mpl$(_EXE): test/x_chk.x src/utl.o test/ut_mpl.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_mpl.o src/utl.o
+  
+test/t_mpl2$(_EXE): test/x_chk.x src/utl.o test/ut_mpl2.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_mpl2.o src/utl.o
+  
 test/t_utf$(_EXE): test/x_chk.x src/utl.o  test/ut_utf.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_utf.o src/utl.o
 
@@ -180,8 +186,8 @@ runtest: tst
 #     \___//_/ \___/ \__,_//_/ /_/(_)    
 
 clean:
-	cd src;  $(RM) utl.c utl.h l_* libutl.a *.o *.obj *.gc?? utl_unc utl_unc.exe
-	cd test; $(RM) t_* *.o *.obj *.tmp l_* gmon.out *.gc?? utl.c x_chk.x
+	cd src;  $(RM) utl.c utl.h l_* libutl.a *.o *.obj *.gc?? utl_unc *.exe
+	cd test; $(RM) t_* *.o *.obj *.tmp l_* gmon.out *.gc?? utl.c x_chk.x *.exe
 	$(RM) l_*
 
 gcov:

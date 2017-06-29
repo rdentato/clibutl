@@ -32,4 +32,4 @@ utl.o: ../../src/utl.c
 
 clean:
 	$(RM) utl.o
-	$(RM) calculator.o calculator$(_EXE)
+	$(RM) calculator.o calculator calculator.exe

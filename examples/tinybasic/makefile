@@ -25,11 +25,13 @@ CFLAGS = -std=c99 -O2 -Wall -pedantic -I../../src
 all: tbc$(_EXE) 
 
 tbc$(_EXE): utl.o tbc.o
-	$(CC) $(LNFLAGS) -o tbc.exe tbc.o utl.o
+	$(CC) $(LNFLAGS) -o tbc$(_EXE) tbc.o utl.o
   
 utl.o: ../../src/utl.c
 	$(CC) $(CFLAGS) -c -o utl.o ../../src/utl.c
 
 clean:
 	$(RM) utl.o
-	$(RM) tbc.o tbc$(_EXE)
+	$(RM) tbc.o tbc tbc.exe
+	$(RM) t.out
+
