@@ -113,7 +113,7 @@ typedef struct log_watch_s log_watch_t;
                                                         : ((utl_log_watch = utl_log_watch->prev), 1), \
                                    utl_log_watch_.flg; \
                                  utl_log_watch_last(utl_log_watch,__FILE__,__LINE__),\
-                                 (( utl_log_dbglvl <= UTL_LOG_D) && utl_log_prt("WCH END\x09:%s:%d\x09",__FILE__,__LINE__)),utl_log_watch_.flg = 0)
+                                 (void)(( utl_log_dbglvl <= UTL_LOG_D) && utl_log_prt("WCH END\x09:%s:%d\x09",__FILE__,__LINE__)),utl_log_watch_.flg = 0)
 							 
 #define logifdebug       if (utl_log_dbglvl > UTL_LOG_D) ; else
 
