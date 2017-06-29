@@ -55,10 +55,23 @@ pegrule(lvowel) { // lower wovel
   }  
 }
 
+pegrule(testand) {
+   // x <- 'x' & 'p'
+   pegstr("x");
+   pegand { pegstr("p"); }
+}
+
+pegrule(testnot) {
+   // x <- 'x' !'p'
+   pegstr("x");
+   pegnot { pegstr("p"); }
+}
+
+
 int main(int argc, char *argv[])
 {
   const char *q;
-  const char *p;
+  //const char *p;
 //  int ret;
   peg_t pg;
   
@@ -108,10 +121,24 @@ int main(int argc, char *argv[])
   logcheck(pegparse(pg,lvowel,"ù"));
   logcheck(!pegparse(pg,lvowel,"c"));
   logcheck(!pegparse(pg,lvowel,"ç"));
+  
+  pg = pegfree(pg);
+  
+  pg = pegnew();
+  
+  q = "xp";
+  logcheck(pegparse(pg,testand,q) && (pegpos(pg)[0]== 'p'));
+  logcheck(pegpos(pg)-pegstartpos(pg) == 1);
+  logcheck(!pegparse(pg,testnot,q));
 
+  q = "xx";
+  logcheck(pegparse(pg,testnot,q) && (pegpos(pg)[0]== 'x'));
+  logcheck(pegpos(pg)-pegstartpos(pg) == 1);
+  logcheck(!pegparse(pg,testand,q));
 
   
   pg = pegfree(pg);
+  
   logclose();
 
   exit(0);

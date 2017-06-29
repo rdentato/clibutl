@@ -61,7 +61,7 @@ int arg(const char *from, const char *to, void *aux)
 
 int main(int argc, char *argv[])
 {
-  char *q;
+  //char *q;
   peg_t pg;
   
   logopen("l_peg.log","w");
@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
   
   pg = pegnew();
   
-  q = "ABCDE+FEG-43+AA";
+  //q = "ABCDE+FEG-43+AA";
   
   pg = pegfree(pg);
   logclose();
