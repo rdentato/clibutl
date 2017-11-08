@@ -22,7 +22,7 @@
 pmx_t utl_pmx_ ;
 
 
-int(*utl_pmx_ext)(const char *pat, const char *txt, int, int32_t ch) = NULL;
+//int(*utl_pmx_ext)(const char *pat, const char *txt, int, int32_t ch) = NULL;
 
 #define utl_pmx_set_paterror(t) do {if (!utl_pmx_.error) {utl_pmx_.error = t;}} while (0)
 
@@ -152,7 +152,7 @@ static int32_t utl_pmx_iscapt(const char *pat, const char *txt)
 
 void utl_pmx_extend(int(*ext)(const char *, const char *, int, int32_t))
 {
-  utl_pmx_ext = ext;
+  utl_pmx_.ext = ext;
 }
 
 #define UTL_PMX_QUOTED 0
@@ -339,9 +339,13 @@ static int utl_pmx_class(const char **pat_ptr, const char **txt_ptr)
     case '=' : utl_W(utl_pmx_isin_chars(pat+1,pat_end,ch)) ; break;
     case '#' : utl_W(utl_pmx_isin_codes(pat+1,pat_end,ch)) ; break;
     
-    case 'N' : utl_W((txt[0]=='\r'
-                            ? (txt[1] == '\n'? (len++) : 1)
-                            : (txt[0] == '\n'?  1 : 0)    )) ; break;
+    case 'L' : while(*txt && *txt != '\r' && *txt != '\n') txt++;
+               if (*txt == '\r' && *txt == '\n') txt++;
+               n=1;
+               break;
+    
+    case 'N' : utl_W((txt[0]=='\r' ? (txt[1] == '\n'? (len++) : 1)
+                                   : (txt[0] == '\n'?  1 : 0)    )) ; break;
 
     case 'Q' : utl_W((len=utl_pmx_delimited(pat+1,pat_end,txt, UTL_PMX_QUOTED))); break;
     case 'B' : utl_W((len=utl_pmx_delimited(pat+1,pat_end,txt, UTL_PMX_BRACED))); break;
@@ -357,8 +361,8 @@ static int utl_pmx_class(const char **pat_ptr, const char **txt_ptr)
                utl_W((len=utl_pmx_iscapt(pat+1,txt)));
                break;
   
-    case ':' : if (utl_pmx_ext)
-                 utl_W((len=utl_pmx_ext(pat+1,txt,len,ch)));
+    case ':' : if (utl_pmx_.ext)
+                 utl_W((len=utl_pmx_.ext(pat+1,txt,len,ch)));
                break;
   
     default  : ; //utl_pmx_set_paterror(pat);
@@ -468,6 +472,7 @@ static const char *utl_pmx_alt(const char *pat, const char **txt_ptr)
 static const char *utl_pmx_match(const char *pat, const char *txt)
 {
   int32_t len;
+  int32_t plen;
   int32_t ch;
   int32_t c1;
   int16_t inv =0;
@@ -478,7 +483,7 @@ static const char *utl_pmx_match(const char *pat, const char *txt)
   
   while (*pat) {
     _logdebug("[MATCH] %d [%s] [%s]",pmxcount(),pat,txt);
-    c1 = 0; 
+    c1 = 0; plen = 0; 
     switch (*pat) {
       case '(' : pat++;
                  if (*pat == '|') {inv = 1; pat++;}
@@ -522,9 +527,9 @@ static const char *utl_pmx_match(const char *pat, const char *txt)
       case '<' : if (!utl_pmx_class(&pat,&txt)) utl_pmx_FAIL;
                  break;
 
-      case '%' : if (pat[1]) len = utl_pmx_nextch(++pat, &c1);
+      case '%' : if (pat[1]) plen = 1+utl_pmx_nextch(pat+1, &c1);
 
-      default  : if (c1 == 0) len = utl_pmx_nextch(pat, &c1);
+      default  : if (c1 == 0) plen = utl_pmx_nextch(pat, &c1);
                  len = utl_pmx_nextch(txt, &ch);
                  if (!utl_pmx_.csens) {
                    ch = utlfoldchar(ch);
@@ -535,7 +540,7 @@ static const char *utl_pmx_match(const char *pat, const char *txt)
                    utl_pmx_FAIL;
                  }
                  txt += len;
-                 pat += len;
+                 pat += plen;
                  break;
                  
       fail     : pat = utl_pmx_alt(pat, &txt) ; /* search for an alternative */
