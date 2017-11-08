@@ -237,6 +237,7 @@ void *utl_vec_alloc(vec_t v, uint32_t i)
 {
   uint8_t *elm=NULL;
   
+  _logdebug("vecalloc: pos: %d max:%d cnt:%d",i,v->max,v->cnt);
   if (i == vec_MAX_CNT) i = v->cnt;
   if (utl_vec_makeroom(v,i)) {
     elm = v->vec + (i*v->esz);
@@ -249,8 +250,9 @@ void *utl_vec_alloc(vec_t v, uint32_t i)
 void *utl_vec_set(vec_t v, uint32_t i)
 {
   uint8_t *elm=NULL;
-  
+  _logdebug("vecset: %p pos: %d",(void*)v,i);
   elm = utl_vec_alloc(v,i);
+  _logdebug("allocated:");
   if (elm) memcpy(elm, v->elm, v->esz);
   return elm;
 }
@@ -875,10 +877,10 @@ size_t utl_buf_readall(buf_t b, uint32_t i, FILE *f)
   return ret;
 }
 
-char *utl_buf_readln(buf_t b, uint32_t i, FILE *f)
+char *utl_buf_readln(buf_t b, uint32_t n, FILE *f)
 {
   int c;
-  uint32_t n = i;
+  uint32_t i = n;
   
   if (i == vec_MAX_CNT) i = b->cnt;
  
@@ -1050,7 +1052,7 @@ int utl_sym_freeze(FILE *f, sym_t t)
   int ret = 0;
   ret = utl_vec_freeze(f,t);
   _logifdebug {
-    logtrace("FREEZE VEC: %p",t->vec);
+    logtrace("FREEZE VEC: %p",(void *)(t->vec));
     for (int k=0; k<32; k+=2) {
       logtrace("%2d [%8X] -> %8X",k,((uint32_t *)(t->vec))[k],((uint32_t *)(t->vec))[k+1]);
     }
@@ -1067,7 +1069,7 @@ sym_t utl_sym_unfreeze(FILE *f, utl_cmp_t cmp, utl_hsh_t hsh)
   _logtrace("SYM UNFRZ: %p %p",utl_sym_cmp,utl_sym_hash);
   t = utl_vec_unfreeze(f,utl_sym_cmp,utl_sym_hash);
   _logifdebug {
-    logtrace("UNFREEZE VEC: %p",t->vec);
+    logtrace("UNFREEZE VEC: %p",(void *)(t->vec));
     for (int k=0; k<32; k+=2) {
       logtrace("%2d [%8X] -> %8X",k,((uint32_t *)(t->vec))[k],((uint32_t *)(t->vec))[k+1]);
     }
@@ -1099,12 +1101,16 @@ static uint32_t utl_sym_store(sym_t t,const char *sym)
   return id;
 }
 
-uint32_t utl_sym_add(sym_t t, const char *sym)
+uint32_t utl_sym_add(sym_t t, const char *sym, int symis)
 {
-  uint32_t k;
+  uint32_t k = symNULL;
   
-  k = utl_sym_search(t, sym);
-  if (k == symNULL) {
+  if (!(symis & symNEW))
+    k = utl_sym_search(t, sym);
+  if (k != symNULL) {
+    if (symis & symUNIQ) k = symNULL;
+  }
+  else {
     k = utl_sym_store(t,sym);
     vecadd(uint32_t,t,k);
   }

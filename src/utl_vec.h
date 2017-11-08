@@ -55,6 +55,8 @@ typedef struct vec_s {
 #define vecalloc(...)  utl_vec_alloc utl_expand((utl_arg0(__VA_ARGS__,NULL), \
                                                  utl_arg1(__VA_ARGS__,vec_MAX_CNT,vec_MAX_CNT)))
 
+#define vecreserve   vecalloc
+
 #define vecdel(v,i)          utl_vec_del(v,i)
 
 // Set (sorted or unsorted) 
@@ -204,15 +206,17 @@ int     utl_buf_fmt(buf_t b, uint32_t i, const char *fmt, ...);
 void utl_dpqsort(void *base, uint32_t nel, uint32_t esz, utl_cmp_t cmp, void *aux);
 #define utlqsort(b,n,s,c,x) utl_dpqsort(b,n,s,c,x)
 
-#define utlqseacrch(b)
-
 #define sym_t vec_t
 
 #define symNULL vec_MAX_CNT
+#define symNEW  1
+#define symUNIQ 2
 
 #define symnew()           utl_sym_new()
 #define symfree(t)         utl_sym_free(t)
-#define symadd(t,s)        utl_sym_add(t,s)
+#define symadd(t,s)        utl_sym_add(t,s,0)
+#define symadduniq(t,s)    utl_sym_add(t,s,symUNIQ)
+#define symaddnew(t,s)     utl_sym_add(t,s,symNEW)
 #define symdel(t,i)        utl_sym_del(t,i)
 #define symget(t,i)        utl_sym_get(t,i)
 #define symsearch(t,s)     utl_sym_search(t,s)
@@ -228,7 +232,7 @@ sym_t    utl_sym_unfreeze(FILE *f, utl_cmp_t cmp, utl_hsh_t hsh);
 int      utl_sym_freeze(FILE *f, sym_t t);
 int16_t  utl_sym_del(sym_t t, const char *sym);
 uint32_t utl_sym_search(sym_t t, const char *sym);
-uint32_t utl_sym_add(sym_t t, const char *sym);
+uint32_t utl_sym_add(sym_t t, const char *sym, int isnew);
 char    *utl_sym_get(sym_t t,uint32_t id);
 sym_t    utl_sym_free(sym_t t);
 sym_t    utl_sym_new(void);
