@@ -67,7 +67,7 @@ int utl_check(void *ptr,const char *file, int32_t line)
   if (ptr == NULL) return memNULL;
   p = utl_mem(ptr);
   if (memcmp(p->chk,utl_BEG_CHK,4)) { 
-    logprintf("TRC Invalid or double freed %p (%lu)\x09:%s:%d\x09",p->blk,
+    logprintf("TRC Invalid or double freed %p (%lu)\x09:%s:%d\x09",(void *)(p->blk),
                                                (unsigned long)utl_mem_allocated, file, line);     
     return memINVALID; 
   }
@@ -95,7 +95,7 @@ void *utl_malloc(size_t size, const char *file, int32_t line )
   memcpy(p->chk,utl_BEG_CHK,4);
   memcpy(p->blk+p->size,utl_END_CHK,4);
   utl_mem_allocated += size;
-  logprintf("TRC Allocated %p [%lu] (%lu)\x09:%s:%d\x09",p->blk,(unsigned long)size,(unsigned long)utl_mem_allocated,file,line);
+  logprintf("TRC Allocated %p [%lu] (%lu)\x09:%s:%d\x09",(void *)(p->blk),(unsigned long)size,(unsigned long)utl_mem_allocated,file,line);
   return p->blk;
 }
 
@@ -188,7 +188,7 @@ void *utl_strdup(const char *ptr, const char *file, int32_t line)
 
   dest = (char *)utl_malloc(size,file,line);
   if (dest) memcpy(dest,ptr,size);
-  logprintf("TRC strdup %p [%lu] -> %p (%lu)\x09:%s:%d\x09", ptr, (unsigned long)size, dest, 
+  logprintf("TRC strdup %p [%lu] -> %p (%lu)\x09:%s:%d\x09",(void *)ptr, (unsigned long)size, (void *)dest, 
                                                 (unsigned long)utl_mem_allocated, file, line);
   return dest;
 }
@@ -197,7 +197,7 @@ void *utl_strdup(const char *ptr, const char *file, int32_t line)
 size_t utl_mem_used(void) {return utl_mem_allocated;}
 
 
-mpl_t utl_mpl_new()
+mpl_t utl_mpl_new(void)
 {
   mpl_t mp = NULL;
   mp = malloc(sizeof(mpl_s));
