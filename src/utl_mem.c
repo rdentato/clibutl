@@ -73,7 +73,7 @@ int utl_check(void *ptr,const char *file, int32_t line)
   }
   if (memcmp(p->blk+p->size,utl_END_CHK,4)) {
     logprintf("TRC Boundary overflow %p [%lu] (%lu)\x09:%s:%d\x09",
-                              p->blk, (unsigned long)p->size, (unsigned long)utl_mem_allocated, file, line); 
+                              (void *)(p->blk), (unsigned long)p->size, (unsigned long)utl_mem_allocated, file, line); 
     return memOVERFLOW;
   }
   logprintf("TRC Valid pointer %p (%lu)\x09:%s:%d\x09",ptr, (unsigned long)utl_mem_allocated, file, line); 
@@ -163,7 +163,7 @@ void *utl_realloc(void *ptr, size_t size, const char *file, int32_t line)
                        utl_mem_allocated -= p->size;
                        utl_mem_allocated += size; 
                        logprintf("TRC realloc %p [%lu] -> %p [%lu] (%lu)\x09:%s:%d\x09", 
-                                       ptr, (unsigned long)p->size, p->blk, (unsigned long)size, 
+                                       (void *)ptr, (unsigned long)p->size, (void *)(p->blk), (unsigned long)size, 
                                        (unsigned long)utl_mem_allocated, file, line);
                        p->size = size;
                        memcpy(p->chk,utl_BEG_CHK,4);
