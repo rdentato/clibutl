@@ -13,21 +13,3 @@ notifications:
     on_failure: always  # options: [always|never|change] default: always
     on_start: never     # options: [always|never|change] default: always
 
-env:
-global:
-   # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
-   #   via the "travis encrypt" command using the project repo's public key
-   - secure: "lxBug5FPtTI/U6GKwYyEAxIngtysicUkSzHF20ypW/+wFoXI1WYiAZ4nWSqiSLgnBwTaAGuMOrgQcZERA3ZVYfWKnVqfQYZGb1QDzlPsD1Ra7x6FHvcPH9XA4BuxqwSpGUGSEeBZZcJf8fMsn0LzNa5hgDdSsc+D2e5oLtNU3mU="
-
-before_install:
-      - echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
-
-addons:
-  coverity_scan:
-    project:
-      name: "rdentato/clibutl"
-      description: "Small library for C Programming"
-    notification_email: rdentato@gmail.com
-    build_command_prepend: "make clean"
-    build_command:    "make runtest"
-    branch_pattern: coverity_scan
