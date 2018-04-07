@@ -126,6 +126,12 @@ vec_t utl_vec_new(uint16_t esz, utl_cmp_t cmp, utl_hsh_t hsh)
   return v;
 }
 
+void *utl_vec_aux(vec_t v,void *p)
+{
+  if (p) v->aux = p;
+  return v->aux;
+}
+
 vec_t utl_vec_free(vec_t v)
 {
   if (v) { 
@@ -225,7 +231,7 @@ void *utl_vec_get(vec_t v, uint32_t i)
 {
   uint8_t *elm=NULL;
   
-  if (i == vec_MAX_CNT) i = v->cnt -1;
+  if (i == vec_MAX_CNT) i = v->cnt-1;
   if (i < v->cnt) {
     elm = v->vec + (i*v->esz);
     memcpy(v->elm,elm,v->esz);
@@ -329,6 +335,13 @@ void utl_vec_deq(vec_t v)
     v->fst = 0;
     v->lst = 0;
   }
+}
+
+void utl_vec_deq_all(vec_t v)
+{
+  v->cnt = 0;
+  v->fst = 0;
+  v->lst = 0;
 }
 
 /* * Sorted sets  * */
@@ -1194,6 +1207,255 @@ int32_t utl_sym_getdata(sym_t t,uint32_t id)
   return *s;
 }
 
+/* *** ARB *** */
+
+#define ARB_NODE(a_,n_)   ((utl_arb_node_t *)(a_->vec))[a_->n_-1]
+
+arb_t utl_arb_new(void)
+{
+  arb_t a;
+  a= utl_vec_new(sizeof(utl_arb_node_t),NULL,NULL);
+  if (a) { 
+    a->flg |= vecARB;
+    a->lst  = 0;
+  }
+  return a;
+}
+
+uint32_t utl_arb_cnt(arb_t a)
+{
+  uint32_t cnt =0;
+  if (a) {
+    cnt = a->cnt;
+    if (a->lst) cnt -= ARB_NODE(a,lst).dat;
+  }
+  return cnt;
+}
+
+arb_node_t utl_arb_root(arb_t a)            { return a          ? a->cur = a->fst                                     :0; }
+arb_node_t utl_arb_parent(arb_t a)          { return a && a->cur? a->cur = ARB_NODE(a,cur).upn :0; }
+arb_node_t utl_arb_firstchild(arb_t a)      { return a && a->cur? a->cur = ARB_NODE(a,cur).dwn :0; }
+arb_node_t utl_arb_nextsibling(arb_t a)     { return a && a->cur? a->cur = ARB_NODE(a,cur).nxt :0; }
+int32_t utl_arb_getdata(arb_t a)            { return a && a->cur?          ARB_NODE(a,cur).dat :0; }
+int32_t utl_arb_setdata(arb_t a, int32_t v) { return a && a->cur?         (ARB_NODE(a,cur).dat = v, 1) :0; }
+
+int utl_arb_islast(arb_t a)   {return (a && a->cur && ARB_NODE(a,cur).nxt == 0); }
+int utl_arb_isleaf(arb_t a)   {return (a && a->cur && ARB_NODE(a,cur).dwn == 0); }
+int utl_arb_isroot(arb_t a)   {return (a && a->cur && (a->cur == a->fst)); }
+
+
+arb_node_t utl_arb_current(arb_t a, arb_node_t n)
+{
+  if (!a) return 0;
+  if (n > 0) a->cur = n;
+  return a->cur;
+}
+
+static utl_arb_node_t *utl_arb_newnode(arb_t a, uint32_t *ret_n)
+{
+  uint32_t n = 0;
+  utl_arb_node_t node, *np = NULL;
+  
+  if (a) {
+    node.upn = a->cur;
+    node.dwn = 0;
+    node.nxt = 0;
+    node.dat = 0;
+    
+    if (a->lst > 0) { // take a node from the free list
+      n = a->lst;
+      a->lst = ARB_NODE(a,lst).upn;
+    }
+    else {
+      vecadd(utl_arb_node_t,a,node);
+      n = veccount(a);
+    }
+    np = vecgetptr(a,n-1);
+    *ret_n = n;
+  }  
+  return np;
+}
+
+arb_node_t utl_arb_addnode(arb_t a)
+{
+  uint32_t n = 0;
+  utl_arb_node_t *np;
+  
+  if (a) {
+    np = utl_arb_newnode(a,&n);
+    if (np) {    
+      if (a->fst == 0) { // Just added the root!
+        a->fst = n;
+        np->upn = 0;
+      }
+      else { // add as first (leftmost) child
+        np->upn = a->cur;
+        np->nxt = ARB_NODE(a,cur).dwn;
+        ARB_NODE(a,cur).dwn = n;
+      }
+      a->cur = n;
+    }
+  }  
+   
+  return n;
+}
+
+arb_node_t  utl_arb_addsibling(arb_t a)
+{
+  uint32_t n = 0;
+  utl_arb_node_t *np;
+  
+  if (a && a->fst && a->cur != a->fst) { // Root can't have siblings!!
+    np = utl_arb_newnode(a,&n);
+    if (np) { // add as next child
+      np->upn = ARB_NODE(a,cur).upn;
+      np->nxt = ARB_NODE(a,cur).nxt;
+      ARB_NODE(a,cur).nxt = n;
+      a->cur = n;
+    }
+  }     
+  return n;
+}
+
+#if 0
+int utl_arb_dfsX(arb_t a, arb_fun_t pre, arb_fun_t post)
+{
+  arb_node_t nxt = 0;
+  arb_node_t n;
+  int ret = 0;
+  
+  if (pre) ret = pre(a);
+  if (ret == 0) {
+    n = a->cur;
+    nxt = arbfirstchild(a);
+    while (nxt) {
+      if ((ret = utl_arb_dfs(a,pre,post))) break;
+      a->cur = nxt;
+      nxt = arbnextsibling(a);
+    }
+    a->cur = n;
+  }
+  if (post) ret = post(a) || ret;
+  return ret;   
+}
+#endif 
+
+#define POST_ACTION 0x80000000
+
+int utl_arb_dfs(arb_t a, arb_fun_t pre, arb_fun_t post)
+{
+  arb_node_t cur;
+  
+  int ret = 0; 
+  vec_t stk = NULL;
+  
+  if (!a || a->fst == 0) return 1;
+
+  stk = vecnew(arb_node_t);
+  vecalloc(stk,100); // 100 Nodes per level!
+  vecdropall(stk);
+  vecpush(arb_node_t, stk, a->cur);
+  _logdebug("PUSH: %08X",a->cur);
+  while (!vecisempty(stk)) {
+    cur = vectop(arb_node_t, stk, 0);
+    vecdrop(stk);
+    _logdebug("POP:  %08X",cur);
+    
+    if (cur & POST_ACTION) {
+      a->cur = cur & (POST_ACTION-1);
+      if (post) ret = post(a) || ret;
+    }
+    else {
+      a->cur = cur;
+      if (pre && !ret) ret = pre(a);
+      
+      if (ARB_NODE(a,cur).nxt) {
+        if (!ret) {
+          vecpush(arb_node_t, stk, ARB_NODE(a,cur).nxt);
+          _logdebug("PUSH: %08X",ARB_NODE(a,cur).nxt);
+        }
+      }
+      else {  // last child
+        if (a->cur != a->fst) { // and is not root
+          vecpush(arb_node_t, stk, ARB_NODE(a,cur).upn | POST_ACTION);
+          _logdebug("PUSH: %08X",ARB_NODE(a,cur).upn | POST_ACTION);
+        }
+      }
+      if (ARB_NODE(a,cur).dwn) {
+        if (!ret) {
+          vecpush(arb_node_t, stk, ARB_NODE(a,cur).dwn);
+          _logdebug("PUSH: %08X", ARB_NODE(a,cur).dwn);
+        }
+      }
+      else {
+        if (post) ret = post(a) || ret;
+      }
+    }
+  }  
+  
+  vecfree(stk);  
+  
+  return ret;   
+}
+
+int utl_arb_bfs(arb_t a, arb_fun_t pre)
+{
+  vec_t que=NULL;
+  arb_node_t nxt;
+  int ret;
+  
+  if (!a || a->fst == 0) return 1;
+  
+  que = vecnew(arb_node_t);
+  vecalloc(que,100); // 100 Nodes per level!
+  vecdeqall(que);
+  vecenq(arb_node_t, que, a->cur);
+  while (!vecisempty(que)) {
+    a->cur = vecfirst(arb_node_t,que,0);
+    _logdebug("First: %d",nxt);
+    _logassert(a->cur);
+    vecdeq(que);
+    
+    ret = pre(a);
+    if (ret) break;
+    
+    nxt = arbfirstchild(a);
+    while (nxt) {
+      _logdebug("Enque: %d",nxt);
+      vecenq(arb_node_t,que,nxt);
+      nxt = arbnextsibling(a);
+    }    
+  }
+  que = vecfree(que);
+  return ret;   
+}
+
+#define DELETED_NODE 0x80000000
+static int utl_arb_delnode(arb_t a)
+{
+  ARB_NODE(a,cur).nxt = a->lst;
+  ARB_NODE(a,cur).upn = DELETED_NODE;
+  a->lst = a->cur;
+  a->cur = a->fst;
+  return 0;
+}
+
+int utl_arb_del(arb_t a)
+{
+  int ret = 1;
+  if (a && a->fst) {
+    if (a->cur == a->fst) { // delete all tree nodes
+      a->fst = 0;
+      a->lst = 0;
+      a->cnt = 0;
+    }
+    else {
+      ret = utl_arb_bfs(a,utl_arb_delnode);
+      a->cur = a->fst;
+    }
+  }
+  return ret;
+}
 
 #endif
 //>>>//

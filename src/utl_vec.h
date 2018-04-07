@@ -70,6 +70,8 @@ typedef struct vec_s {
 
 #define vecSORTED 0x0001
 #define vecHASHED 0x0020
+#define vecARB    0x0040
+#define vecQUE    0x0080
 
 #define vecissorted(v) ((v)->flg &   vecSORTED)
 #define vecsorted(v)   ((v)->flg |=  vecSORTED)
@@ -86,12 +88,16 @@ typedef struct vec_s {
                              } while (0)
 #define vecdrop(...)         utl_vec_drop(utl_expand(utl_arg0(__VA_ARGS__,NULL)), \
                                           utl_expand(utl_arg1(__VA_ARGS__,1,1)))
+                                          
+#define vecdropall(v)        ((v)->cnt=0)
+
 #define vectop(type,v,d)     vecget(type,v,vec_MAX_CNT,d)    
 #define vectopptr(v)         vecgetptr(v,vec_MAX_CNT)    
 
 // Queue
 #define vecenq(type,v,e)     vecDO(type,v,0,e,utl_vec_enq)
 #define vecdeq(v)            utl_vec_deq(v)
+#define vecdeqall(v)         utl_vec_deq_all(v)
 
 // I/O
 #define vecread(v,i,n,f)  utl_vec_read(v,i,n,f)
@@ -108,10 +114,12 @@ typedef struct vec_s {
                                       utl_arg1(__VA_ARGS__,NULL,NULL), \
                                       utl_arg2(__VA_ARGS__,NULL,NULL,NULL)))
 
+#define vecaux(...)       utl_vec_aux(utl_arg0(__VA_ARGS__,NULL), \
+                                      utl_arg1(__VA_ARGS__,NULL,NULL))
+
 #define vecfree(v)        utl_vec_free(v)
 #define veccount(v)       ((v)->cnt)
 #define vecmax(v)         ((v)->max)
-#define vecaux(v)         ((v)->aux)
 #define vecisempty(v)     ((v)->cnt == 0)
 #define vec(type,v)       ((type *)((v)->vec))
 #define vecclear(v)       ((v)->cnt = 0)
@@ -133,6 +141,8 @@ void *utl_vec_set(vec_t v, uint32_t i);
 void *utl_vec_ins(vec_t v, uint32_t i);
 void *utl_vec_add(vec_t v, uint32_t i);
 void *utl_vec_get(vec_t v, uint32_t i);
+
+void *utl_vec_aux(vec_t v,void *p);
 
 void *utl_vec_first(vec_t v);
 void *utl_vec_next(vec_t v) ;
@@ -238,6 +248,72 @@ sym_t    utl_sym_free(sym_t t);
 sym_t    utl_sym_new(void);
 int32_t  utl_sym_getdata(sym_t t,uint32_t id);
 int16_t  utl_sym_setdata(sym_t t,uint32_t id, int32_t val);
+
+#define arb_t         vec_t
+#define arb_node_t    uint32_t
+
+
+typedef struct utl_arb_node_s {
+  uint32_t upn;
+  uint32_t dwn;
+  uint32_t nxt;
+   int32_t dat;
+} utl_arb_node_t;
+
+arb_t       utl_arb_new(void);
+arb_node_t  utl_arb_root(arb_t a);
+arb_node_t  utl_arb_parent(arb_t a);
+arb_node_t  utl_arb_firstchild(arb_t a);
+arb_node_t  utl_arb_nextsibling(arb_t a);
+arb_node_t  utl_arb_current(arb_t a, arb_node_t n);
+int32_t     utl_arb_getdata(arb_t a);
+int32_t     utl_arb_setdata(arb_t a, int32_t v);
+
+arb_node_t  utl_arb_addnode(arb_t a);
+arb_node_t  utl_arb_addsibling(arb_t a);
+
+
+int  utl_arb_reparent(arb_t a,arb_node_t n);
+int  utl_arb_trim(arb_t a);
+
+uint32_t    utl_arb_cnt(arb_t a);
+
+#define arbnew          utl_arb_new
+#define arbfree         utl_vec_free
+#define arbroot         utl_arb_root
+#define arbparent       utl_arb_parent
+#define arbfirstchild   utl_arb_firstchild
+#define arbnextsibling  utl_arb_nextsibling 
+#define arbvisit        utl_arb_visit
+#define arbcurrent(...) utl_arb_current(utl_expand(utl_arg0(__VA_ARGS__,NULL)), \
+                                         utl_expand(utl_arg1(__VA_ARGS__,0,0)))
+
+#define arbgetdata utl_arb_getdata
+#define arbsetdata utl_arb_setdata
+#define arbcount utl_arb_cnt
+
+#define arbaddchild        utl_arb_addnode       
+#define arbaddsibling      utl_arb_addsibling
+#define arbaddlastsibling  utl_arb_addlastsibling
+#define arbaux             vecaux
+
+int utl_arb_isleaf(arb_t a);
+int utl_arb_islast(arb_t a);
+int utl_arb_isroot(arb_t a);
+
+#define arbislast          utl_arb_islast
+#define arbisleaf          utl_arb_isleaf
+#define arbisroot          utl_arb_isroot
+#define arbisempty(a)     (!utl_arb_cnt(a))
+
+typedef int (*arb_fun_t)(arb_t);
+int utl_arb_dfs(arb_t a, arb_fun_t pre, arb_fun_t post);
+int utl_arb_bfs(arb_t a, arb_fun_t pre);
+
+#define arbdfs          utl_arb_dfs
+#define arbdfspre(a,f)  utl_arb_dfs(a,f,NULL)
+#define arbdfspost(a,f) utl_arb_dfs(a,NULL,f)
+#define arbbfs          utl_arb_bfs
 
 #endif 
 //>>>//
