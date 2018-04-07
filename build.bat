@@ -56,6 +56,8 @@ del /Q /F src\*.log    2> nul
 del /Q /F test\*.obj   2> nul
 del /Q /F test\*.o     2> nul
 del /Q /F test\t_*     2> nul
+del /Q /F test\l_*     2> nul
+del /Q /F test\tt_*    2> nul
 del /Q /F test\*.log   2> nul
 del /Q /F test\*.tmp   2> nul
 del /Q /F build.log    2> nul
@@ -82,7 +84,7 @@ goto compile
 
 :PCC64
 echo Compiling with Pelles C (64bit)
-set BUILD_1=cc /Tamd64-coff /O2 /std:C99
+set BUILD_1=cc /Tamd64-coff /O2 /std:C99 /Ze
 set BUILD_2=
 set BUILD_O=/o
 set BUILD_C=/c 
@@ -96,34 +98,40 @@ cd src
 
 %BUILD_1% utl_unc.c %BUILD_2% %BUILD_O%utl_unc.exe >> ..\build.log
 
-utl_unc utl_hdr.h utl_log.h utl_mem.h utl_vec.h utl_pmx.h utl_fsm.h utl_try.h utl_end.h > utl.h 
-utl_unc utl_hdr.c utl_log.c utl_mem.c utl_vec.c utl_pmx.c > utl.c 
+utl_unc utl_hdr.h utl_log.h utl_mem.h utl_vec.h utl_pmx.h utl_peg.h utl_fsm.h utl_try.h utl_net.h utl_end.h > utl.h 
+utl_unc utl_hdr.c utl_log.c utl_mem.c utl_vec.c utl_pmx.c utl_peg.c utl_net.c > utl.c 
+
 copy utl.c ..\dist >>..\build.log
 copy utl.h ..\dist >>..\build.log
 
+
+%BUILD_1% %BUILD_C% /DUTL_NET=1 utl.c >> ..\build.log
+copy utl.obj ..\test\utlN.obj
 
 %BUILD_1% %BUILD_C% utl.c >> ..\build.log
 copy utl.obj ..\test >> ..\build.log
 copy utl.h ..\test >> ..\build.log
 
 cd ..\test
-%BUILD_1% ut_utf.c  %BUILD_2% utl.obj %BUILD_O%t_utf.exe   >> ../build.log
-%BUILD_1% ut_buf.c  %BUILD_2% utl.obj %BUILD_O%t_buf.exe   >> ../build.log
-%BUILD_1% ut_mem.c  %BUILD_2% utl.obj %BUILD_O%t_mem.exe   >> ../build.log
-%BUILD_1% ut_pmx.c  %BUILD_2% utl.obj %BUILD_O%t_pmx.exe   >> ../build.log
-%BUILD_1% ut_pmx2.c %BUILD_2% utl.obj %BUILD_O%t_pmx2.exe  >> ../build.log
-%BUILD_1% ut_pmx3.c %BUILD_2% utl.obj %BUILD_O%t_pmx3.exe  >> ../build.log
-%BUILD_1% ut_pmx4.c %BUILD_2% utl.obj %BUILD_O%t_pmx4.exe  >> ../build.log      
-%BUILD_1% ut_utf.c  %BUILD_2% utl.obj %BUILD_O%t_utf.exe   >> ../build.log      
-%BUILD_1% ut_vec.c  %BUILD_2% utl.obj %BUILD_O%t_vec.exe   >> ../build.log
-%BUILD_1% ut_trc.c  %BUILD_2% utl.obj %BUILD_O%t_trc.exe   >> ../build.log
-%BUILD_1% ut_dpq.c  %BUILD_2% utl.obj %BUILD_O%t_dpq.exe   >> ../build.log
-%BUILD_1% ut_pmx5.c %BUILD_2% utl.obj %BUILD_O%t_pmx5.exe  >> ../build.log
-%BUILD_1% ut_trc.c  %BUILD_2% utl.obj %BUILD_O%t_trc.exe   >> ../build.log
-%BUILD_1% ut_try.c  %BUILD_2% utl.obj %BUILD_O%t_try.exe   >> ../build.log
-%BUILD_1% ut_utf.c  %BUILD_2% utl.obj %BUILD_O%t_utf.exe   >> ../build.log
-%BUILD_1% ut_sym.c  %BUILD_2% utl.obj %BUILD_O%t_sym.exe   >> ../build.log
-%BUILD_1% ut_vec2.c %BUILD_2% utl.obj %BUILD_O%t_vec2.exe  >> ../build.log
+%BUILD_1% ut_utf.c  %BUILD_2% utl.obj  %BUILD_O%t_utf.exe   >> ../build.log
+%BUILD_1% ut_buf.c  %BUILD_2% utl.obj  %BUILD_O%t_buf.exe   >> ../build.log
+%BUILD_1% ut_mem.c  %BUILD_2% utl.obj  %BUILD_O%t_mem.exe   >> ../build.log
+%BUILD_1% ut_pmx.c  %BUILD_2% utl.obj  %BUILD_O%t_pmx.exe   >> ../build.log
+%BUILD_1% ut_pmx2.c %BUILD_2% utl.obj  %BUILD_O%t_pmx2.exe  >> ../build.log
+%BUILD_1% ut_pmx3.c %BUILD_2% utl.obj  %BUILD_O%t_pmx3.exe  >> ../build.log
+%BUILD_1% ut_pmx4.c %BUILD_2% utl.obj  %BUILD_O%t_pmx4.exe  >> ../build.log      
+%BUILD_1% ut_pmx5.c %BUILD_2% utl.obj  %BUILD_O%t_pmx5.exe  >> ../build.log
+%BUILD_1% ut_peg.c  %BUILD_2% utl.obj  %BUILD_O%t_peg.exe   >> ../build.log
+%BUILD_1% ut_peg2.c %BUILD_2% utl.obj  %BUILD_O%t_peg2.exe  >> ../build.log
+%BUILD_1% ut_utf.c  %BUILD_2% utl.obj  %BUILD_O%t_utf.exe   >> ../build.log      
+%BUILD_1% ut_vec.c  %BUILD_2% utl.obj  %BUILD_O%t_vec.exe   >> ../build.log
+%BUILD_1% ut_trc.c  %BUILD_2% utl.obj  %BUILD_O%t_trc.exe   >> ../build.log
+%BUILD_1% ut_dpq.c  %BUILD_2% utl.obj  %BUILD_O%t_dpq.exe   >> ../build.log
+%BUILD_1% ut_try.c  %BUILD_2% utl.obj  %BUILD_O%t_try.exe   >> ../build.log
+%BUILD_1% ut_utf.c  %BUILD_2% utl.obj  %BUILD_O%t_utf.exe   >> ../build.log
+%BUILD_1% ut_sym.c  %BUILD_2% utl.obj  %BUILD_O%t_sym.exe   >> ../build.log
+%BUILD_1% ut_srv.c  %BUILD_2% utlN.obj %BUILD_O%tt_srv.exe  >> ../build.log
+%BUILD_1% ut_vec2.c %BUILD_2% utl.obj  %BUILD_O%t_vec2.exe  >> ../build.log
 %BUILD_1% ut_logassert.c  %BUILD_2% utl.obj %BUILD_O%t_logassert.exe   >> ../build.log
 
 del utl.h
