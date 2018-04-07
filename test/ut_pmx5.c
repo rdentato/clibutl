@@ -53,6 +53,16 @@ int main(int argc, char *argv[])
   s = pmxsearch("<utf><I>èÆ","Èæ");
   logcheck(s);
 
+  s = pmxmatch("<?>(a|b)c","ac");
+  logcheck(s);
+
+  s = pmxmatch("<?>(a|b)c","bc");
+  logcheck(s);
+  
+  s = pmxmatch("<?>(a|b)c","c");
+  logcheck(s);
+  loginfo("%.*s",pmxlen(0),pmxstart(0));
+  
   logclose();
   exit(0);
 }

@@ -235,10 +235,17 @@ int main(int argc, char *argv[])
   pk = vecsearch(int,v,9);
   logcheck(!pk);
   
-  vecfree(v);
+  v = vecfree(v);
 
+  v = vecnew(double);
+  vecset(double,v,0,12.1);
+  logcheck(12.1 == vecget(double,v,0,0));
   
+  logcheck(-1. == vecget(double,v,10000,-1.));
   
+  logcheck(12.1 == vecget(double,v,0,0));
+  v = vecfree(v);
+     
   logclose();
 
   exit(0);
