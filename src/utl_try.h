@@ -88,7 +88,7 @@ extern utl_jb_t *utl_jmp_list; // Defined in utl_hdr.c
 #define utl_throw(x,y)    do { \
                             int ex_ = x; \
                             if (ex_ > 0 && utl_jmp_list) {\
-                              logwarning("Exception: %d (%d)",utl_unpow2(x),y);\
+                              /*logwarning("Exception: %d (%d)",utl_unpow2(x),y);*/\
                               utl_jmp_list->fn = __FILE__; \
                               utl_jmp_list->ln = __LINE__;\
                               utl_jmp_list->id = y;\

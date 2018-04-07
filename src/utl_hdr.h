@@ -22,12 +22,22 @@ extern "C" {
 #define UTL_NOTRY
 #endif
 
+#ifdef UTL_NET
+#ifndef _WIN32
+#define _POSIX_C_SOURCE 201112L
+#endif
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#ifndef _WIN32
+#include <unistd.h>
+#endif
 #include <string.h>
 #include <stdarg.h>
 #include <stddef.h>
+#include <errno.h>
 #include <time.h>
 #include <ctype.h>
 #include <assert.h>
@@ -71,11 +81,16 @@ extern const char *utl_emptystring;
 // behaves differently from the other compilers (up to VS2015, at least)
 #define utl_expand(x) x
 
-#define utl_arg0(x0,...)              x0
-#define utl_arg1(x0,x1,...)           x1
-#define utl_arg2(x0,x1,x2,...)        x2
-#define utl_arg3(x0,x1,x2,x3,...)     x3
-#define utl_arg4(x0,x1,x2,x3,x4,...)  x4
+#define utl_arg0(_x0,...)                                     _x0
+#define utl_arg1(_x0,_x1,...)                                 _x1
+#define utl_arg2(_x0,_x1,_x2,...)                             _x2
+#define utl_arg3(_x0,_x1,_x2,_x3,...)                         _x3
+#define utl_arg4(_x0,_x1,_x2,_x3,_x4,...)                     _x4
+#define utl_arg5(_x0,_x1,_x2,_x3,_x4,_x5,...)                 _x5
+#define utl_arg6(_x0,_x1,_x2,_x3,_x4,_x5,_x6,...)             _x6
+#define utl_arg7(_x0,_x1,_x2,_x3,_x4,_x5,_x6,_x7,...)         _x7
+#define utl_arg8(_x0,_x1,_x2,_x3,_x4,_x5,_x6,_x7,_x8,...)     _x8
+#define utl_arg9(_x0,_x1,_x2,_x3,_x4,_x5,_x6,_x7,_x8,_x9,...) _x9
 
 int utl_unpow2(int n);
 
@@ -103,5 +118,9 @@ int utl_next_utf8(const char *txt, int32_t *ch);
                                utl_expand(utl_arg1(__VA_ARGS__,NULL,NULL)))
 
 typedef int (*utl_txt_action_t)(const char *, const char *, void *);
+
+#ifdef __cplusplus
+}
+#endif
                                
 //>>>//
