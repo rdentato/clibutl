@@ -22,12 +22,22 @@ extern "C" {
 #define UTL_NOTRY
 #endif
 
+#ifdef UTL_NET
+#ifndef _WIN32
+#define _POSIX_C_SOURCE 201112L
+#endif
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#ifndef _WIN32
+#include <unistd.h>
+#endif
 #include <string.h>
 #include <stdarg.h>
 #include <stddef.h>
+#include <errno.h>
 #include <time.h>
 #include <ctype.h>
 #include <assert.h>
@@ -71,11 +81,16 @@ extern const char *utl_emptystring;
 // behaves differently from the other compilers (up to VS2015, at least)
 #define utl_expand(x) x
 
-#define utl_arg0(x0,...)              x0
-#define utl_arg1(x0,x1,...)           x1
-#define utl_arg2(x0,x1,x2,...)        x2
-#define utl_arg3(x0,x1,x2,x3,...)     x3
-#define utl_arg4(x0,x1,x2,x3,x4,...)  x4
+#define utl_arg0(_x0,...)                                     _x0
+#define utl_arg1(_x0,_x1,...)                                 _x1
+#define utl_arg2(_x0,_x1,_x2,...)                             _x2
+#define utl_arg3(_x0,_x1,_x2,_x3,...)                         _x3
+#define utl_arg4(_x0,_x1,_x2,_x3,_x4,...)                     _x4
+#define utl_arg5(_x0,_x1,_x2,_x3,_x4,_x5,...)                 _x5
+#define utl_arg6(_x0,_x1,_x2,_x3,_x4,_x5,_x6,...)             _x6
+#define utl_arg7(_x0,_x1,_x2,_x3,_x4,_x5,_x6,_x7,...)         _x7
+#define utl_arg8(_x0,_x1,_x2,_x3,_x4,_x5,_x6,_x7,_x8,...)     _x8
+#define utl_arg9(_x0,_x1,_x2,_x3,_x4,_x5,_x6,_x7,_x8,_x9,...) _x9
 
 int utl_unpow2(int n);
 
@@ -103,6 +118,10 @@ int utl_next_utf8(const char *txt, int32_t *ch);
                                utl_expand(utl_arg1(__VA_ARGS__,NULL,NULL)))
 
 typedef int (*utl_txt_action_t)(const char *, const char *, void *);
+
+#ifdef __cplusplus
+}
+#endif
                                
 #line 28 "src/utl_log.h"
 #ifndef UTL_NOLOG
@@ -364,6 +383,8 @@ typedef struct vec_s {
 #define vecalloc(...)  utl_vec_alloc utl_expand((utl_arg0(__VA_ARGS__,NULL), \
                                                  utl_arg1(__VA_ARGS__,vec_MAX_CNT,vec_MAX_CNT)))
 
+#define vecreserve   vecalloc
+
 #define vecdel(v,i)          utl_vec_del(v,i)
 
 // Set (sorted or unsorted) 
@@ -377,6 +398,7 @@ typedef struct vec_s {
 
 #define vecSORTED 0x0001
 #define vecHASHED 0x0020
+#define vecARB    0x0040
 
 #define vecissorted(v) ((v)->flg &   vecSORTED)
 #define vecsorted(v)   ((v)->flg |=  vecSORTED)
@@ -513,15 +535,17 @@ int     utl_buf_fmt(buf_t b, uint32_t i, const char *fmt, ...);
 void utl_dpqsort(void *base, uint32_t nel, uint32_t esz, utl_cmp_t cmp, void *aux);
 #define utlqsort(b,n,s,c,x) utl_dpqsort(b,n,s,c,x)
 
-#define utlqseacrch(b)
-
 #define sym_t vec_t
 
 #define symNULL vec_MAX_CNT
+#define symNEW  1
+#define symUNIQ 2
 
 #define symnew()           utl_sym_new()
 #define symfree(t)         utl_sym_free(t)
-#define symadd(t,s)        utl_sym_add(t,s)
+#define symadd(t,s)        utl_sym_add(t,s,0)
+#define symadduniq(t,s)    utl_sym_add(t,s,symUNIQ)
+#define symaddnew(t,s)     utl_sym_add(t,s,symNEW)
 #define symdel(t,i)        utl_sym_del(t,i)
 #define symget(t,i)        utl_sym_get(t,i)
 #define symsearch(t,s)     utl_sym_search(t,s)
@@ -537,13 +561,52 @@ sym_t    utl_sym_unfreeze(FILE *f, utl_cmp_t cmp, utl_hsh_t hsh);
 int      utl_sym_freeze(FILE *f, sym_t t);
 int16_t  utl_sym_del(sym_t t, const char *sym);
 uint32_t utl_sym_search(sym_t t, const char *sym);
-uint32_t utl_sym_add(sym_t t, const char *sym);
+uint32_t utl_sym_add(sym_t t, const char *sym, int isnew);
 char    *utl_sym_get(sym_t t,uint32_t id);
 sym_t    utl_sym_free(sym_t t);
 sym_t    utl_sym_new(void);
 int32_t  utl_sym_getdata(sym_t t,uint32_t id);
 int16_t  utl_sym_setdata(sym_t t,uint32_t id, int32_t val);
 
+#define arb_t      vec_t
+#define arb_node_t uint32_t
+
+typedef struct utl_arb_node_s {
+  uint32_t upn;
+  uint32_t dwn;
+  uint32_t nxt;
+   int32_t dat;
+} utl_arb_node_t;
+
+arb_t       utl_arb_new(void);
+arb_node_t  utl_arb_root(arb_t a);
+arb_node_t  utl_arb_parent(arb_t a);
+arb_node_t  utl_arb_firstchild(arb_t a);
+arb_node_t  utl_arb_nextchild(arb_t a);
+int         utl_arb_visit(arb_t a);
+arb_node_t  utl_arb_current(arb_t a, arb_node_t n);
+int32_t     utl_arb_getdata(arb_t a);
+int32_t     utl_arb_setdata(arb_t a, int32_t v);
+
+arb_node_t  utl_arb_addnode(arb_t a);
+arb_node_t  utl_arb_addsibling(arb_t a);
+arb_node_t  utl_arb_addlastsibling(arb_t a);
+
+arb_node_t  utl_arb_reparent(arb_t a,arb_node_t n);
+arb_node_t  utl_arb_remove(arb_t a,arb_node_t n);
+arb_node_t  utl_arb_removearb(arb_t a,arb_node_t n);
+
+#define arbnew          utl_arb_new
+#define arbfree         ult_vec_free
+#define arbroot         utl_arb_root
+#define arbparent       utl_arb_parent
+#define arbfirstchild   utl_arb_firstchild
+#define arbnextchild    utl_arb_nextchild 
+#define arbvisit        utl_arb_visit
+#define arbcurrent(...) utl_arb_current(utl_expand(utl_arg0(__VA_ARGS__,NULL)), \
+                                         utl_expand(utl_arg1(__VA_ARGS__,0,0)))
+
+                                         
 #endif 
 #line 18 "src/utl_pmx.h"
 #ifndef UTL_NOPMX
@@ -566,15 +629,17 @@ typedef struct {
 const char       *start;
 const char       *capt[utl_pmx_MAXCAPT][2];
 const char       *error;
+void             *aux;
 uint16_t          capnum;
 uint16_t          utf8;
 uint16_t          csens;
-utl_pmx_state_s   stack[utl_pmx_MAXCAPT];
 uint16_t          stack_ptr;
+utl_pmx_state_s   stack[utl_pmx_MAXCAPT];
+int             (*ext)(const char *pat, const char *txt, int, int32_t ch);
 } pmx_t;
 
 
-extern int(*utl_pmx_ext)(const char *pat, const char *txt, int, int32_t ch);
+//extern int(*utl_pmx_ext)(const char *pat, const char *txt, int, int32_t ch);
 
 //extern const char  *utl_pmx_capt[utl_pmx_MAXCAPT][2];
 //extern uint8_t      utl_pmx_capnum                  ;
@@ -583,18 +648,21 @@ extern int(*utl_pmx_ext)(const char *pat, const char *txt, int, int32_t ch);
 extern pmx_t utl_pmx_ ;
 
 
-#define pmxsearch(r,t)  utl_pmx_search(r,t,0)
-#define pmxmatch(r,t)   utl_pmx_search(r,t,1)
-#define pmxstart(n)    (utl_pmx_.capt[n][0])
-#define pmxend(n)      (utl_pmx_.capt[n][1])
-#define pmxcount()     (utl_pmx_.capnum)
-#define pmxlen(n)       utl_pmx_len(n)
-#define pmxerror()     (utl_pmx_.error?utl_pmx_.error:utl_emptystring)
-#define pmxextend(f)   (void)(utl_pmx_ext = f)
-#define pmxscan(r,t,f,a) utl_pmx_scan(r,t,f,a)
+#define pmxsearch(r,t)    utl_pmx_search(r,t,0)
+#define pmxmatch(r,t)     utl_pmx_search(r,t,1)
+#define pmxstart(n)      (utl_pmx_.capt[n][0])
+#define pmxend(n)        (utl_pmx_.capt[n][1])
+#define pmxcount()       (utl_pmx_.capnum)
+#define pmxlen(n)         utl_pmx_len(n)
+#define pmxerror()       (utl_pmx_.error?utl_pmx_.error:utl_emptystring)
+#define pmxextend(f)     (void)(utl_pmx_.ext = f)
+#define pmxscan(r,t,f,a)  utl_pmx_scan(r,t,f,a)
 
 #define pmxclear(p_)    utl_pmx_save(p_)
-#define pmxrestore(p_) utl_pmx_restore(p_)
+#define pmxrestore(p_)  utl_pmx_restore(p_)
+
+#define pmxsetaux(p)    (void)(utl_pmx_.aux = p)
+#define pmxaux()       utl_pmx_.aux
 
 void        utl_pmx_save(pmx_t *);
 void        utl_pmx_restore(pmx_t *);
@@ -853,7 +921,7 @@ extern utl_jb_t *utl_jmp_list; // Defined in utl_hdr.c
 #define utl_throw(x,y)    do { \
                             int ex_ = x; \
                             if (ex_ > 0 && utl_jmp_list) {\
-                              logwarning("Exception: %d (%d)",utl_unpow2(x),y);\
+                              /*logwarning("Exception: %d (%d)",utl_unpow2(x),y);*/\
                               utl_jmp_list->fn = __FILE__; \
                               utl_jmp_list->ln = __LINE__;\
                               utl_jmp_list->id = y;\
@@ -871,6 +939,50 @@ extern utl_jb_t *utl_jmp_list; // Defined in utl_hdr.c
 #define thrownid()   utl_jb.id
 #define thrownfile() utl_jb.fn
 #define thrownline() utl_jb.ln
+
+#endif
+#line 19 "src/utl_net.h"
+#ifdef UTL_NET
+ 
+
+#ifdef _WIN32
+
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#ifndef __GNUC__
+#pragma comment(lib, "Ws2_32.lib")
+#endif
+#else
+
+#include <sys/types.h> 
+#include <sys/socket.h>
+#include <sys/select.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+
+#endif
+
+int utl_net_listen(uint32_t addr, int port, int (*hnd)(char *,int), long timeout, int (*tmout)(void)) ;
+int utl_net_nohandle(char *msg,int len);
+int utl_net_notimeout(void);
+
+
+#define utlserver(...)       utl_net_listen utl_expand ((INADDR_ANY, \
+                                                  utl_arg0(__VA_ARGS__,0,0,0,0), \
+                                                  utl_arg1(__VA_ARGS__,utl_net_nohandle,utl_net_nohandle,utl_net_nohandle,utl_net_nohandle), \
+                                                  utl_arg2(__VA_ARGS__,0,0,0,0), \
+                                                  utl_arg3(__VA_ARGS__,utl_net_notimeout,utl_net_notimeout,utl_net_notimeout,utl_net_notimeout) ))
+
+#define utlserverlocal(...)  utl_net_listen utl_expand ((INADDR_LOOPBACK, \
+                                                  utl_arg0(__VA_ARGS__,0,0,0,0), \
+                                                  utl_arg1(__VA_ARGS__,utl_net_nohandle,utl_net_nohandle,utl_net_nohandle,utl_net_nohandle), \
+                                                  utl_arg2(__VA_ARGS__,0,0,0,0), \
+                                                  utl_arg3(__VA_ARGS__,utl_net_notimeout,utl_net_notimeout,utl_net_notimeout,utl_net_notimeout) ))
 
 #endif
 #line 17 "src/utl_end.h"

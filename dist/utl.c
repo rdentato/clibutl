@@ -97,37 +97,7 @@ int utl_unpow2(int n)
 }
 
 
-
-/*
-  Dealing with text encoding is a complex business. The most basic
-issue for pmx is to deal with lower/upper case characters.
-
-  Even just restricting to the main scripts that have the lower/upper
-case distinction (Latin, Greek and Cyrillic) and the major encodings
-(Unicode, ISO/IEC, Windows code pages, ...) would result in providinge
-something that could be of little use for somebody and of no use for many.
-
-  So, I went for the easiest solution: the Latin-1
-characters in the iso-8859-1 and Unicode Latin-1 supplement.
-In other words: the characters encoded in a single byte.
-
-  We need to extend the functions `islower()`, `isupper()`, `isalpha()`,
-`isalnum()` to include the letters in the range 0xA0-0xFF.
-
-  I've decided to not include the "numeric" caharacters for
-superscript or fractions, It seeems counterintuitive to me that
-`isdigit(0xBD); // 1/2` returns true. 
-  
-  To represent this encoding, we need four bits for each character:
-
-    xxxx
-    \\\
-     \\\_____ isupper 
-      \\_____ islower
-       \_____ isdigit     
-       
-  This allows using a table with 128 bytes rather than 256.
-*/
+#line 33 "src/utl_utf.c"
 
 static unsigned char utl_ENCODING[] = {
        /*  10   32   54   76   98   BA   DC   FE */
@@ -459,13 +429,13 @@ int utl_check(void *ptr,const char *file, int32_t line)
   if (ptr == NULL) return memNULL;
   p = utl_mem(ptr);
   if (memcmp(p->chk,utl_BEG_CHK,4)) { 
-    logprintf("TRC Invalid or double freed %p (%lu)\x09:%s:%d\x09",p->blk,
+    logprintf("TRC Invalid or double freed %p (%lu)\x09:%s:%d\x09",(void *)(p->blk),
                                                (unsigned long)utl_mem_allocated, file, line);     
     return memINVALID; 
   }
   if (memcmp(p->blk+p->size,utl_END_CHK,4)) {
     logprintf("TRC Boundary overflow %p [%lu] (%lu)\x09:%s:%d\x09",
-                              p->blk, (unsigned long)p->size, (unsigned long)utl_mem_allocated, file, line); 
+                              (void *)(p->blk), (unsigned long)p->size, (unsigned long)utl_mem_allocated, file, line); 
     return memOVERFLOW;
   }
   logprintf("TRC Valid pointer %p (%lu)\x09:%s:%d\x09",ptr, (unsigned long)utl_mem_allocated, file, line); 
@@ -487,7 +457,7 @@ void *utl_malloc(size_t size, const char *file, int32_t line )
   memcpy(p->chk,utl_BEG_CHK,4);
   memcpy(p->blk+p->size,utl_END_CHK,4);
   utl_mem_allocated += size;
-  logprintf("TRC Allocated %p [%lu] (%lu)\x09:%s:%d\x09",p->blk,(unsigned long)size,(unsigned long)utl_mem_allocated,file,line);
+  logprintf("TRC Allocated %p [%lu] (%lu)\x09:%s:%d\x09",(void *)(p->blk),(unsigned long)size,(unsigned long)utl_mem_allocated,file,line);
   return p->blk;
 }
 
@@ -555,7 +525,7 @@ void *utl_realloc(void *ptr, size_t size, const char *file, int32_t line)
                        utl_mem_allocated -= p->size;
                        utl_mem_allocated += size; 
                        logprintf("TRC realloc %p [%lu] -> %p [%lu] (%lu)\x09:%s:%d\x09", 
-                                       ptr, (unsigned long)p->size, p->blk, (unsigned long)size, 
+                                       (void *)ptr, (unsigned long)p->size, (void *)(p->blk), (unsigned long)size, 
                                        (unsigned long)utl_mem_allocated, file, line);
                        p->size = size;
                        memcpy(p->chk,utl_BEG_CHK,4);
@@ -580,7 +550,7 @@ void *utl_strdup(const char *ptr, const char *file, int32_t line)
 
   dest = (char *)utl_malloc(size,file,line);
   if (dest) memcpy(dest,ptr,size);
-  logprintf("TRC strdup %p [%lu] -> %p (%lu)\x09:%s:%d\x09", ptr, (unsigned long)size, dest, 
+  logprintf("TRC strdup %p [%lu] -> %p (%lu)\x09:%s:%d\x09",(void *)ptr, (unsigned long)size, (void *)dest, 
                                                 (unsigned long)utl_mem_allocated, file, line);
   return dest;
 }
@@ -589,7 +559,7 @@ void *utl_strdup(const char *ptr, const char *file, int32_t line)
 size_t utl_mem_used(void) {return utl_mem_allocated;}
 
 
-mpl_t utl_mpl_new()
+mpl_t utl_mpl_new(void)
 {
   mpl_t mp = NULL;
   mp = malloc(sizeof(mpl_s));
@@ -923,6 +893,7 @@ void *utl_vec_alloc(vec_t v, uint32_t i)
 {
   uint8_t *elm=NULL;
   
+  _logdebug("vecalloc: pos: %d max:%d cnt:%d",i,v->max,v->cnt);
   if (i == vec_MAX_CNT) i = v->cnt;
   if (utl_vec_makeroom(v,i)) {
     elm = v->vec + (i*v->esz);
@@ -935,8 +906,9 @@ void *utl_vec_alloc(vec_t v, uint32_t i)
 void *utl_vec_set(vec_t v, uint32_t i)
 {
   uint8_t *elm=NULL;
-  
+  _logdebug("vecset: %p pos: %d",(void*)v,i);
   elm = utl_vec_alloc(v,i);
+  _logdebug("allocated:");
   if (elm) memcpy(elm, v->elm, v->esz);
   return elm;
 }
@@ -1561,10 +1533,10 @@ size_t utl_buf_readall(buf_t b, uint32_t i, FILE *f)
   return ret;
 }
 
-char *utl_buf_readln(buf_t b, uint32_t i, FILE *f)
+char *utl_buf_readln(buf_t b, uint32_t n, FILE *f)
 {
   int c;
-  uint32_t n = i;
+  uint32_t i = n;
   
   if (i == vec_MAX_CNT) i = b->cnt;
  
@@ -1736,7 +1708,7 @@ int utl_sym_freeze(FILE *f, sym_t t)
   int ret = 0;
   ret = utl_vec_freeze(f,t);
   _logifdebug {
-    logtrace("FREEZE VEC: %p",t->vec);
+    logtrace("FREEZE VEC: %p",(void *)(t->vec));
     for (int k=0; k<32; k+=2) {
       logtrace("%2d [%8X] -> %8X",k,((uint32_t *)(t->vec))[k],((uint32_t *)(t->vec))[k+1]);
     }
@@ -1753,7 +1725,7 @@ sym_t utl_sym_unfreeze(FILE *f, utl_cmp_t cmp, utl_hsh_t hsh)
   _logtrace("SYM UNFRZ: %p %p",utl_sym_cmp,utl_sym_hash);
   t = utl_vec_unfreeze(f,utl_sym_cmp,utl_sym_hash);
   _logifdebug {
-    logtrace("UNFREEZE VEC: %p",t->vec);
+    logtrace("UNFREEZE VEC: %p",(void *)(t->vec));
     for (int k=0; k<32; k+=2) {
       logtrace("%2d [%8X] -> %8X",k,((uint32_t *)(t->vec))[k],((uint32_t *)(t->vec))[k+1]);
     }
@@ -1785,12 +1757,16 @@ static uint32_t utl_sym_store(sym_t t,const char *sym)
   return id;
 }
 
-uint32_t utl_sym_add(sym_t t, const char *sym)
+uint32_t utl_sym_add(sym_t t, const char *sym, int symis)
 {
-  uint32_t k;
+  uint32_t k = symNULL;
   
-  k = utl_sym_search(t, sym);
-  if (k == symNULL) {
+  if (!(symis & symNEW))
+    k = utl_sym_search(t, sym);
+  if (k != symNULL) {
+    if (symis & symUNIQ) k = symNULL;
+  }
+  else {
     k = utl_sym_store(t,sym);
     vecadd(uint32_t,t,k);
   }
@@ -1874,6 +1850,86 @@ int32_t utl_sym_getdata(sym_t t,uint32_t id)
   return *s;
 }
 
+/* *** ARB *** */
+
+arb_t utl_arb_new(void)
+{
+  arb_t a;
+  a= utl_vec_new(sizeof(utl_arb_node_t),NULL,NULL);
+  if (a) { 
+    a->flg &= vecARB;
+    a->lst  = 0;
+  }
+  return a;
+}
+
+
+uint32_t utl_arb_cnt(arb_t a)
+{
+  uint32_t cnt =0;
+  if (a) {
+    cnt = a->cnt;
+    if (a->lst) cnt -= ((utl_arb_node_t *)(a->vec))[a->lst-1].dat;
+  }
+  return cnt;
+}
+
+arb_node_t utl_arb_root(arb_t a)            { return a          ? a->cur = a->fst                                     :0; }
+arb_node_t utl_arb_parent(arb_t a)          { return a && a->cur? a->cur = ((utl_arb_node_t *)(a->vec))[a->cur-1].upn :0; }
+arb_node_t utl_arb_firstchild(arb_t a)      { return a && a->cur? a->cur = ((utl_arb_node_t *)(a->vec))[a->cur-1].dwn :0; }
+arb_node_t utl_arb_nextchild(arb_t a)       { return a && a->cur? a->cur = ((utl_arb_node_t *)(a->vec))[a->cur-1].nxt :0; }
+int32_t utl_arb_getdata(arb_t a)            { return a && a->cur?          ((utl_arb_node_t *)(a->vec))[a->cur-1].dat :0; }
+int32_t utl_arb_setdata(arb_t a, int32_t v) { return a && a->cur? (((utl_arb_node_t *)(a->vec))[a->cur-1].dat = v, 1) :0; }
+
+arb_node_t utl_arb_current(arb_t a, arb_node_t n)
+{
+  if (!a) return 0;
+  if (n > 0) a->cur = n;
+  return a->cur;
+}
+
+arb_node_t utl_arb_addnode(arb_t a)
+{
+  uint32_t n = 0;
+  utl_arb_node_t node, *np;
+  
+  if (a) {
+    node.upn = a->cur;
+    node.dwn = 0;
+    node.nxt = 0;
+    node.dat = 0;
+    
+    if (a->lst > 0) { // take a node from the free list
+       n = a->lst;
+       a->lst = ((utl_arb_node_t *)(a->vec))[a->lst-1].upn;
+    }
+    else {
+      vecadd(utl_arb_node_t,a,node);
+      n = veccount(a);
+    }
+    np = vecgetptr(a,n-1);
+    
+    if (a->fst == 0) { // Just added the root!
+      a->fst = n;
+      a->cur = n;
+    }
+    else { // add as first (leftmost) child
+      np->upn = a->cur;
+      np->nxt = ((utl_arb_node_t *)(a->vec))[a->cur-1].dwn;
+    }
+  }  
+   
+  return n;
+}
+
+
+arb_node_t  utl_arb_addsibling(arb_t a);
+arb_node_t  utl_arb_addlastsibling(arb_t a);
+
+
+
+int        utl_arb_visit(arb_t a);
+
 
 #endif
 #line 19 "src/utl_pmx.c"
@@ -1883,7 +1939,7 @@ int32_t utl_sym_getdata(sym_t t,uint32_t id)
 pmx_t utl_pmx_ ;
 
 
-int(*utl_pmx_ext)(const char *pat, const char *txt, int, int32_t ch) = NULL;
+//int(*utl_pmx_ext)(const char *pat, const char *txt, int, int32_t ch) = NULL;
 
 #define utl_pmx_set_paterror(t) do {if (!utl_pmx_.error) {utl_pmx_.error = t;}} while (0)
 
@@ -2013,7 +2069,7 @@ static int32_t utl_pmx_iscapt(const char *pat, const char *txt)
 
 void utl_pmx_extend(int(*ext)(const char *, const char *, int, int32_t))
 {
-  utl_pmx_ext = ext;
+  utl_pmx_.ext = ext;
 }
 
 #define UTL_PMX_QUOTED 0
@@ -2200,9 +2256,13 @@ static int utl_pmx_class(const char **pat_ptr, const char **txt_ptr)
     case '=' : utl_W(utl_pmx_isin_chars(pat+1,pat_end,ch)) ; break;
     case '#' : utl_W(utl_pmx_isin_codes(pat+1,pat_end,ch)) ; break;
     
-    case 'N' : utl_W((txt[0]=='\r'
-                            ? (txt[1] == '\n'? (len++) : 1)
-                            : (txt[0] == '\n'?  1 : 0)    )) ; break;
+    case 'L' : while(*txt && *txt != '\r' && *txt != '\n') txt++;
+               if (*txt == '\r' && *txt == '\n') txt++;
+               n=1;
+               break;
+    
+    case 'N' : utl_W((txt[0]=='\r' ? (txt[1] == '\n'? (len++) : 1)
+                                   : (txt[0] == '\n'?  1 : 0)    )) ; break;
 
     case 'Q' : utl_W((len=utl_pmx_delimited(pat+1,pat_end,txt, UTL_PMX_QUOTED))); break;
     case 'B' : utl_W((len=utl_pmx_delimited(pat+1,pat_end,txt, UTL_PMX_BRACED))); break;
@@ -2218,8 +2278,8 @@ static int utl_pmx_class(const char **pat_ptr, const char **txt_ptr)
                utl_W((len=utl_pmx_iscapt(pat+1,txt)));
                break;
   
-    case ':' : if (utl_pmx_ext)
-                 utl_W((len=utl_pmx_ext(pat+1,txt,len,ch)));
+    case ':' : if (utl_pmx_.ext)
+                 utl_W((len=utl_pmx_.ext(pat+1,txt,len,ch)));
                break;
   
     default  : ; //utl_pmx_set_paterror(pat);
@@ -2329,6 +2389,7 @@ static const char *utl_pmx_alt(const char *pat, const char **txt_ptr)
 static const char *utl_pmx_match(const char *pat, const char *txt)
 {
   int32_t len;
+  int32_t plen;
   int32_t ch;
   int32_t c1;
   int16_t inv =0;
@@ -2339,7 +2400,7 @@ static const char *utl_pmx_match(const char *pat, const char *txt)
   
   while (*pat) {
     _logdebug("[MATCH] %d [%s] [%s]",pmxcount(),pat,txt);
-    c1 = 0; 
+    c1 = 0; plen = 0; 
     switch (*pat) {
       case '(' : pat++;
                  if (*pat == '|') {inv = 1; pat++;}
@@ -2383,9 +2444,9 @@ static const char *utl_pmx_match(const char *pat, const char *txt)
       case '<' : if (!utl_pmx_class(&pat,&txt)) utl_pmx_FAIL;
                  break;
 
-      case '%' : if (pat[1]) len = utl_pmx_nextch(++pat, &c1);
+      case '%' : if (pat[1]) plen = 1+utl_pmx_nextch(pat+1, &c1);
 
-      default  : if (c1 == 0) len = utl_pmx_nextch(pat, &c1);
+      default  : if (c1 == 0) plen = utl_pmx_nextch(pat, &c1);
                  len = utl_pmx_nextch(txt, &ch);
                  if (!utl_pmx_.csens) {
                    ch = utlfoldchar(ch);
@@ -2396,7 +2457,7 @@ static const char *utl_pmx_match(const char *pat, const char *txt)
                    utl_pmx_FAIL;
                  }
                  txt += len;
-                 pat += len;
+                 pat += plen;
                  break;
                  
       fail     : pat = utl_pmx_alt(pat, &txt) ; /* search for an alternative */
@@ -2768,6 +2829,150 @@ int utl_peg_parse(peg_t parser, pegrule_t start_rule, utl_peg_mmz_t *mmzptr,
     return !parser->fail;
   }
   return 0;
+}
+
+#endif
+#line 20 "src/utl_net.c"
+#ifdef UTL_NET
+ 
+#ifdef _WIN32
+#define  cleanup(err) (WSACleanup(),err)
+#define  initsock()    WSADATA wsdata; \
+                       if (WSAStartup( MAKEWORD(2, 2), &wsdata)) \
+                         return WSANOTINITIALISED;
+#define  SIZE_T int
+#else
+#define  SOCKET int
+#define  SOCKET_ERROR -1
+#define  INVALID_SOCKET -1
+#define  closesocket close
+#define  cleanup(err) (err)
+#define  initsock()  
+#define  SIZE_T size_t
+#endif
+ 
+#define BACKLOG 10
+
+#define MAXBUF 1024
+static char buf[MAXBUF];
+
+
+int utl_net_nohandle(char *msg,int len) { return len; } // Echo
+int utl_net_notimeout(void)             { return 0; }
+
+static int gotbytes(SOCKET sock, int (*hnd)(char *,int) ,fd_set *set)
+{
+  int n;
+  
+  n = recv(sock,buf,MAXBUF-1,0);
+  buf[n] = '\0';
+
+  //printf("[%s]\n",buf); fflush(stdout);
+  if (n > 0) {
+    n = hnd(buf,n);
+    if (n > 0) {
+      send(sock,buf,n,0);
+    }
+  }
+  else {
+    FD_CLR(sock, set);
+    closesocket(sock);
+  }
+  return n;
+}
+ 
+static SOCKET newconn(SOCKET srv, SOCKET max, fd_set *set)
+{
+  SOCKET cln;
+  struct sockaddr_in client;
+  SIZE_T size = sizeof(struct sockaddr_in);
+
+  cln = accept(srv, (struct sockaddr*)&client, &size);
+  if (cln == INVALID_SOCKET) {
+    // ERRROR TO BE LOGGED
+  }
+  else {
+    //printf("Connection from %s:%d\n", inet_ntoa(client.sin_addr), htons(client.sin_port));
+    //fflush(stdout);
+    FD_SET(cln, set);
+    if (cln > max)  max = cln;
+  }
+  return max;
+}
+ 
+int utl_net_listen(uint32_t addr, int port, int (*hnd)(char *,int), long timeout, int (*tmout)(void)) 
+{
+  SOCKET srvsock;
+  SOCKET maxsock;
+
+  fd_set socksfd;
+  fd_set rdsocks;
+  struct timeval seltimeout; 
+  struct timeval *seltimeoutptr = NULL; 
+  struct sockaddr_in srvaddr;
+  int    run = 1;
+   
+  seltimeout.tv_usec = 0;
+  if (timeout > 0) {
+    seltimeoutptr = &seltimeout;  
+  }
+  
+  initsock();
+ 
+  memset(&srvaddr,0,sizeof(srvaddr));
+  srvaddr.sin_family      = AF_INET;
+  srvaddr.sin_port        = htons(port);
+  srvaddr.sin_addr.s_addr = htonl(addr);
+ 
+  srvsock = socket(AF_INET , SOCK_STREAM, 0);
+  if (srvsock == INVALID_SOCKET) {
+    return cleanup(errno);
+  }
+ 
+  int reuseaddr = 1; 
+  if (setsockopt(srvsock, SOL_SOCKET, SO_REUSEADDR, (const char*)&reuseaddr, 
+                                                               sizeof(int)) == SOCKET_ERROR) {
+    return cleanup(errno);
+  }
+ 
+  if (bind(srvsock, (struct sockaddr *)&srvaddr, sizeof(struct sockaddr_in)) == SOCKET_ERROR) {
+    return cleanup(errno);
+  }
+   
+  if (listen(srvsock, BACKLOG) == SOCKET_ERROR) {
+    return cleanup(errno);
+  }
+ 
+  FD_ZERO(&socksfd);
+  FD_SET(srvsock, &socksfd);
+  maxsock = srvsock;
+
+  while (run >= 0) {
+    rdsocks = socksfd;
+    seltimeout.tv_sec = timeout;
+    switch (select(maxsock + 1, &rdsocks, NULL, NULL, seltimeoutptr)) {
+      case -1: return cleanup(errno);
+      
+      case  0: //printf("Timeout\n"); fflush(stdout);
+               run = tmout();
+               break;
+               
+      default: for (SOCKET s = 0; s <= maxsock; s++) {
+                 if (FD_ISSET(s, &rdsocks)) {
+                   // printf("Socket %d ready\n", (int)s); fflush(stdout);
+                   if (s == srvsock) {
+                     maxsock = newconn(srvsock, maxsock, &socksfd);
+                   }
+                   else {
+                     run = gotbytes(s, hnd, &socksfd);
+                   }
+                 }
+               }
+    }
+  }
+
+  closesocket(srvsock);
+  return cleanup(0);
 }
 
 #endif
