@@ -15,8 +15,11 @@
 #
 
 _EXE=.exe
+SOCKLIB=-lws2_32
+
 ifeq "$(COMSPEC)" ""
 _EXE=
+SOCKLIB=
 endif
 
 #CC=gcc
@@ -40,6 +43,8 @@ LNFLAGS = $(PRFFLAGS) $(LDFLAGS) -Lsrc/
 
 all: src dist tst
 
+mini: src_mini dist_mini
+
 #                            
 #       _____ _____ _____ _  
 #      / ___// ___// ___/(_) 
@@ -48,13 +53,21 @@ all: src dist tst
 
 HDRS = src/utl_hdr.h src/utl_log.h src/utl_mem.h src/utl_vec.h \
        src/utl_pmx.h src/utl_peg.h src/utl_fsm.h \
-       src/utl_try.h src/utl_end.h 
+       src/utl_try.h src/utl_net.h src/utl_end.h
 
-CSRC = src/utl_hdr.c src/utl_log.c src/utl_mem.c \
-       src/utl_vec.c src/utl_pmx.c src/utl_peg.c 
+CSRC = src/utl_hdr.c src/utl_utf.c src/utl_log.c src/utl_mem.c \
+       src/utl_vec.c src/utl_pmx.c src/utl_peg.c \
+       src/utl_net.c
 
+#src/utl_mtr.h
+#src/utl_mtr.c 
 
-src: src/libutl.a
+HDRS_MINI = src/utl_hdr.h src/utl_log.h src/utl_fsm.h \
+            src/utl_try.h src/utl_end.h 
+
+CSRC_MINI = src/utl_hdr.c src/utl_log.c 
+
+src: src/libutl.a  src/utlnet.o
 
 src/utl.h: src/utl_unc$(_EXE) $(HDRS)
 #	cat $(HDRS) > src/utl.h
@@ -68,8 +81,19 @@ src/utl.c: src/utl.h $(CSRC)
 src/utl_unc$(_EXE): src/utl_unc.o
 	$(CC) $(LNFLAGS) -o $@ src/utl_unc.o
 
+src/utlnet.o: src/utl.c
+	$(CC) $(CFLAGS) -DUTL_NET -c -o src/utlnet.o src/utl.c
+  
 src/libutl.a:  src/utl.o
 	$(AR) $@ src/utl.o
+
+src_mini: src/utl_m.c src/utl_m.h
+
+src/utl_m.h: src/utl_unc$(_EXE) $(HDRS_MINI)
+	src/utl_unc $(HDRS_MINI) > src/utl_m.h
+
+src/utl_m.c: src/utl_m.h $(CSRC_MINI)
+	src/utl_unc $(CSRC_MINI) > src/utl_m.c
 
   
 #            __ _        __  
@@ -80,6 +104,9 @@ src/libutl.a:  src/utl.o
 
 dist: src/utl.h src/utl.c 
 	$(CP) src/utl.h src/utl.c dist
+
+dist_mini: src/utl_m.h src/utl_m.c 
+	$(CP) src/utl_m.h src/utl_m.c dist
 
 
 #       __               __    
@@ -92,7 +119,10 @@ TESTS = test/x_chk.x test/t_vec$(_EXE)  test/t_buf$(_EXE)  test/t_mem$(_EXE)  \
         test/t_pmx$(_EXE)  test/t_trc$(_EXE) test/t_vec2$(_EXE) test/t_dpq$(_EXE) \
         test/t_pmx2$(_EXE) test/t_pmx3$(_EXE) test/t_pmx4$(_EXE) test/t_pmx5$(_EXE) \
         test/t_utf$(_EXE)  test/t_logassert$(_EXE) test/t_try$(_EXE) test/t_log$(_EXE) \
-        test/t_vec3$(_EXE) test/t_sym$(_EXE) test/t_peg$(_EXE) test/t_peg2$(_EXE)
+        test/t_vec3$(_EXE) test/t_sym$(_EXE) test/t_peg$(_EXE) test/t_peg2$(_EXE) \
+        test/tt_srv$(_EXE) test/t_arb$(_EXE) 
+        
+# test/t_mtr$(_EXE)
 
 tst:  $(TESTS) 
 
@@ -160,11 +190,17 @@ test/t_mpl2$(_EXE): test/x_chk.x src/utl.o test/ut_mpl2.o
 test/t_utf$(_EXE): test/x_chk.x src/utl.o  test/ut_utf.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_utf.o src/utl.o
 
+test/t_arb$(_EXE): test/x_chk.x src/utl.o  test/ut_arb.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_arb.o src/utl.o
+
 test/t_trc$(_EXE): test/x_chk.x src/utl.o  test/ut_trc.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_trc.o src/utl.o
 
 test/t_logassert$(_EXE): test/x_chk.x src/utl.o test/ut_logassert.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_logassert.o src/utl.o
+
+test/tt_srv$(_EXE): test/x_chk.x src/utlnet.o  test/ut_srv.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_srv.o src/utlnet.o $(SOCKLIB)
 
 # Test using `utl_single.h`
 #test/t_mem2$(_EXE): src/utl_single.h  test/ut_mem2.o
@@ -187,7 +223,7 @@ runtest: tst
 
 clean:
 	cd src;  $(RM) utl.c utl.h l_* libutl.a *.o *.obj *.gc?? utl_unc *.exe
-	cd test; $(RM) t_* *.o *.obj *.tmp l_* gmon.out *.gc?? utl.c x_chk.x *.exe
+	cd test; $(RM) t_* tt_* *.o *.obj *.tmp l_* gmon.out *.gc?? utl.c x_chk.x *.exe
 	$(RM) l_*
 
 gcov:
