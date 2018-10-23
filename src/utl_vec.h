@@ -14,6 +14,8 @@
 **
 */
 
+#include "utl.h"
+
 //<<<//
 #ifndef UTL_NOVEC
 
@@ -309,11 +311,14 @@ int utl_arb_isroot(arb_t a);
 typedef int (*arb_fun_t)(arb_t);
 int utl_arb_dfs(arb_t a, arb_fun_t pre, arb_fun_t post);
 int utl_arb_bfs(arb_t a, arb_fun_t pre);
+int utl_arb_prune(arb_t a);
 
 #define arbdfs          utl_arb_dfs
 #define arbdfspre(a,f)  utl_arb_dfs(a,f,NULL)
 #define arbdfspost(a,f) utl_arb_dfs(a,NULL,f)
 #define arbbfs          utl_arb_bfs
+#define arbprune        utl_arb_prune
+
 
 #endif 
 //>>>//

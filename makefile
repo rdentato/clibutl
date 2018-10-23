@@ -53,11 +53,13 @@ mini: src_mini dist_mini
 
 HDRS = src/utl_hdr.h src/utl_log.h src/utl_mem.h src/utl_vec.h \
        src/utl_pmx.h src/utl_peg.h src/utl_fsm.h \
-       src/utl_try.h src/utl_net.h src/utl_end.h
+       src/utl_try.h src/utl_end.h
+#src/utl_net.h 
 
 CSRC = src/utl_hdr.c src/utl_utf.c src/utl_log.c src/utl_mem.c \
-       src/utl_vec.c src/utl_pmx.c src/utl_peg.c \
-       src/utl_net.c
+       src/utl_vec.c src/utl_pmx.c src/utl_peg.c 
+
+      # src/utl_net.c
 
 #src/utl_mtr.h
 #src/utl_mtr.c 
@@ -67,7 +69,8 @@ HDRS_MINI = src/utl_hdr.h src/utl_log.h src/utl_fsm.h \
 
 CSRC_MINI = src/utl_hdr.c src/utl_log.c 
 
-src: src/libutl.a  src/utlnet.o
+src: src/libutl.a
+#  src/utlnet.o
 
 src/utl.h: src/utl_unc$(_EXE) $(HDRS)
 #	cat $(HDRS) > src/utl.h
@@ -120,7 +123,9 @@ TESTS = test/x_chk.x test/t_vec$(_EXE)  test/t_buf$(_EXE)  test/t_mem$(_EXE)  \
         test/t_pmx2$(_EXE) test/t_pmx3$(_EXE) test/t_pmx4$(_EXE) test/t_pmx5$(_EXE) \
         test/t_utf$(_EXE)  test/t_logassert$(_EXE) test/t_try$(_EXE) test/t_log$(_EXE) \
         test/t_vec3$(_EXE) test/t_sym$(_EXE) test/t_peg$(_EXE) test/t_peg2$(_EXE) \
-        test/tt_srv$(_EXE) test/t_arb$(_EXE) 
+        test/t_arb$(_EXE) 
+
+			# test/tt_srv$(_EXE) 
         
 # test/t_mtr$(_EXE)
 

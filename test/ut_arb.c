@@ -28,18 +28,19 @@
          8   9
 
 */
+FILE *outfile = NULL;
 
 int prtnode(arb_t a)
 {
     if (a) {
-      loginfo("Node: %d (%p)", arbgetdata(a), (void*)a);
+      loginfo("Node: %d (%p) %d", arbgetdata(a), (void*)a, a->cur);
     }
     return 0;
 }
 
 int prtopen(arb_t a)
 {
-    fprintf(stderr,"(%d",arbgetdata(a));
+    fprintf(outfile,"(%d",arbgetdata(a));
     return 0;
 }
 
@@ -47,16 +48,16 @@ int prtopen20(arb_t a)
 {
   int *s;
   s = arbaux(a);
-  fprintf(stderr,"(");
+  fprintf(outfile,"(");
   if (*s < -20) return 1;
   *s += arbgetdata(a);
-  fprintf(stderr,"%d",arbgetdata(a));
+  fprintf(outfile,"%d",arbgetdata(a));
   return 0;
 }
 
 int prtclose(arb_t a)
 {
-    fprintf(stderr,")");
+    fprintf(outfile,")");
     return 0;
 }
 
@@ -64,13 +65,14 @@ int prtclose(arb_t a)
 int main(int argc, char *argv[])
 {
   
-  arb_t a,r;
+  arb_t a;
   int i;
   arb_node_t n;
   utl_arb_node_t *p;
   
   logopen("l_arb.log","w");
 
+  outfile = fopen("l_arb2.log","w");
 
   vec_t v = NULL;
   int k;
@@ -197,20 +199,37 @@ int main(int argc, char *argv[])
   int sum;
   arbaux(a,&sum);
   logcheck(arbaux(a) == &sum);
-  fprintf(stderr,"\n");
+  fprintf(outfile,"\n");
   sum=0;
   arbroot(a);
   arbdfs(a,prtopen20,prtclose);
   
   #if 1
-  loginfo("BFS");
+  loginfo("      ***  BFS");
   arbroot(a);
   arbbfs(a,prtnode);
   #endif
   
+  arbroot(a);
+  arbfirstchild(a);
+  
+  i = arbprune(a);
+  
+  logcheck(i==0);
+  logexpect(arbcount(a) == 2,"(Got %d)",arbcount(a));
+  arbbfs(a,prtnode);
+  
+  arbroot(a);
+  arbaddchild(a);
+  arbsetdata(a,2);
+  logexpect(arbcount(a) == 3,"(Got %d)",arbcount(a));
+  
+  arbroot(a);
+  arbbfs(a,prtnode);
+  
   a = arbfree(a);
   
-    
+  fclose(outfile);
   logclose();
     
   exit(0);
