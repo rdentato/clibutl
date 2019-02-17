@@ -43,7 +43,7 @@ extern "C" {
 #include <assert.h>
 #include <setjmp.h>
 #include <limits.h>
-
+#include <fcntl.h>
 
 #ifdef NDEBUG
 
@@ -118,6 +118,16 @@ int utl_next_utf8(const char *txt, int32_t *ch);
                                utl_expand(utl_arg1(__VA_ARGS__,NULL,NULL)))
 
 typedef int (*utl_txt_action_t)(const char *, const char *, void *);
+
+void utl_randstate(uint64_t *s1, uint64_t *s2);
+uint32_t utl_rand(void);
+void utl_srand(uint64_t s1, uint64_t s2);
+
+#define utlsrand(...)  utl_srand(utl_expand(utl_arg0(__VA_ARGS__,0)),\
+                                 utl_expand(utl_arg1(__VA_ARGS__,0,0)))
+
+#define utlrand() utl_rand()
+#define utlrandstate(a,b) utl_randstate(a,b)
 
 #ifdef __cplusplus
 }

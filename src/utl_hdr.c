@@ -93,6 +93,7 @@ pollute your namespace (and could possibly stop you using
 #define UTL_MAIN
 #include "utl.h"
 
+
 const char *utl_emptystring = "";
 
 int   utl_ret(int x)      {return x;}
@@ -161,6 +162,44 @@ uint32_t utl_rnd()
 	return rnd;
 }
 */
+
+// *Really* minimal PCG32 code / (c) 2014 M.E. O'Neill / pcg-random.org
+// Licensed under Apache License 2.0 (NO WARRANTY, etc. see website)
+// http://www.pcg-random.org/download.html
+
+static uint64_t rng_state = (uint64_t)&rng_state;
+static uint64_t rng_inc = (uint64_t)&rng_inc;
+
+uint32_t utl_rand()
+{
+    uint64_t oldstate = rng_state;
+    // Advance internal state
+    rng_state = oldstate * 6364136223846793005ULL + (rng_inc|1);
+    // Calculate output function (XSH RR), uses old state for max ILP
+    uint32_t xorshifted = ((oldstate >> 18u) ^ oldstate) >> 27u;
+    uint32_t rot = oldstate >> 59u;
+    return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
+}
+
+void utl_randstate(uint64_t *s1, uint64_t *s2)
+{
+  if (s1) *s1 = rng_state;
+  if (s2) *s2 = rng_inc;
+}
+
+void utl_srand(uint64_t s1, uint64_t s2)
+{
+  if (s1 == 0) {
+    int fd = open("/dev/urandom",O_RDONLY);
+    if (fd >= 0) {
+      read(fd, &s1, sizeof(s1));
+      close(fd);
+    }
+  }
+  rng_state = s1 ? s1 : (uint64_t)time(0);
+  rng_inc   = s2 ? s2 : (uint64_t)&rng_inc;
+}
+
 /* returns log2(n) assuming n is 2^m */
 int utl_unpow2(int n)
 { int r;
