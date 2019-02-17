@@ -123,7 +123,7 @@ TESTS = test/x_chk.x test/t_vec$(_EXE)  test/t_buf$(_EXE)  test/t_mem$(_EXE)  \
         test/t_pmx2$(_EXE) test/t_pmx3$(_EXE) test/t_pmx4$(_EXE) test/t_pmx5$(_EXE) \
         test/t_utf$(_EXE)  test/t_logassert$(_EXE) test/t_try$(_EXE) test/t_log$(_EXE) \
         test/t_vec3$(_EXE) test/t_sym$(_EXE) test/t_peg$(_EXE) test/t_peg2$(_EXE) \
-        test/t_arb$(_EXE) 
+        test/t_arb$(_EXE)  test/t_rand$(_EXE)
 
 			# test/tt_srv$(_EXE) 
         
@@ -198,6 +198,11 @@ test/t_utf$(_EXE): test/x_chk.x src/utl.o  test/ut_utf.o
 test/t_arb$(_EXE): test/x_chk.x src/utl.o  test/ut_arb.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_arb.o src/utl.o
 
+test/t_rand$(_EXE): test/x_chk.x src/utl.o  test/ut_rand.o
+	$(CC) $(LNFLAGS) -o $@ test/ut_rand.o src/utl.o
+	cd support/ent; make
+
+
 test/t_trc$(_EXE): test/x_chk.x src/utl.o  test/ut_trc.o
 	$(CC) $(LNFLAGS) -o $@ test/ut_trc.o src/utl.o
 
@@ -230,6 +235,7 @@ clean:
 	cd src;  $(RM) utl.c utl.h l_* libutl.a *.o *.obj *.gc?? utl_unc *.exe
 	cd test; $(RM) t_* tt_* *.o *.obj *.tmp l_* gmon.out *.gc?? utl.c x_chk.x *.exe
 	$(RM) l_*
+	cd support/ent; make clean
 
 gcov:
 	make "CCFLAGS=-O0 -coverage" "LDFLAGS=--coverage -lgcov"
