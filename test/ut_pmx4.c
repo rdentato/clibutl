@@ -75,7 +75,7 @@ int isprime(const char *pat,const char *txt, int len, int32_t ch)
   n = strtol(txt,&s,10);
   if (n == 0 || n >= 200) return 0;
   if (!strchr((char*)p,n)) return 0;
-  logtrace("prime: %p %p %s",txt,s,txt);
+  logtrace("prime: %p %p %s",txt,(void *)s,txt);
   return (s-txt);             
 }
 
