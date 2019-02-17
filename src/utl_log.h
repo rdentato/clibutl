@@ -48,10 +48,14 @@
                                 fflush(utl_log_file);\
                               } else (void)0
 
-#define utl_log_prt(...) (utl_log_time(), \
-                          fprintf(utl_log_file,__VA_ARGS__),\
-                          fputc('\n',utl_log_file),\
-                          fflush(utl_log_file))
+#define utl_log_notime() fprintf(utl_log_file,"                    ")
+
+#define utl_log_prt_(...) (fprintf(utl_log_file,__VA_ARGS__),\
+                           fputc('\n',utl_log_file),\
+                           fflush(utl_log_file))
+
+#define utl_log_prt(...)          (utl_log_time(), utl_log_prt_(__VA_ARGS__))
+#define utl_log_prt_notime(...)   (utl_log_notime(), utl_log_prt_(__VA_ARGS__))
 
 extern const char *utl_log_w;
 
@@ -78,7 +82,7 @@ extern const char *utl_log_w;
 #define loginfo(...)    utl_log_trc(utl_log_prdlvl <= UTL_LOG_I,"INF ",__VA_ARGS__)
 #endif
 #endif
-#else // ULT_LOGLVL_NONE
+#else // UTL_LOGLVL_NONE
 #define UTL_NDEBUG
 #endif
 
@@ -98,11 +102,10 @@ extern const char *utl_log_w;
 
 #define logdebug(...)  utl_log_trc(utl_log_dbglvl <= UTL_LOG_D,"DBG ",__VA_ARGS__)
 
-
 struct log_watch_s {
   struct log_watch_s *prev;
-  char *watch[UTL_LOG_WATCH_SIZE] ;
-  int  flg;
+  char               *watch[UTL_LOG_WATCH_SIZE] ;
+  int                 flg;
 };
 
 typedef struct log_watch_s log_watch_t;
@@ -115,16 +118,56 @@ typedef struct log_watch_s log_watch_t;
                                  utl_log_watch_last(utl_log_watch,__FILE__,__LINE__),\
                                  (void)(( utl_log_dbglvl <= UTL_LOG_D) && utl_log_prt("WCH END\x09:%s:%d\x09",__FILE__,__LINE__)),utl_log_watch_.flg = 0)
 							 
-#define logifdebug       if (utl_log_dbglvl > UTL_LOG_D) ; else
+#define logifdebug       if (utl_log_dbglvl > UTL_LOG_D) (void)0; else
+
+#define logscenario(...)  for(int utl_scenario=(utl_log_prt_notime("--- Scenario: " __VA_ARGS__), (utl_log_example_i=0), 1); \
+                              utl_scenario ; \
+                              utl_scenario=(utl_log_prt_notime("^^^"),0))
+
+#define loggiven(...)     if (utl_log_example_i) (void)0; \
+                          else if ((utl_log_prt_notime("    Given " __VA_ARGS__),0)) (void)0;\
+                          else
+
+#define logand(...)       if ((utl_log_prt_notime("    And " __VA_ARGS__)  ,0)) (void)0; else
+#define logthen(...)      if ((utl_log_prt_notime("    Then " __VA_ARGS__) ,0)) (void)0; else
+#define logbut(...)       if ((utl_log_prt_notime("    But " __VA_ARGS__)  ,0)) (void)0; else
+
+#define logwhen(...)      if ((utl_log_example_i ? (utl_log_prt_notime("    And when " __VA_ARGS__)): \
+                                                   (utl_log_prt_notime("    When " __VA_ARGS__))), 0) \
+                          (void)0; else
+
+
+#define logexample   utl_log_example[utl_log_example_i]
+
+#define log_for(t,a)  for(t *utl_log_example = a; \
+                             utl_log_example_i < (sizeof(a)/sizeof(t)) || (utl_log_example_i=0); \
+                             utl_log_example_i++ )
+
+#define utl_CAT(a,b) a ## _ ## b
+#define log_examples(l,s,...) \
+               struct utl_CAT(utl_log_ex_s,l) s utl_CAT(utl_log_ex,l)[] = __VA_ARGS__; \
+               log_for(struct utl_CAT(utl_log_ex_s,l), utl_CAT(utl_log_ex,l)) 
+
+#define logexamples(s,...) log_examples(__LINE__,s,__VA_ARGS__)
 
 #else
+
 #define logcheck(e)    utl_ret(1)
 #define logexpect(e)   utl_ret(1)
 #define logassert(e)   
 #define logclock
 #define logdebug(...)
 #define logwatch(...)
-#define logifdebug       if (1) ; else
+#define logifdebug         if (1) ; else
+
+#define loggiven(...)      if (1) ; else
+#define logwhen(...)       if (1) ; else
+#define logand(...)        if (1) ; else
+#define logbut(...)        if (1) ; else
+#define logthen(...)       if (1) ; else
+#define logscenario(...)   if (1) ; else
+#define logexamples(s,...) if (1) ; else
+
 #define UTL_NOTRACE
 #endif
 
@@ -142,13 +185,20 @@ typedef struct log_watch_s log_watch_t;
 #define _logclose()         utl_ret(0)
 #define _logclock
 #define _logdebug(...)
-#define _logifdebug       if (1) ; else
+#define _logifdebug         if (1) ; else
 #define _loginfo(...)
 #define _logwarning(...)
 #define _logerror(...)
 #define _logtrace(...)  
 #define _logwatch(...)
-   
+
+#define _loggiven(...)      if (1) ; else
+#define _logwhen(...)       if (1) ; else
+#define _logand(...)        if (1) ; else
+#define _logbut(...)        if (1) ; else
+#define _logthen(...)       if (1) ; else
+#define _logscenario(...)   if (1) ; else
+#define _logexamples(s,...) if (1) ; else
 
 extern FILE *utl_log_file;
 extern uint32_t utl_log_check_num;
@@ -156,6 +206,8 @@ extern uint32_t utl_log_check_fail;
 extern log_watch_t *utl_log_watch;
 extern int16_t utl_log_dbglvl;
 extern int16_t utl_log_prdlvl;
+
+extern int utl_log_example_i;
 
 FILE *utl_log_open(const char *fname, const char *mode);
 int   utl_log_close(const char *msg);

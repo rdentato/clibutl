@@ -293,6 +293,8 @@ int16_t utl_log_dbglvl = 0;
 int16_t utl_log_prdlvl = 0;
 const char *utl_log_w = "w";
 
+int utl_log_example_i;
+
 log_watch_t *utl_log_watch = NULL;
 
 int utl_log_close(const char *msg)
