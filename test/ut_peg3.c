@@ -16,6 +16,10 @@
 
 #include "utl.h"
 
+/*
+   testalt = A*B | A*X
+*/
+
 pegrule (testalt) {
   pegalt {
     pegeither {
