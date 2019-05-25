@@ -4,7 +4,7 @@
   A *literate programming* tools enable programmers to layout a source file according
 the order that is more natural for explaining what that code does.
 
-  The principle is that concepts that are logically related should be described close
+  The key principle is that concepts that are logically related should be described close
 to each other. This is often not the case as programmers are forced to write code in 
 the order that is most convenient for the compiler.
 
@@ -18,27 +18,26 @@ the other.
     - Use MarkDown as typesetting language
     - Ability to generate multiple files from a single lit file
     - Ability to generate an identifiers index across multiple project files
-    - Generates HTML output
+    - Generates HTML output for single files and for "projects" (a set of files)
     - Generates PDF input (??)
-
 
 ## Block types
 
   The key concept is the _block_
   
-   - `> "filename" [filetype]`   
-   - `= block title`
-   - `^ block title`
-   - `v block title`
-
+   - `:(> "filename" [filetype]`   
+   - `:(= block title`
+   - `:(^ block title`
+   - `:(v block title`
+   - `:(< "filename" ):`
 
 # Generated files
 
-  Since the tasks is rather simple, all the files will be described in this document.
+  Since the task is rather simple, all the files will be described in this document.
   
 ## The C file
 
-:(out "lit.c" C
+:(> "lit.c" C
 
    #include "lit.h"
    
@@ -54,7 +53,7 @@ the other.
 
 ## The header file 
 
-:(out "lit.h" C
+:(> "lit.h" C
 
     #include "utl.h"
  
@@ -81,7 +80,7 @@ lit$(_EXE): lit.o
 
 # Parsing input files
 
-:(after Parse input files
+:(v Parse input files
     char *f;
     for (char *fname = files[0]; fname; fname++) {
       f = fopen(fname,"r");

@@ -1,3 +1,4 @@
+/* *** 2019-05-25 15:32:12 *** */
 #line 2 "src/utl_hdr.h"
 /* 
 **  (C) by Remo Dentato (rdentato@gmail.com)
@@ -43,7 +44,7 @@ extern "C" {
 #include <assert.h>
 #include <setjmp.h>
 #include <limits.h>
-
+#include <fcntl.h>
 
 #ifdef NDEBUG
 
@@ -119,6 +120,16 @@ int utl_next_utf8(const char *txt, int32_t *ch);
 
 typedef int (*utl_txt_action_t)(const char *, const char *, void *);
 
+void utl_randstate(uint64_t *s1, uint64_t *s2);
+uint32_t utl_rand(void);
+void utl_srand(uint64_t s1, uint64_t s2);
+
+#define utlsrand(...)  utl_srand(utl_expand(utl_arg0(__VA_ARGS__,0)),\
+                                 utl_expand(utl_arg1(__VA_ARGS__,0,0)))
+
+#define utlrand() utl_rand()
+#define utlrandstate(a,b) utl_randstate(a,b)
+
 #ifdef __cplusplus
 }
 #endif
@@ -147,10 +158,14 @@ typedef int (*utl_txt_action_t)(const char *, const char *, void *);
                                 fflush(utl_log_file);\
                               } else (void)0
 
-#define utl_log_prt(...) (utl_log_time(), \
-                          fprintf(utl_log_file,__VA_ARGS__),\
-                          fputc('\n',utl_log_file),\
-                          fflush(utl_log_file))
+#define utl_log_notime() fprintf(utl_log_file,"                    ")
+
+#define utl_log_prt_(...) (fprintf(utl_log_file,__VA_ARGS__),\
+                           fputc('\n',utl_log_file),\
+                           fflush(utl_log_file))
+
+#define utl_log_prt(...)          (utl_log_time(), utl_log_prt_(__VA_ARGS__))
+#define utl_log_prt_notime(...)   (utl_log_notime(), utl_log_prt_(__VA_ARGS__))
 
 extern const char *utl_log_w;
 
@@ -177,7 +192,7 @@ extern const char *utl_log_w;
 #define loginfo(...)    utl_log_trc(utl_log_prdlvl <= UTL_LOG_I,"INF ",__VA_ARGS__)
 #endif
 #endif
-#else // ULT_LOGLVL_NONE
+#else // UTL_LOGLVL_NONE
 #define UTL_NDEBUG
 #endif
 
@@ -197,11 +212,10 @@ extern const char *utl_log_w;
 
 #define logdebug(...)  utl_log_trc(utl_log_dbglvl <= UTL_LOG_D,"DBG ",__VA_ARGS__)
 
-
 struct log_watch_s {
   struct log_watch_s *prev;
-  char *watch[UTL_LOG_WATCH_SIZE] ;
-  int  flg;
+  char               *watch[UTL_LOG_WATCH_SIZE] ;
+  int                 flg;
 };
 
 typedef struct log_watch_s log_watch_t;
@@ -214,16 +228,56 @@ typedef struct log_watch_s log_watch_t;
                                  utl_log_watch_last(utl_log_watch,__FILE__,__LINE__),\
                                  (void)(( utl_log_dbglvl <= UTL_LOG_D) && utl_log_prt("WCH END\x09:%s:%d\x09",__FILE__,__LINE__)),utl_log_watch_.flg = 0)
 							 
-#define logifdebug       if (utl_log_dbglvl > UTL_LOG_D) ; else
+#define logifdebug       if (utl_log_dbglvl > UTL_LOG_D) (void)0; else
+
+#define logscenario(...)  for(int utl_scenario=(utl_log_prt_notime("--- Scenario: " __VA_ARGS__), (utl_log_example_i=0), 1); \
+                              utl_scenario ; \
+                              utl_scenario=(utl_log_prt_notime("^^^"),0))
+
+#define loggiven(...)     if (utl_log_example_i) (void)0; \
+                          else if ((utl_log_prt_notime("    Given " __VA_ARGS__),0)) (void)0;\
+                          else
+
+#define logand(...)       if ((utl_log_prt_notime("    And " __VA_ARGS__)  ,0)) (void)0; else
+#define logthen(...)      if ((utl_log_prt_notime("    Then " __VA_ARGS__) ,0)) (void)0; else
+#define logbut(...)       if ((utl_log_prt_notime("    But " __VA_ARGS__)  ,0)) (void)0; else
+
+#define logwhen(...)      if ((utl_log_example_i ? (utl_log_prt_notime("    And when " __VA_ARGS__)): \
+                                                   (utl_log_prt_notime("    When " __VA_ARGS__))), 0) \
+                          (void)0; else
+
+
+#define logexample   utl_log_example[utl_log_example_i]
+
+#define log_for(t,a)  for(t *utl_log_example = a; \
+                             utl_log_example_i < (sizeof(a)/sizeof(t)) || (utl_log_example_i=0); \
+                             utl_log_example_i++ )
+
+#define utl_CAT(a,b) a ## _ ## b
+#define log_examples(l,s,...) \
+               struct utl_CAT(utl_log_ex_s,l) s utl_CAT(utl_log_ex,l)[] = __VA_ARGS__; \
+               log_for(struct utl_CAT(utl_log_ex_s,l), utl_CAT(utl_log_ex,l)) 
+
+#define logexamples(s,...) log_examples(__LINE__,s,__VA_ARGS__)
 
 #else
+
 #define logcheck(e)    utl_ret(1)
 #define logexpect(e)   utl_ret(1)
 #define logassert(e)   
 #define logclock
 #define logdebug(...)
 #define logwatch(...)
-#define logifdebug       if (1) ; else
+#define logifdebug         if (1) ; else
+
+#define loggiven(...)      if (1) ; else
+#define logwhen(...)       if (1) ; else
+#define logand(...)        if (1) ; else
+#define logbut(...)        if (1) ; else
+#define logthen(...)       if (1) ; else
+#define logscenario(...)   if (1) ; else
+#define logexamples(s,...) if (1) ; else
+
 #define UTL_NOTRACE
 #endif
 
@@ -241,13 +295,20 @@ typedef struct log_watch_s log_watch_t;
 #define _logclose()         utl_ret(0)
 #define _logclock
 #define _logdebug(...)
-#define _logifdebug       if (1) ; else
+#define _logifdebug         if (1) ; else
 #define _loginfo(...)
 #define _logwarning(...)
 #define _logerror(...)
 #define _logtrace(...)  
 #define _logwatch(...)
-   
+
+#define _loggiven(...)      if (1) ; else
+#define _logwhen(...)       if (1) ; else
+#define _logand(...)        if (1) ; else
+#define _logbut(...)        if (1) ; else
+#define _logthen(...)       if (1) ; else
+#define _logscenario(...)   if (1) ; else
+#define _logexamples(s,...) if (1) ; else
 
 extern FILE *utl_log_file;
 extern uint32_t utl_log_check_num;
@@ -255,6 +316,8 @@ extern uint32_t utl_log_check_fail;
 extern log_watch_t *utl_log_watch;
 extern int16_t utl_log_dbglvl;
 extern int16_t utl_log_prdlvl;
+
+extern int utl_log_example_i;
 
 FILE *utl_log_open(const char *fname, const char *mode);
 int   utl_log_close(const char *msg);
@@ -342,7 +405,7 @@ void *utl_mpl_free(mpl_t mp, void *e,int clean);
 
 
 #endif /* UTL_NOMEM */
-#line 18 "src/utl_vec.h"
+#line 20 "src/utl_vec.h"
 #ifndef UTL_NOVEC
 
 #define vec_MIN_ELEM 16
@@ -399,6 +462,7 @@ typedef struct vec_s {
 #define vecSORTED 0x0001
 #define vecHASHED 0x0020
 #define vecARB    0x0040
+#define vecQUE    0x0080
 
 #define vecissorted(v) ((v)->flg &   vecSORTED)
 #define vecsorted(v)   ((v)->flg |=  vecSORTED)
@@ -415,12 +479,16 @@ typedef struct vec_s {
                              } while (0)
 #define vecdrop(...)         utl_vec_drop(utl_expand(utl_arg0(__VA_ARGS__,NULL)), \
                                           utl_expand(utl_arg1(__VA_ARGS__,1,1)))
+                                          
+#define vecdropall(v)        ((v)->cnt=0)
+
 #define vectop(type,v,d)     vecget(type,v,vec_MAX_CNT,d)    
 #define vectopptr(v)         vecgetptr(v,vec_MAX_CNT)    
 
 // Queue
 #define vecenq(type,v,e)     vecDO(type,v,0,e,utl_vec_enq)
 #define vecdeq(v)            utl_vec_deq(v)
+#define vecdeqall(v)         utl_vec_deq_all(v)
 
 // I/O
 #define vecread(v,i,n,f)  utl_vec_read(v,i,n,f)
@@ -437,10 +505,12 @@ typedef struct vec_s {
                                       utl_arg1(__VA_ARGS__,NULL,NULL), \
                                       utl_arg2(__VA_ARGS__,NULL,NULL,NULL)))
 
+#define vecaux(...)       utl_vec_aux(utl_arg0(__VA_ARGS__,NULL), \
+                                      utl_arg1(__VA_ARGS__,NULL,NULL))
+
 #define vecfree(v)        utl_vec_free(v)
 #define veccount(v)       ((v)->cnt)
 #define vecmax(v)         ((v)->max)
-#define vecaux(v)         ((v)->aux)
 #define vecisempty(v)     ((v)->cnt == 0)
 #define vec(type,v)       ((type *)((v)->vec))
 #define vecclear(v)       ((v)->cnt = 0)
@@ -462,6 +532,8 @@ void *utl_vec_set(vec_t v, uint32_t i);
 void *utl_vec_ins(vec_t v, uint32_t i);
 void *utl_vec_add(vec_t v, uint32_t i);
 void *utl_vec_get(vec_t v, uint32_t i);
+
+void *utl_vec_aux(vec_t v,void *p);
 
 void *utl_vec_first(vec_t v);
 void *utl_vec_next(vec_t v) ;
@@ -568,8 +640,9 @@ sym_t    utl_sym_new(void);
 int32_t  utl_sym_getdata(sym_t t,uint32_t id);
 int16_t  utl_sym_setdata(sym_t t,uint32_t id, int32_t val);
 
-#define arb_t      vec_t
-#define arb_node_t uint32_t
+#define arb_t         vec_t
+#define arb_node_t    uint32_t
+
 
 typedef struct utl_arb_node_s {
   uint32_t upn;
@@ -582,31 +655,60 @@ arb_t       utl_arb_new(void);
 arb_node_t  utl_arb_root(arb_t a);
 arb_node_t  utl_arb_parent(arb_t a);
 arb_node_t  utl_arb_firstchild(arb_t a);
-arb_node_t  utl_arb_nextchild(arb_t a);
-int         utl_arb_visit(arb_t a);
+arb_node_t  utl_arb_nextsibling(arb_t a);
 arb_node_t  utl_arb_current(arb_t a, arb_node_t n);
 int32_t     utl_arb_getdata(arb_t a);
 int32_t     utl_arb_setdata(arb_t a, int32_t v);
 
 arb_node_t  utl_arb_addnode(arb_t a);
 arb_node_t  utl_arb_addsibling(arb_t a);
-arb_node_t  utl_arb_addlastsibling(arb_t a);
 
-arb_node_t  utl_arb_reparent(arb_t a,arb_node_t n);
-arb_node_t  utl_arb_remove(arb_t a,arb_node_t n);
-arb_node_t  utl_arb_removearb(arb_t a,arb_node_t n);
+
+int  utl_arb_reparent(arb_t a,arb_node_t n);
+int  utl_arb_trim(arb_t a);
+
+uint32_t    utl_arb_cnt(arb_t a);
 
 #define arbnew          utl_arb_new
-#define arbfree         ult_vec_free
+#define arbfree         utl_vec_free
 #define arbroot         utl_arb_root
 #define arbparent       utl_arb_parent
 #define arbfirstchild   utl_arb_firstchild
-#define arbnextchild    utl_arb_nextchild 
+#define arbnextsibling  utl_arb_nextsibling 
 #define arbvisit        utl_arb_visit
 #define arbcurrent(...) utl_arb_current(utl_expand(utl_arg0(__VA_ARGS__,NULL)), \
                                          utl_expand(utl_arg1(__VA_ARGS__,0,0)))
 
-                                         
+#define arbgetdata utl_arb_getdata
+#define arbsetdata utl_arb_setdata
+#define arbcount utl_arb_cnt
+
+#define arbaddchild        utl_arb_addnode       
+#define arbaddsibling      utl_arb_addsibling
+#define arbaddlastsibling  utl_arb_addlastsibling
+#define arbaux             vecaux
+
+int utl_arb_isleaf(arb_t a);
+int utl_arb_islast(arb_t a);
+int utl_arb_isroot(arb_t a);
+
+#define arbislast          utl_arb_islast
+#define arbisleaf          utl_arb_isleaf
+#define arbisroot          utl_arb_isroot
+#define arbisempty(a)     (!utl_arb_cnt(a))
+
+typedef int (*arb_fun_t)(arb_t);
+int utl_arb_dfs(arb_t a, arb_fun_t pre, arb_fun_t post);
+int utl_arb_bfs(arb_t a, arb_fun_t pre);
+int utl_arb_prune(arb_t a);
+
+#define arbdfs          utl_arb_dfs
+#define arbdfspre(a,f)  utl_arb_dfs(a,f,NULL)
+#define arbdfspost(a,f) utl_arb_dfs(a,NULL,f)
+#define arbbfs          utl_arb_bfs
+#define arbprune        utl_arb_prune
+
+
 #endif 
 #line 18 "src/utl_pmx.h"
 #ifndef UTL_NOPMX
@@ -939,50 +1041,6 @@ extern utl_jb_t *utl_jmp_list; // Defined in utl_hdr.c
 #define thrownid()   utl_jb.id
 #define thrownfile() utl_jb.fn
 #define thrownline() utl_jb.ln
-
-#endif
-#line 19 "src/utl_net.h"
-#ifdef UTL_NET
- 
-
-#ifdef _WIN32
-
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#ifndef __GNUC__
-#pragma comment(lib, "Ws2_32.lib")
-#endif
-#else
-
-#include <sys/types.h> 
-#include <sys/socket.h>
-#include <sys/select.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-
-#endif
-
-int utl_net_listen(uint32_t addr, int port, int (*hnd)(char *,int), long timeout, int (*tmout)(void)) ;
-int utl_net_nohandle(char *msg,int len);
-int utl_net_notimeout(void);
-
-
-#define utlserver(...)       utl_net_listen utl_expand ((INADDR_ANY, \
-                                                  utl_arg0(__VA_ARGS__,0,0,0,0), \
-                                                  utl_arg1(__VA_ARGS__,utl_net_nohandle,utl_net_nohandle,utl_net_nohandle,utl_net_nohandle), \
-                                                  utl_arg2(__VA_ARGS__,0,0,0,0), \
-                                                  utl_arg3(__VA_ARGS__,utl_net_notimeout,utl_net_notimeout,utl_net_notimeout,utl_net_notimeout) ))
-
-#define utlserverlocal(...)  utl_net_listen utl_expand ((INADDR_LOOPBACK, \
-                                                  utl_arg0(__VA_ARGS__,0,0,0,0), \
-                                                  utl_arg1(__VA_ARGS__,utl_net_nohandle,utl_net_nohandle,utl_net_nohandle,utl_net_nohandle), \
-                                                  utl_arg2(__VA_ARGS__,0,0,0,0), \
-                                                  utl_arg3(__VA_ARGS__,utl_net_notimeout,utl_net_notimeout,utl_net_notimeout,utl_net_notimeout) ))
 
 #endif
 #line 17 "src/utl_end.h"

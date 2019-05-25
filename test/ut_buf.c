@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
     loggiven("no buffer have been created so far");
     logwhen("a new buffer is created")
       b = bufnew();
-    logthen("the returned buffer should be not NULL") 
+    logthen("the returned buffer is not NULL") 
       logassert(b);
   }
   

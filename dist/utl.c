@@ -1,3 +1,4 @@
+/* *** 2019-05-25 15:32:12 *** */
 #line 2 "src/utl_hdr.c"
 /* 
 **  (C) by Remo Dentato (rdentato@gmail.com)
@@ -16,6 +17,7 @@
 #line 93 "src/utl_hdr.c"
 #define UTL_MAIN
 #include "utl.h"
+
 
 const char *utl_emptystring = "";
 
@@ -85,6 +87,44 @@ uint32_t utl_rnd()
 	return rnd;
 }
 */
+
+// *Really* minimal PCG32 code / (c) 2014 M.E. O'Neill / pcg-random.org
+// Licensed under Apache License 2.0 (NO WARRANTY, etc. see website)
+// http://www.pcg-random.org/download.html
+
+static uint64_t rng_state = (uint64_t)&rng_state;
+static uint64_t rng_inc = (uint64_t)&rng_inc;
+
+uint32_t utl_rand()
+{
+    uint64_t oldstate = rng_state;
+    // Advance internal state
+    rng_state = oldstate * 6364136223846793005ULL + (rng_inc|1);
+    // Calculate output function (XSH RR), uses old state for max ILP
+    uint32_t xorshifted = ((oldstate >> 18u) ^ oldstate) >> 27u;
+    uint32_t rot = oldstate >> 59u;
+    return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
+}
+
+void utl_randstate(uint64_t *s1, uint64_t *s2)
+{
+  if (s1) *s1 = rng_state;
+  if (s2) *s2 = rng_inc;
+}
+
+void utl_srand(uint64_t s1, uint64_t s2)
+{
+  if (s1 == 0) {
+    int fd = open("/dev/urandom",O_RDONLY);
+    if (fd >= 0) {
+      read(fd, &s1, sizeof(s1));
+      close(fd);
+    }
+  }
+  rng_state = s1 ? s1 : (uint64_t)time(0);
+  rng_inc   = s2 ? s2 : (uint64_t)&rng_inc;
+}
+
 /* returns log2(n) assuming n is 2^m */
 int utl_unpow2(int n)
 { int r;
@@ -244,6 +284,8 @@ uint32_t utl_log_check_fail  = 0;
 int16_t utl_log_dbglvl = 0;
 int16_t utl_log_prdlvl = 0;
 const char *utl_log_w = "w";
+
+int utl_log_example_i;
 
 log_watch_t *utl_log_watch = NULL;
 
@@ -782,6 +824,12 @@ vec_t utl_vec_new(uint16_t esz, utl_cmp_t cmp, utl_hsh_t hsh)
   return v;
 }
 
+void *utl_vec_aux(vec_t v,void *p)
+{
+  if (p) v->aux = p;
+  return v->aux;
+}
+
 vec_t utl_vec_free(vec_t v)
 {
   if (v) { 
@@ -881,7 +929,7 @@ void *utl_vec_get(vec_t v, uint32_t i)
 {
   uint8_t *elm=NULL;
   
-  if (i == vec_MAX_CNT) i = v->cnt -1;
+  if (i == vec_MAX_CNT) i = v->cnt-1;
   if (i < v->cnt) {
     elm = v->vec + (i*v->esz);
     memcpy(v->elm,elm,v->esz);
@@ -985,6 +1033,13 @@ void utl_vec_deq(vec_t v)
     v->fst = 0;
     v->lst = 0;
   }
+}
+
+void utl_vec_deq_all(vec_t v)
+{
+  v->cnt = 0;
+  v->fst = 0;
+  v->lst = 0;
 }
 
 /* * Sorted sets  * */
@@ -1852,34 +1907,49 @@ int32_t utl_sym_getdata(sym_t t,uint32_t id)
 
 /* *** ARB *** */
 
+#define ARB_NODE(a_,n_)   ((utl_arb_node_t *)(a_->vec))[(n_)-1]
+
 arb_t utl_arb_new(void)
 {
   arb_t a;
   a= utl_vec_new(sizeof(utl_arb_node_t),NULL,NULL);
   if (a) { 
-    a->flg &= vecARB;
+    a->flg |= vecARB;
     a->lst  = 0;
   }
   return a;
 }
-
 
 uint32_t utl_arb_cnt(arb_t a)
 {
   uint32_t cnt =0;
   if (a) {
     cnt = a->cnt;
-    if (a->lst) cnt -= ((utl_arb_node_t *)(a->vec))[a->lst-1].dat;
+    if (a->lst) cnt -= ARB_NODE(a,a->lst).dat;
   }
   return cnt;
 }
 
-arb_node_t utl_arb_root(arb_t a)            { return a          ? a->cur = a->fst                                     :0; }
-arb_node_t utl_arb_parent(arb_t a)          { return a && a->cur? a->cur = ((utl_arb_node_t *)(a->vec))[a->cur-1].upn :0; }
-arb_node_t utl_arb_firstchild(arb_t a)      { return a && a->cur? a->cur = ((utl_arb_node_t *)(a->vec))[a->cur-1].dwn :0; }
-arb_node_t utl_arb_nextchild(arb_t a)       { return a && a->cur? a->cur = ((utl_arb_node_t *)(a->vec))[a->cur-1].nxt :0; }
-int32_t utl_arb_getdata(arb_t a)            { return a && a->cur?          ((utl_arb_node_t *)(a->vec))[a->cur-1].dat :0; }
-int32_t utl_arb_setdata(arb_t a, int32_t v) { return a && a->cur? (((utl_arb_node_t *)(a->vec))[a->cur-1].dat = v, 1) :0; }
+arb_node_t utl_arb_root(arb_t a) { return a ? a->cur = a->fst : 0; }
+
+#define arbMOVE(fname,dir)   arb_node_t utl_arb_##fname(arb_t a)            \
+                             {                                              \
+                               arb_node_t n = 0;                            \
+                               if (a && a->cur) n = ARB_NODE(a,a->cur).dir; \
+                               if (n) a->cur = n;                           \
+                               return n;                                    \
+                             }
+                           
+arbMOVE(firstchild,dwn)
+arbMOVE(nextsibling,nxt)
+arbMOVE(parent,upn)
+
+int32_t utl_arb_getdata(arb_t a)            {return a && a->cur?  ARB_NODE(a,a->cur).dat:0; }
+int32_t utl_arb_setdata(arb_t a, int32_t v) {return a && a->cur? (ARB_NODE(a,a->cur).dat=(v),1):0;}
+
+int utl_arb_islast(arb_t a)   {return (a && a->cur && ARB_NODE(a,a->cur).nxt == 0); }
+int utl_arb_isleaf(arb_t a)   {return (a && a->cur && ARB_NODE(a,a->cur).dwn == 0); }
+int utl_arb_isroot(arb_t a)   {return (a && a->cur && (a->cur == a->fst)); }
 
 arb_node_t utl_arb_current(arb_t a, arb_node_t n)
 {
@@ -1888,48 +1958,285 @@ arb_node_t utl_arb_current(arb_t a, arb_node_t n)
   return a->cur;
 }
 
-arb_node_t utl_arb_addnode(arb_t a)
+static utl_arb_node_t *utl_arb_newnode(arb_t a, uint32_t *ret_n)
 {
   uint32_t n = 0;
-  utl_arb_node_t node, *np;
+  utl_arb_node_t node, *np = NULL;
   
   if (a) {
-    node.upn = a->cur;
-    node.dwn = 0;
-    node.nxt = 0;
-    node.dat = 0;
     
     if (a->lst > 0) { // take a node from the free list
-       n = a->lst;
-       a->lst = ((utl_arb_node_t *)(a->vec))[a->lst-1].upn;
+      n = a->lst;
+      a->lst = ARB_NODE(a,a->lst).nxt;
     }
     else {
+      node.upn = a->cur;
+      node.dwn = 0;
+      node.nxt = 0;
+      node.dat = 0;
       vecadd(utl_arb_node_t,a,node);
       n = veccount(a);
     }
     np = vecgetptr(a,n-1);
-    
-    if (a->fst == 0) { // Just added the root!
-      a->fst = n;
+    *ret_n = n;
+  }  
+  return np;
+}
+
+arb_node_t utl_arb_addnode(arb_t a)
+{
+  uint32_t n = 0;
+  utl_arb_node_t *np;
+  
+  if (a) {
+    np = utl_arb_newnode(a,&n);
+    if (np) {    
+      if (a->fst == 0) { // Just added the root!
+        a->fst = n;
+        np->upn = 0;
+      }
+      else { // add as first (leftmost) child
+        np->upn = a->cur;
+        np->nxt = ARB_NODE(a,a->cur).dwn;
+        ARB_NODE(a,a->cur).dwn = n;
+      }
       a->cur = n;
-    }
-    else { // add as first (leftmost) child
-      np->upn = a->cur;
-      np->nxt = ((utl_arb_node_t *)(a->vec))[a->cur-1].dwn;
     }
   }  
    
   return n;
 }
 
+arb_node_t  utl_arb_addsibling(arb_t a)
+{
+  uint32_t n = 0;
+  utl_arb_node_t *np;
+  
+  if (a && a->fst && a->cur != a->fst) { // Root can't have siblings!!
+    np = utl_arb_newnode(a,&n);
+    if (np) { // add as next child
+      np->upn = ARB_NODE(a,a->cur).upn;
+      np->nxt = ARB_NODE(a,a->cur).nxt;
+      ARB_NODE(a,a->cur).nxt = n;
+      a->cur = n;
+    }
+  }     
+  return n;
+}
 
-arb_node_t  utl_arb_addsibling(arb_t a);
-arb_node_t  utl_arb_addlastsibling(arb_t a);
+#if 0
+// recursive implementation
+int utl_arb_dfsX(arb_t a, arb_fun_t pre, arb_fun_t post)
+{
+  arb_node_t nxt = 0;
+  arb_node_t n;
+  int ret = 0;
+  
+  if (pre) ret = pre(a);
+  if (ret == 0) {
+    n = a->cur;
+    nxt = arbfirstchild(a);
+    while (nxt) {
+      if ((ret = utl_arb_dfs(a,pre,post))) break;
+      a->cur = nxt;
+      nxt = arbnextsibling(a);
+    }
+    a->cur = n;
+  }
+  if (post) ret = post(a) || ret;
+  return ret;   
+}
+#endif 
+
+#define POST_ACTION 0x80000000
+
+int utl_arb_dfs(arb_t a, arb_fun_t pre, arb_fun_t post)
+{
+  arb_node_t cur;
+  
+  int ret = 0; 
+  vec_t stk = NULL;
+  
+  if (!a || a->fst == 0) return 1;
+
+  stk = vecnew(arb_node_t);
+  vecalloc(stk,100); // 100 Nodes per level!
+  vecdropall(stk);
+  vecpush(arb_node_t, stk, a->cur);
+  _logdebug("PUSH: %08X",a->cur);
+  while (!vecisempty(stk)) {
+    cur = vectop(arb_node_t, stk, 0);
+    vecdrop(stk);
+    _logdebug("POP:  %08X",cur);
+    
+    if (cur & POST_ACTION) {
+      a->cur = cur & (POST_ACTION-1);
+      if (post) ret = post(a) || ret;
+    }
+    else {
+      a->cur = cur;
+      if (pre && !ret) ret = pre(a);
+      
+      if (ARB_NODE(a,a->cur).nxt) {
+        if (!ret) {
+          vecpush(arb_node_t, stk, ARB_NODE(a,a->cur).nxt);
+          _logdebug("PUSH: %08X",ARB_NODE(a,a->cur).nxt);
+        }
+      }
+      else {  // last child
+        if (a->cur != a->fst) { // and is not root
+          vecpush(arb_node_t, stk, ARB_NODE(a,a->cur).upn | POST_ACTION);
+          _logdebug("PUSH: %08X",ARB_NODE(a,a->cur).upn | POST_ACTION);
+        }
+      }
+      if (ARB_NODE(a,a->cur).dwn) {
+        if (!ret) {
+          vecpush(arb_node_t, stk, ARB_NODE(a,a->cur).dwn);
+          _logdebug("PUSH: %08X", ARB_NODE(a,a->cur).dwn);
+        }
+      }
+      else {
+        if (post) ret = post(a) || ret;
+      }
+    }
+  }  
+  
+  vecfree(stk);  
+  
+  return ret;   
+}
+
+int utl_arb_bfs(arb_t a, arb_fun_t pre)
+{
+  vec_t que=NULL;
+  arb_node_t nxt;
+  arb_node_t cur;
+  int ret;
+  
+  if (!a || a->fst == 0) return 1;
+  
+  que = vecnew(arb_node_t);
+  vecalloc(que,100); // 100 Nodes per level!
+  vecdeqall(que);
+  
+  cur = a->cur;
+  vecenq(arb_node_t, que, a->cur);
+  while (!vecisempty(que)) {
+    a->cur = vecfirst(arb_node_t,que,0);
+    _logdebug("First: %d",a->cur);
+    _logassert(a->cur);
+    vecdeq(que);
+    
+    ret = pre(a);
+    if (ret) break;
+    
+    nxt = arbfirstchild(a);
+    while (nxt) {
+      _logdebug("Enque: %d",nxt);
+      vecenq(arb_node_t,que,nxt);
+      nxt = arbnextsibling(a);
+    }    
+  }
+  que = vecfree(que);
+  a->cur = cur;
+  return ret;   
+}
 
 
+#define DELETED_NODE 0x80000000
 
-int        utl_arb_visit(arb_t a);
+static arb_node_t utl_arb_detach(arb_t a)
+{
+  arb_node_t node = 0;
+  arb_node_t upn;
+  arb_node_t nxt;
+  arb_node_t prv = 0;
+  // Detach the subtree that has a->cur as root
 
+  if (!a || a->fst == 0 || a->cur == a->fst) return 0;
+  
+  node = a->cur;
+  _logdebug("ARBDETACH %d",node);
+  upn = ARB_NODE(a,node).upn;
+  ARB_NODE(a,node).upn = DELETED_NODE;
+  
+  a->cur = upn;  
+
+  nxt = arbfirstchild(a);
+  
+  if (nxt == node) {
+    ARB_NODE(a,upn).dwn = ARB_NODE(a,nxt).nxt;
+  }
+  else {  
+    while (nxt && nxt != node) {
+      prv = nxt;
+      nxt = arbnextsibling(a);
+    }
+    logassert(nxt != 0);
+    ARB_NODE(a,prv).nxt = ARB_NODE(a,nxt).nxt ;
+  }
+  a->cur = upn;  
+  _logdebug("ARBDETACH %d DONE",node);
+  return node;
+}
+
+int utl_arb_prune(arb_t a)
+{
+  arb_node_t nxt;
+  arb_node_t node;
+  
+  if (!a || a->fst == 0) return 1;
+
+  if (a->cur == a->fst) { // delete all tree nodes
+    a->fst = 0;
+    a->lst = 0;
+    a->cnt = 0;
+    a->cur = 0;
+    return 0;
+  }
+  
+  logdebug("ARBDEL %d",a->cur);
+  // detach the node from root
+  node = utl_arb_detach(a);
+  if (node) {
+    vec_t que = vecnew(arb_node_t);
+    if (!que) return 1;
+    
+    vecalloc(que,100); // 100 Nodes per level!
+    vecdeqall(que);
+    
+    vecenq(arb_node_t, que, node);
+    logdebug("ENQ %d",node);
+    while (!vecisempty(que)) {
+      node = vecfirst(arb_node_t,que,0);
+      logassert(node != 0);
+      vecdeq(que);
+      logdebug("DEQ %d",node);
+      
+      nxt = ARB_NODE(a,node).dwn;
+      
+      while (nxt) {
+        logdebug("ENQ %d",nxt);
+        vecenq(arb_node_t,que,nxt);
+        nxt = ARB_NODE(a,nxt).nxt;
+      } 
+      
+      ARB_NODE(a,node).dat = 1;
+      
+      if (a->lst) {
+        ARB_NODE(a,node).dat += ARB_NODE(a,a->lst).dat;
+      }
+      
+      ARB_NODE(a,node).nxt = a->lst;
+      ARB_NODE(a,node).upn = DELETED_NODE;
+      a->lst = node;
+    }
+
+    que = vecfree(que);
+  }
+  
+  return 0;
+}
 
 #endif
 #line 19 "src/utl_pmx.c"
@@ -2829,150 +3136,6 @@ int utl_peg_parse(peg_t parser, pegrule_t start_rule, utl_peg_mmz_t *mmzptr,
     return !parser->fail;
   }
   return 0;
-}
-
-#endif
-#line 20 "src/utl_net.c"
-#ifdef UTL_NET
- 
-#ifdef _WIN32
-#define  cleanup(err) (WSACleanup(),err)
-#define  initsock()    WSADATA wsdata; \
-                       if (WSAStartup( MAKEWORD(2, 2), &wsdata)) \
-                         return WSANOTINITIALISED;
-#define  SIZE_T int
-#else
-#define  SOCKET int
-#define  SOCKET_ERROR -1
-#define  INVALID_SOCKET -1
-#define  closesocket close
-#define  cleanup(err) (err)
-#define  initsock()  
-#define  SIZE_T size_t
-#endif
- 
-#define BACKLOG 10
-
-#define MAXBUF 1024
-static char buf[MAXBUF];
-
-
-int utl_net_nohandle(char *msg,int len) { return len; } // Echo
-int utl_net_notimeout(void)             { return 0; }
-
-static int gotbytes(SOCKET sock, int (*hnd)(char *,int) ,fd_set *set)
-{
-  int n;
-  
-  n = recv(sock,buf,MAXBUF-1,0);
-  buf[n] = '\0';
-
-  //printf("[%s]\n",buf); fflush(stdout);
-  if (n > 0) {
-    n = hnd(buf,n);
-    if (n > 0) {
-      send(sock,buf,n,0);
-    }
-  }
-  else {
-    FD_CLR(sock, set);
-    closesocket(sock);
-  }
-  return n;
-}
- 
-static SOCKET newconn(SOCKET srv, SOCKET max, fd_set *set)
-{
-  SOCKET cln;
-  struct sockaddr_in client;
-  SIZE_T size = sizeof(struct sockaddr_in);
-
-  cln = accept(srv, (struct sockaddr*)&client, &size);
-  if (cln == INVALID_SOCKET) {
-    // ERRROR TO BE LOGGED
-  }
-  else {
-    //printf("Connection from %s:%d\n", inet_ntoa(client.sin_addr), htons(client.sin_port));
-    //fflush(stdout);
-    FD_SET(cln, set);
-    if (cln > max)  max = cln;
-  }
-  return max;
-}
- 
-int utl_net_listen(uint32_t addr, int port, int (*hnd)(char *,int), long timeout, int (*tmout)(void)) 
-{
-  SOCKET srvsock;
-  SOCKET maxsock;
-
-  fd_set socksfd;
-  fd_set rdsocks;
-  struct timeval seltimeout; 
-  struct timeval *seltimeoutptr = NULL; 
-  struct sockaddr_in srvaddr;
-  int    run = 1;
-   
-  seltimeout.tv_usec = 0;
-  if (timeout > 0) {
-    seltimeoutptr = &seltimeout;  
-  }
-  
-  initsock();
- 
-  memset(&srvaddr,0,sizeof(srvaddr));
-  srvaddr.sin_family      = AF_INET;
-  srvaddr.sin_port        = htons(port);
-  srvaddr.sin_addr.s_addr = htonl(addr);
- 
-  srvsock = socket(AF_INET , SOCK_STREAM, 0);
-  if (srvsock == INVALID_SOCKET) {
-    return cleanup(errno);
-  }
- 
-  int reuseaddr = 1; 
-  if (setsockopt(srvsock, SOL_SOCKET, SO_REUSEADDR, (const char*)&reuseaddr, 
-                                                               sizeof(int)) == SOCKET_ERROR) {
-    return cleanup(errno);
-  }
- 
-  if (bind(srvsock, (struct sockaddr *)&srvaddr, sizeof(struct sockaddr_in)) == SOCKET_ERROR) {
-    return cleanup(errno);
-  }
-   
-  if (listen(srvsock, BACKLOG) == SOCKET_ERROR) {
-    return cleanup(errno);
-  }
- 
-  FD_ZERO(&socksfd);
-  FD_SET(srvsock, &socksfd);
-  maxsock = srvsock;
-
-  while (run >= 0) {
-    rdsocks = socksfd;
-    seltimeout.tv_sec = timeout;
-    switch (select(maxsock + 1, &rdsocks, NULL, NULL, seltimeoutptr)) {
-      case -1: return cleanup(errno);
-      
-      case  0: //printf("Timeout\n"); fflush(stdout);
-               run = tmout();
-               break;
-               
-      default: for (SOCKET s = 0; s <= maxsock; s++) {
-                 if (FD_ISSET(s, &rdsocks)) {
-                   // printf("Socket %d ready\n", (int)s); fflush(stdout);
-                   if (s == srvsock) {
-                     maxsock = newconn(srvsock, maxsock, &socksfd);
-                   }
-                   else {
-                     run = gotbytes(s, hnd, &socksfd);
-                   }
-                 }
-               }
-    }
-  }
-
-  closesocket(srvsock);
-  return cleanup(0);
 }
 
 #endif

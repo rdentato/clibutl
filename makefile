@@ -74,11 +74,13 @@ src: src/libutl.a
 
 src/utl.h: src/utl_unc$(_EXE) $(HDRS)
 #	cat $(HDRS) > src/utl.h
-	src/utl_unc $(HDRS) > src/utl.h
+	date +"/* *** %Y-%m-%d %H:%M:%S *** */" >src/utl.h
+	src/utl_unc $(HDRS) >> src/utl.h
 
 src/utl.c: src/utl.h $(CSRC)
 #	cat $(CSRC) > src/utl.c
-	src/utl_unc $(CSRC) > src/utl.c
+	date +"/* *** %Y-%m-%d %H:%M:%S *** */" >src/utl.c
+	src/utl_unc $(CSRC) >> src/utl.c
 #	for f in $(CSRC); do echo "#line 1 \"$$f\"" >> src/utl.c; cat $$f >> src/utl.c; done
 
 src/utl_unc$(_EXE): src/utl_unc.o
@@ -93,10 +95,12 @@ src/libutl.a:  src/utl.o
 src_mini: src/utl_m.c src/utl_m.h
 
 src/utl_m.h: src/utl_unc$(_EXE) $(HDRS_MINI)
-	src/utl_unc $(HDRS_MINI) > src/utl_m.h
+	date +"/* *** %Y-%m-%d %H:%M:%S *** */" >src/utl_m.h
+	src/utl_unc $(HDRS_MINI) >> src/utl_m.h
 
 src/utl_m.c: src/utl_m.h $(CSRC_MINI)
-	src/utl_unc $(CSRC_MINI) > src/utl_m.c
+	date +"/* *** %Y-%m-%d %H:%M:%S *** */" >src/utl_m.c
+	src/utl_unc $(CSRC_MINI) >> src/utl_m.c
 
   
 #            __ _        __  

@@ -24,13 +24,16 @@
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
+
 #include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
+
 #ifndef __GNUC__
 #pragma comment(lib, "Ws2_32.lib")
 #endif
-#else
+
+#else // Unix
 
 #include <sys/types.h> 
 #include <sys/socket.h>
