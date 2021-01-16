@@ -1,7 +1,7 @@
 # utl [![Build Status](https://travis-ci.org/rdentato/clibutl.svg?branch=master)](https://travis-ci.org/rdentato/clibutl) [![Join the chat at https://gitter.im/clibutl/Lobby](https://badges.gitter.im/clibutl/Lobby.svg)](https://gitter.im/clibutl/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > WARNING: I'm working on the new version of Clibtul. Please get in touch with me if you want to provide
-> feedback or discuss addition/removal to the library.
+> feedback or discuss addition/removal to the library. Email is in the source headers.
 
   This library provides functions that could, hopefully, speed up the
 developemnt of a C program.
@@ -12,7 +12,7 @@ The functions are related to:
  - [*Logging*](https://github.com/rdentato/clibutl/blob/master/doc/log.md)
  - [*Finite State Machines*](https://github.com/rdentato/clibutl/blob/master/doc/fsm.md)
  - *Memory check*
- - *Containers*
+ - *Data structures*
  - *Parsing Regular Expressions (PEG)*
  - [*Pattern matching*](https://github.com/rdentato/clibutl/blob/master/doc/pmx.md) over string
  - [*Try/Catch* exceptions](https://github.com/rdentato/clibutl/blob/master/doc/try.md)
